@@ -1,0 +1,29 @@
+Package: chipmine
+Type: Package
+Title: Analyze ChIP-seq Data
+Version: 0.1.0
+Author: Lakhansing Pardeshi
+Maintainer: The package maintainer <lakhanp1@yahoo.co.in>
+Description: This package process the ChIP-seq profile matrices, peak calling
+    results to generate various plots. These plots are useful for exploratory 
+    analysis of the data.
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+Depends:
+	tidyverse (>= 1.2.1),
+	data.table (>= 1.10.4),
+	circlize (>= 0.4.5),
+	ComplexHeatmap (>= 1.15.1),
+	EnrichedHeatmap (>= 1.6.0),
+Imports:
+	magrittr,
+	VennDiagram (>= 1.6.17),   
+	RColorBrewer,
+	GenomicRanges,
+	imputeTS,
+	lazyeval,
+	ggpubr (>= 0.1.5),
+	scales,
+	rtracklayer (>= 1.40.3)
+RoxygenNote: 6.0.1
