@@ -9,8 +9,8 @@
 #' and hence does perform scalling or normalization.
 #'
 #' @param regions Either GenomicRanges object or a file in bed, narrowPeak or broadPeak format
-#' @param format format of the peak file. Should be one of "bed", "narrowPeak" or "broadPeak".
-#' This option does not matter if the 'regions' argument if a GRanges object.
+#' @param format format of the peak file. Should be one of \emph{bed}, \emph{narrowPeak} or 
+#' \emph{broadPeak}. This option does not matter if the 'regions' argument if a GRanges object.
 #' @param bwFile bigWig file from which the coverage will be calculated
 #' @param name Name of the coverage column. Default: coverage
 #'
