@@ -14,3 +14,6 @@ ______
 ## Usage
 Coming soon...!!!
 
+## License
+GPL V2
+
