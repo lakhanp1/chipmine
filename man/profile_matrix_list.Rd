@@ -11,13 +11,13 @@ profile_matrix_list(exptInfo, geneList, ...)
 
 \item{geneList}{A vector of gene IDs for which the profile needs to be extracted}
 
-\item{...}{Other argument to `import_profile_from_file` function}
+\item{...}{Other argument to \code{import_profile_from_file} function}
 }
 \value{
-A list of normalized matrix where each matrix is of normalizedMatrix class
+A list of normalized matrix where each matrix is of \code{normalizedMatrix} class
 }
 \description{
-This function reads/generate the profile matrix of normalizedMatrix class for each
+This function reads/generate the profile matrix of \code{normalizedMatrix} class for each
 sample
 }
 \examples{
