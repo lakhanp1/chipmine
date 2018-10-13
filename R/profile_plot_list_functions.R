@@ -315,7 +315,7 @@ get_expression_heatmap_list <- function(expDf,
 
 
   polII_color <- colorRamp2(
-    breaks = c(0, quantile(polII_log2_mat, c(0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 0.995, 1))),
+    breaks = c(0, quantile(polII_log2_mat, c(0.5, 0.8, 0.9, 0.92, 0.95, 0.97, 0.99, 0.995, 0.999))),
     colors = c("white", RColorBrewer::brewer.pal(n = 9, name = "RdPu"))
   )
 
