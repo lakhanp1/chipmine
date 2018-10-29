@@ -2,18 +2,18 @@
 % Please edit documentation in R/signal_fold_change_functions.R
 \name{get_fold_change}
 \alias{get_fold_change}
-\title{Raw log2 fold change value between two samples}
+\title{Raw log2 fold change value between two samples as log2(s2/s1)}
 \usage{
-get_fold_change(df, s1, s2, newCol = "lfc", isExpressedCols = NULL)
+get_fold_change(df, nmt, dmt, newCol = "lfc", isExpressedCols = NULL)
 }
 \arguments{
 \item{df}{data frame}
 
-\item{s1}{column name for sample1}
+\item{nmt}{column name for sample in numerator}
 
-\item{s2}{column name for sample2}
+\item{dmt}{column name for sample in denominator}
 
-\item{newCol}{new column name for log2(fold_change) values. Default: lfc}
+\item{newCol}{new column name for log2(nmt/dmt) values. Default: lfc}
 
 \item{isExpressedCols}{A named vector with column names for isExpressed data for
 both polII samples}
@@ -22,7 +22,7 @@ both polII samples}
 dataframe with additional fold change column
 }
 \description{
-Raw log2 fold change value between two samples
+Raw log2 fold change value between two samples as log2(s2/s1)
 }
 \examples{
 NA

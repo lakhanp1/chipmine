@@ -1,12 +1,12 @@
 
 
 
-#' Raw log2 fold change value between two samples
+#' Raw log2 fold change value between two samples as log2(s2/s1)
 #'
 #' @param df data frame
-#' @param s1 column name for sample1
-#' @param s2 column name for sample2
-#' @param newCol new column name for log2(fold_change) values. Default: lfc
+#' @param nmt column name for sample in numerator
+#' @param dmt column name for sample in denominator
+#' @param newCol new column name for log2(nmt/dmt) values. Default: lfc
 #' @param isExpressedCols A named vector with column names for isExpressed data for
 #' both polII samples
 #'
@@ -14,22 +14,22 @@
 #' @export
 #'
 #' @examples NA
-get_fold_change <- function(df, s1, s2, newCol = "lfc", isExpressedCols = NULL){
+get_fold_change <- function(df, nmt, dmt, newCol = "lfc", isExpressedCols = NULL){
 
   df <- dplyr::mutate(df,
-                      !! newCol := log2(!!as.name(s1) + 1) - log2(!!as.name(s2) + 1))
+                      !! newCol := log2(!!as.name(nmt) + 1) - log2(!!as.name(dmt) + 1))
 
   ## LFC correction: set lfc = 0 if both the signal values are not in top 10%
   if(!is.null(isExpressedCols)){
 
-    if(! all(c(s1, s2) %in% names(isExpressedCols))){
+    if(! all(c(dmt, nmt) %in% names(isExpressedCols))){
       stop("Missing is_expressed.* columns for given samples in isExpressedCols vector.")
     }
 
     df <- dplyr::mutate(
       df,
       !! newCol := if_else(
-        condition = !! as.name(isExpressedCols[[s1]]) == TRUE | !! as.name(isExpressedCols[[s2]]) == TRUE,
+        condition = !! as.name(isExpressedCols[[dmt]]) == TRUE | !! as.name(isExpressedCols[[nmt]]) == TRUE,
         true = !! as.name(newCol),
         false = 0))
   }
