@@ -4,7 +4,8 @@
 \alias{plot_MA_gg}
 \title{Generate MA plot}
 \usage{
-plot_MA_gg(df, s1, s2, title = "MA plot", colorCol, pseudoCount = 0.1)
+plot_MA_gg(df, s1, s2, title = NA, colorCol, pseudoCount = 0.1,
+  ylim = NULL)
 }
 \arguments{
 \item{df}{dataframe with values two columns for which MA plot is to be generated}
@@ -19,6 +20,8 @@ plot_MA_gg(df, s1, s2, title = "MA plot", colorCol, pseudoCount = 0.1)
 
 \item{pseudoCount}{A small number to be added to the values to avoid log(0) error.
 Default: 0.1}
+
+\item{ylim}{A two element numeric vector for Y-limits of MA plot. Default: c(-4, 4)}
 }
 \value{
 a ggplot2 object which has MA plot
