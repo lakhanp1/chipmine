@@ -24,14 +24,10 @@ get_polII_signal = function(file, title, clusterData){
 
   polII_df = data.table::fread(input = file, header = T, stringsAsFactors = F, sep = "\t", data.table = F)
 
-
   clusterData = clusterData %>% dplyr::left_join(y = polII_df, by = c("gene" = "gene"))
 
-  polII_df = clusterData %>%
-    dplyr::select(gene, !!(as.name(title))) %>%
-    tibble::column_to_rownames(var = "gene")
-
-  polII_mat = data.matrix(polII_df)
+  polII_mat = as.matrix(clusterData[[title]])
+  rownames(polII_mat) = clusterData$gene
 
   polII_log2_mat = log2(polII_mat + 1)
 
