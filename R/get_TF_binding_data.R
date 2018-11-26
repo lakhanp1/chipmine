@@ -33,7 +33,7 @@ get_TF_binding_data = function(genesDf, exptInfo, allColumns = FALSE){
         next()
       }
 
-      colNames = paste(c("hasPeak.", "peakId.", "peakDist.", "summitDist.", "peakType.", "enrichment.", "pval.", "tesPeakType.", "tesEnrichment.", "tesPval."), exptInfo$sampleId[i], sep = "")
+      colNames = paste(c("hasPeak.", "peakId.", "peakDist.", "summitDist.", "peakType.", "enrichment.", "peakCoverage.", "pval.", "tesPeakType.", "tesEnrichment.", "tesPval."), exptInfo$sampleId[i], sep = "")
 
       df = data.table::fread(input = exptInfo$tfPeakFile[i], header = T, stringsAsFactors = F,
                              drop = c("chr", "start", "end", "strand"), sep = "\t", data.table = F)

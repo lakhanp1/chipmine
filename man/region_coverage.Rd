@@ -4,7 +4,8 @@
 \alias{region_coverage}
 \title{Calculate mean coverage for regions.}
 \usage{
-region_coverage(regions, format = "narrowPeak", bwFile, name = "coverage")
+region_coverage(regions, format = "narrowPeak", bwFile,
+  name = "coverage")
 }
 \arguments{
 \item{regions}{Either GenomicRanges object or a file in bed, narrowPeak or broadPeak format}

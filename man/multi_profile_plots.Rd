@@ -8,8 +8,8 @@ multi_profile_plots(exptInfo, genesToPlot, clusters = NULL,
   drawClusterAn = TRUE, clusterColor = NULL, clustOrd = NULL,
   profileColors = NULL, matSource = "deeptools", targetType = "gene",
   matBins = c(200, 200, 100, 10), ylimFraction = NULL,
-  plotExpression = FALSE, expressionData = NULL, expressionColor = NULL,
-  rasterize = TRUE, rasterQual = 5, ...)
+  plotExpression = FALSE, expressionData = NULL,
+  expressionColor = NULL, rasterize = TRUE, rasterQual = 5, ...)
 }
 \arguments{
 \item{exptInfo}{experiment info as data frame with information like sampleID, type, path etc}

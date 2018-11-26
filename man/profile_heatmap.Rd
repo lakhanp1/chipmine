@@ -5,10 +5,11 @@
 \title{Generate profile heatmap}
 \usage{
 profile_heatmap(profileMat, signalName, columnTitle = NULL,
-  createClusters = FALSE, numClust = 7, geneGroups = NULL, profileColor,
-  showAnnotation = TRUE, clusterColor = NULL, clusterOrder = NULL,
-  ylimFraction = NULL, posLineGpar = gpar(lty = 2, alpha = 0.4, lwd = 0.5),
-  rasterPar = list(use = TRUE, qual = 5), ...)
+  createClusters = FALSE, numClust = 7, geneGroups = NULL,
+  profileColor, showAnnotation = TRUE, clusterColor = NULL,
+  clusterOrder = NULL, ylimFraction = NULL, posLineGpar = gpar(lty =
+  2, alpha = 0.4, lwd = 0.5), rasterPar = list(use = TRUE, qual = 5),
+  ...)
 }
 \arguments{
 \item{profileMat}{profile matrix of class \code{normalizedMatrix}}

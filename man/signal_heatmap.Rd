@@ -4,8 +4,8 @@
 \alias{signal_heatmap}
 \title{Heatmap for polII binding signal}
 \usage{
-signal_heatmap(log2_matrix, htName = NULL, col_title = NULL, legend_title,
-  color, htSplit = NULL, showLegend = TRUE, ...)
+signal_heatmap(log2_matrix, htName = NULL, col_title = NULL,
+  legend_title, color, htSplit = NULL, showLegend = TRUE, ...)
 }
 \arguments{
 \item{log2_matrix}{a log2 matrix with polII expression values to be plotted as Heatmap}

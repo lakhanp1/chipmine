@@ -337,6 +337,7 @@ get_expression_heatmap_list <- function(expDf,
   for(id in polII_ids){
     ht <- signal_heatmap(log2_matrix = polII_log2_mat[, id, drop = FALSE],
                          col_title = id,
+                         column_title_gp = gpar(fontsize = 12),
                          legend_title = "log2(polII_FPKM + 1)",
                          color = polII_color,
                          showLegend = firstPlot)

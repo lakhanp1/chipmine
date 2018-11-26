@@ -5,9 +5,10 @@
 \title{Multiple Enriched Heatmaps as list}
 \usage{
 get_profile_plot_list(exptInfo, cluster = NULL, clusterColor = NULL,
-  clustOrd = NULL, geneList, colorList = NULL, matrixSource = "deeptools",
-  matrixBins = c(200, 200, 100, 10), targetType = "gene",
-  ylimFraction = NULL, rasterPar = list(use = TRUE, qual = 5), ...)
+  clustOrd = NULL, geneList, colorList = NULL,
+  matrixSource = "deeptools", matrixBins = c(200, 200, 100, 10),
+  targetType = "gene", ylimFraction = NULL, rasterPar = list(use =
+  TRUE, qual = 5), ...)
 }
 \arguments{
 \item{exptInfo}{experiment info as data frame with information like sampleID, type,

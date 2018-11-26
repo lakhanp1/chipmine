@@ -4,8 +4,8 @@
 \alias{import_profile_from_file}
 \title{Read profile matrix from file}
 \usage{
-import_profile_from_file(file, source = "deeptools", signalName, selectGenes,
-  up = 200, target = 200, down = 100, binSize = 10,
+import_profile_from_file(file, source = "deeptools", signalName,
+  selectGenes, up = 200, target = 200, down = 100, binSize = 10,
   targetType = "gene", returnDf = FALSE)
 }
 \arguments{

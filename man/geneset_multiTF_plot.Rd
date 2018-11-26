@@ -4,7 +4,8 @@
 \alias{geneset_multiTF_plot}
 \title{Title}
 \usage{
-geneset_multiTF_plot(data, exptInfo, outFile, plotTitle, name, res, numClust)
+geneset_multiTF_plot(data, exptInfo, outFile, plotTitle, name, res,
+  numClust)
 }
 \arguments{
 \item{numClust}{}
