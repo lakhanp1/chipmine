@@ -10,13 +10,14 @@
 #' "TES_3kb_3kb_normalized". Default: deeptools
 #' @param samples A vector of Sample IDs which are to be processed
 #' @param profileType Type of profile. This will be added as suffix to the profile name
+#' @param macs2Control Whether control was used for macs2 peak calling. Default: TRUE
 #'
 #' @return Data frame with details for each sample
 #' @export
 #'
 #' @examples NA
 get_sample_information = function(exptInfoFile, samples, dataPath, matrixSource = "deeptools",
-                                  profileType = "profile"){
+                                  profileType = "profile", macs2Control = TRUE){
 
   ## read the experiment sample details and select only those which are to be plotted
   exptData = data.table::fread(input = exptInfoFile,
@@ -33,7 +34,7 @@ get_sample_information = function(exptInfoFile, samples, dataPath, matrixSource 
     dplyr::mutate(
       profileName = paste(sampleId, profileType, sep = "_"),
       bwFile = paste(dataPath, "/", sampleId, "/", sampleId, "_normalized.bw", sep = ""),
-      matFile = case_when(
+      matFile = dplyr::case_when(
         matrixSource == "deeptools" ~
           paste(dataPath, "/", sampleId, "/", sampleId, "_normalized_profile.tab.gz", sep = ""),
         matrixSource == "normalizedmatrix" ~
@@ -64,50 +65,45 @@ get_sample_information = function(exptInfoFile, samples, dataPath, matrixSource 
         "NA",
         paste(dataPath, "/", sampleId, "/", sampleId, ".kmeans.clusters.txt", sep = "")
       ),
-      tfPeakFile = dplyr::if_else(
-        IP_tag == "polII",
-        "NA",
-        paste(dataPath, "/", sampleId, "/", sampleId, "_peaks.annotated.tab", sep = "")
-      ),
       mergedDataFile = dplyr::if_else(
         IP_tag == "polII",
         "NA",
         paste(dataPath, "/", sampleId, "/", sampleId, "_allGenes_clusters.tab", sep = "")
       ),
-      tfRegionsBed = dplyr::if_else(
-        IP_tag == "polII",
-        "NA",
-        paste(dataPath, "/", sampleId, "/", sampleId, "_peakRegions.bed", sep = "")
+      narrowpeakFile = dplyr::case_when(
+        IP_tag != "polII" & isTRUE(macs2Control) ~
+          paste(dataPath, "/", sampleId, "/", sampleId, "_withCtrl_peaks.narrowPeak", sep = ""),
+        IP_tag != "polII" & isFALSE(macs2Control) ~
+          paste(dataPath, "/", sampleId, "/", sampleId, "_withoutCtrl_peaks.narrowPeak", sep = ""),
+        TRUE ~ "NA"
       ),
-      tfExpAtUpstreamFile = dplyr::if_else(
-        IP_tag == "polII",
-        "NA",
-        paste(dataPath, "/", sampleId, "/", sampleId, "_peakExp_cdsUpstream.rel.mat", sep = "")
+      narrowpeakAnno = dplyr::case_when(
+        IP_tag != "polII" & isTRUE(macs2Control) ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.narrowPeak.nearestCDS.tab", sep = ""),
+        IP_tag != "polII" & isFALSE(macs2Control) ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.narrowPeak.nearestCDS.tab", sep = ""),
+        TRUE ~ "NA"
       ),
-      tfExpAtPeakFile = dplyr::if_else(
-        IP_tag == "polII",
-        "NA",
-        paste(dataPath, "/", sampleId, "/", sampleId, "_narrowpeakExp_peakBed.rel.mat", sep = "")
+      broadpeakFile = dplyr::case_when(
+        IP_tag != "polII" & isTRUE(macs2Control) ~
+          paste(dataPath, "/", sampleId, "/", sampleId, "_withCtrl_peaks.broadPeak", sep = ""),
+        IP_tag != "polII" & isFALSE(macs2Control) ~
+          paste(dataPath, "/", sampleId, "/", sampleId, "_withoutCtrl_peaks.broadPeak", sep = ""),
+        TRUE ~ "NA"
       ),
-      narrowpeakFile = dplyr::if_else(
-        IP_tag == "polII",
-        "NA",
-        paste(dataPath, "/", sampleId, "/", sampleId, "_narrow_peaks.narrowPeak", sep = "")
+      broadpeakAnno = dplyr::case_when(
+        IP_tag != "polII" & isTRUE(macs2Control) ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.broadPeak.nearestCDS.tab", sep = ""),
+        IP_tag != "polII" & isFALSE(macs2Control) ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.broadPeak.nearestCDS.tab", sep = ""),
+        TRUE ~ "NA"
       ),
-      narrowpeakAnno = dplyr::if_else(
-        IP_tag == "polII",
-        "NA",
-        paste(dataPath, "/", sampleId, "/", sampleId, ".narrowPeak.nearestCDS.tab", sep = "")
-      ),
-      broadpeakFile = dplyr::if_else(
-        IP_tag == "polII",
-        "NA",
-        paste(dataPath, "/", sampleId, "/", sampleId, "_broad_peaks.broadPeak", sep = "")
-      ),
-      broadpeakAnno = dplyr::if_else(
-        IP_tag == "polII",
-        "NA",
-        paste(dataPath, "/", sampleId, "/", sampleId, ".broadPeak.nearestCDS.tab", sep = "")
+      tfPeakFile = dplyr::case_when(
+        IP_tag != "polII" & isTRUE(macs2Control) ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.annotated.tab", sep = ""),
+        IP_tag != "polII" & isFALSE(macs2Control) ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.annotated.tab", sep = ""),
+        TRUE ~ "NA"
       )
     ) %>%
     dplyr::mutate_at(c("polIIExpFile", "polIIExpMat", "clusterFile", "tfPeakFile", "mergedDataFile", "narrowpeakFile", "narrowpeakAnno", "broadpeakFile", "broadpeakAnno"),

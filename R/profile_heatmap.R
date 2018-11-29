@@ -184,6 +184,7 @@ profile_heatmap <- function(profileMat,
       clusterNames <- levels(clusterData$cluster)
       cat("Colors for clusters not provided. Generating new colors for clusters: ", clusterNames, "\n")
 
+      # clusterColor <- structure(rainbow(length(clusterNames)), names = clusterNames)
       clusterColor <- structure(pkg.env$customColors[1:length(clusterNames)], names = clusterNames)
 
       ## if there are too many clusters, use rainbow colors
@@ -246,13 +247,13 @@ profile_heatmap <- function(profileMat,
 
   if(isTRUE(attributes(profileMat)$target_is_single_point)){
     ## when region length == 1
-    axis_names[1] <- attributes(profileMat)$extend[1]
+    axis_names[1] <- attributes(profileMat)$extend[1] * -1
     axis_names[2] <- attributes(profileMat)$target_name
     axis_names[3] <- attributes(profileMat)$extend[2]
 
   } else{
     ## when region length > 1
-    axis_names[1] <- attributes(profileMat)$extend[1]
+    axis_names[1] <- attributes(profileMat)$extend[1] * -1
     axis_names[2] <- "start"
     axis_names[3] <- "end"
     axis_names[4] <- attributes(profileMat)$extend[2]

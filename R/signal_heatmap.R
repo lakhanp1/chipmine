@@ -42,9 +42,11 @@ signal_heatmap = function(log2_matrix,
   ## average signal line annotation which is default. Now if we use the column names for
   ## Heatmap, the column names and profile heatmap are not placed at same height.
   ## So we make the names of Heatmap as annotation so that they are aligned properly
-  colNameAnn <- HeatmapAnnotation(colName = anno_text(x = c(col_title),
-                                                      rot = 90, just = "left",
-                                                      offset = unit(1, "mm"))
+  colNameAnn <- HeatmapAnnotation(
+    colName = anno_text(x = c(col_title),
+                        rot = 90, just = "left",
+                        offset = unit(1, "mm")),
+    annotation_height = unit.c(max_text_width(col_title))
   )
 
 
@@ -56,7 +58,6 @@ signal_heatmap = function(log2_matrix,
   ht = Heatmap(log2_matrix, name = htName,
                col = color,
                top_annotation = colNameAnn,
-               top_annotation_height = unit.c(unit(5, "mm"), max_text_width(col_title) + unit(2, "mm")),
                show_row_names = FALSE, show_column_names = FALSE,
                width = unit(1 * ncol(log2_matrix), "cm"),
                show_heatmap_legend = showLegend,

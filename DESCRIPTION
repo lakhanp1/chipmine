@@ -26,4 +26,4 @@ Imports:
 	ggpubr (>= 0.1.5),
 	scales,
 	rtracklayer (>= 1.40.3)
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.1

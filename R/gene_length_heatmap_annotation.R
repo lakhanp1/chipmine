@@ -34,11 +34,16 @@ gene_length_heatmap_annotation = function(bedFile, genes){
   #   dplyr::left_join(y = geneSet, by = c("gene" = "name"))
 
 
-  an = rowAnnotation(gene_length = row_anno_points(x = selectGl,
-                                                   size = unit(1, "mm"),
-                                                   gp = gpar(col = "#00000040")
-  ),
-  annotation_width = unit(2, "cm")
+  an = rowAnnotation(
+    gene_length = row_anno_points(
+      x = selectGl,
+      size = unit(1, "mm"),
+      gp = gpar(col = "#00000040")
+    ),
+    annotation_width = unit(2, "cm"),
+    show_annotation_name = TRUE,
+    annotation_name_side = "top",
+    annotation_name_rot = 90
   )
 
   return(list(
