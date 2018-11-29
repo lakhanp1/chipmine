@@ -19,14 +19,15 @@ add_annotation_titles = function(annotations, anTitle, fontSize = 7){
 
     cat("Adding heatmap annotation title for annotation ", an, "\n")
 
-    decorate_annotation(annotation = an,
-                        slice = 1,
-                        code = {
-                          grid.text(label = anTitle[[an]], x = unit(0.5, "npc"), y = unit(1, "npc") + unit(2, "mm"),
-                                    default.units = "npc", just = "left", rot = 90,
-                                    gp = gpar(fontsize = fontSize)
-                          )
-                        }
+    decorate_annotation(
+      annotation = an,
+      slice = 1,
+      code = {
+        grid.text(label = anTitle[[an]], x = unit(0.5, "npc"), y = unit(1, "npc") + unit(2, "mm"),
+                  default.units = "npc", just = "left", rot = 90,
+                  gp = gpar(fontsize = fontSize)
+        )
+      }
     )
   }
 
