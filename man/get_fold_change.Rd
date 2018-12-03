@@ -4,7 +4,8 @@
 \alias{get_fold_change}
 \title{Raw log2 fold change value between two samples as log2(s2/s1)}
 \usage{
-get_fold_change(df, nmt, dmt, newCol = "lfc", isExpressedCols = NULL)
+get_fold_change(df, nmt, dmt, newCol = "lfc", isExpressedCols = NULL,
+  lfcLimit = 0)
 }
 \arguments{
 \item{df}{data frame}
@@ -13,10 +14,13 @@ get_fold_change(df, nmt, dmt, newCol = "lfc", isExpressedCols = NULL)
 
 \item{dmt}{column name for sample in denominator}
 
-\item{newCol}{new column name for log2(nmt/dmt) values. Default: lfc}
+\item{newCol}{new column name for \code{log2(nmt/dmt)} values. Default: lfc}
 
 \item{isExpressedCols}{A named vector with column names for isExpressed data for
 both polII samples}
+
+\item{lfcLimit}{All the LFC values in range \code{[-lfcLimit, lfcLimit]} are set
+to 0. Default: 0 i.e. no limit}
 }
 \value{
 dataframe with additional fold change column

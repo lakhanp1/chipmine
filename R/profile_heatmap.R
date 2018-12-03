@@ -207,10 +207,12 @@ profile_heatmap <- function(profileMat,
 
 
     ## generate row annotation of clusters
-    htAnno <- rowAnnotation(df = clusterData["cluster"],
-                            col = list(cluster = clusterColor),
-                            width = unit(0.3, "cm"),
-                            show_legend = F
+    htAnno <- rowAnnotation(
+      df = clusterData["cluster"],
+      name = "clusterAn",
+      col = list(cluster = clusterColor),
+      width = unit(0.3, "cm"),
+      show_legend = F
     )
 
 
