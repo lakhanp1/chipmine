@@ -9,7 +9,8 @@ multi_profile_plots(exptInfo, genesToPlot, clusters = NULL,
   profileColors = NULL, matSource = "deeptools", targetType = "gene",
   matBins = c(200, 200, 100, 10), ylimFraction = NULL,
   plotExpression = FALSE, expressionData = NULL,
-  expressionColor = NULL, rasterize = TRUE, rasterQual = 5, ...)
+  expressionColor = NULL, keep = c(0, 1), rasterize = TRUE,
+  rasterQual = 5, ...)
 }
 \arguments{
 \item{exptInfo}{experiment info as data frame with information like sampleID, type, path etc}
@@ -50,6 +51,11 @@ and upper limits for ylimit of top annotation. Default: NULL.}
 status for each gene etc. Default: NULL}
 
 \item{expressionColor}{color object for polII expression heatmap}
+
+\item{keep}{Same as \code{EnrichedHeatmap::normalizeToMatrix}. First value is used as lower quantile
+and any value in profile matrix less than lower quantile is set to lower quantile. Second value is
+used as upper quantile and any value greater than upper quantile is set to upper quantile.
+Default: \code{c(0, 1)}}
 
 \item{rasterize}{Binary: whether to rasterize the profile heatmap or not. By default this is set as TRUE
 for multiple profile plots.}

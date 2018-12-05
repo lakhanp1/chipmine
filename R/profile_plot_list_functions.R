@@ -32,11 +32,15 @@
 #' @param plotExpression Binry: whether to plot polII expression heatmap or not. Default: FALSE
 #' @param expressionData an dataframe which has info: clustering, polII expression, TF binding
 #'  status for each gene etc. Default: NULL
+#' @param keep Same as \code{EnrichedHeatmap::normalizeToMatrix}. First value is used as lower quantile
+#' and any value in profile matrix less than lower quantile is set to lower quantile. Second value is
+#' used as upper quantile and any value greater than upper quantile is set to upper quantile.
+#' Default: \code{c(0, 1)}
 #' @param expressionColor color object for polII expression heatmap
-#' @param ... Other arguments for EnrichedHeatmap function
 #' @param rasterize Binary: whether to rasterize the profile heatmap or not. By default this is set as TRUE
 #' for multiple profile plots.
 #' @param rasterQual Raster quality. This is the \code{raster_quality} argument \code{Heatmap} function. in Default: 5
+#' @param ... Other arguments for EnrichedHeatmap function
 #'
 #' @return A list object with following elements:
 #' \itemize{
@@ -65,6 +69,7 @@ multi_profile_plots <- function(exptInfo,
                                 plotExpression = FALSE,
                                 expressionData = NULL,
                                 expressionColor = NULL,
+                                keep = c(0, 1),
                                 rasterize = TRUE,
                                 rasterQual = 5,
                                 ...){
@@ -83,6 +88,7 @@ multi_profile_plots <- function(exptInfo,
                                        matrixBins = matBins,
                                        targetType = targetType,
                                        ylimFraction = ylimFraction,
+                                       keep = keep,
                                        rasterPar = list(use = rasterize, qual = rasterQual),
                                        ...)
 
@@ -196,6 +202,10 @@ multi_profile_plots <- function(exptInfo,
 #' If the value is single number, it has to be floating point number to extract the quantile and use
 #' limit \code{[0, quantile(x)]}. If the value is numeric vector of length 2, the two numbers are used as lower
 #' and upper limits for ylimit of top annotation. Default: NULL.
+#' @param keep Same as \code{EnrichedHeatmap::normalizeToMatrix}. First value is used as lower quantile
+#' and any value in profile matrix less than lower quantile is set to lower quantile. Second value is
+#' used as upper quantile and any value greater than upper quantile is set to upper quantile.
+#' Default: \code{c(0, 1)}
 #' @param rasterPar rasterization parameters as list() with two elements: use, qual. Default:
 #' \code{list(use = TRUE, qual = 5)}. \code{rasterPar$use} is used for \code{use_raster} argument and
 #' \code{rasterPar$qual} is used for \code{raster_quality} argument of \code{Heatmap} function.
@@ -215,6 +225,7 @@ get_profile_plot_list <- function(exptInfo,
                                   matrixBins = c(200, 200, 100, 10),
                                   targetType = "gene",
                                   ylimFraction = NULL,
+                                  keep = c(0, 1),
                                   rasterPar = list(use = TRUE, qual = 5),
                                   ...){
   allPlots <- list()
@@ -233,6 +244,7 @@ get_profile_plot_list <- function(exptInfo,
                                     target = matrixBins[2],
                                     down = matrixBins[3],
                                     binSize = matrixBins[4],
+                                    keep = keep,
                                     targetType = targetType)
 
 

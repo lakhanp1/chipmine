@@ -152,6 +152,10 @@ bigwig_profile_matrix <- function(bwFile, bedFile, signalName, genes,
 #' @param targetType One of "gene", "TSS", "TES", "point". If target is "gene", target is used to decide
 #' the number of bins in gene body. Otherwise, for TSS/TES/point, a signle point matrix is expected where
 #' the region is extracted around single point. Default: gene
+#' @param keep Same as \code{EnrichedHeatmap::normalizeToMatrix}. First value is used as lower quantile
+#' and any value in profile matrix less than lower quantile is set to lower quantile. Second value is
+#' used as upper quantile and any value greater than upper quantile is set to upper quantile.
+#' Default: \code{c(0, 1)}
 #' @param returnDf If TRUE, returns the dataframe instead of profile matrix. Default: FALSE
 #'
 #' @return profile matrix of class \code{normalizedMatrix}
@@ -161,6 +165,7 @@ bigwig_profile_matrix <- function(bwFile, bedFile, signalName, genes,
 import_profile_from_file = function(file, source = "deeptools", signalName, selectGenes,
                                     up = 200, target = 200, down = 100, binSize = 10,
                                     targetType = "gene",
+                                    keep = c(0, 1),
                                     returnDf = FALSE){
 
   if(! tolower(targetType) %in% c("gene", "tss", "tes", "point")){
@@ -215,15 +220,16 @@ import_profile_from_file = function(file, source = "deeptools", signalName, sele
 
   extraCols[extraCols != "geneID"]
 
-  df <- data.table::fread(cmd = z1, sep = "\t", header = F, skip = freadSkip, na.strings = "nan",
-                          col.names = header, data.table = F) %>%
-                          {
-                            if(length(extraCols[extraCols != "geneID"]) == 0){
-                              .
-                            } else{
-                              dplyr::select(., -c(!!! extraCols[extraCols != "geneID"]))
-                            }
-                          }
+  df <- data.table::fread(
+    cmd = z1, sep = "\t", header = F, skip = freadSkip, na.strings = "nan",
+    col.names = header, data.table = F) %>%
+    {
+      if(length(extraCols[extraCols != "geneID"]) == 0){
+        .
+      } else{
+        dplyr::select(., -c(!!! extraCols[extraCols != "geneID"]))
+      }
+    }
 
 
   profileDf <- dplyr::left_join(x = geneDf, y = df, by = c("gene" = "geneID")) %>%
@@ -251,6 +257,18 @@ import_profile_from_file = function(file, source = "deeptools", signalName, sele
   ## compare the imputed values with non-imputed values
   # rowN = 13
   # plotNA.imputations(as.numeric(profileDf[naRows[rowN], ]), as.vector(profileMat[naRows[rowN], ]))
+
+  ## adjust the extreme values
+  ## lower quantile
+  if(keep[1] > 0){
+    profileMat[which(profileMat < quantile(profileMat, keep[1]))] <- quantile(profileMat, keep[1])
+  }
+
+  ## upper quantile
+  if(keep[2] < 1){
+    profileMat[which(profileMat > quantile(profileMat, keep[2]))] <- quantile(profileMat, keep[2])
+  }
+
 
   ## set attributes for the profileMat to make it of class "normalizedMatrix"
   attr(profileMat, "target_is_single_point") <- FALSE
@@ -310,7 +328,7 @@ profile_matrix_list <- function(exptInfo, geneList, ...){
   for(i in 1:nrow(exptInfo)){
     sampleName <- exptInfo$sampleId[i]
 
-    cat("Extracting matrix for sample:", sampleName, "...\n")
+    # cat("Extracting matrix for sample:", sampleName, "...\n")
 
     matList[[sampleName]] <- import_profile_from_file(file = exptInfo$matFile[i],
                                                       signalName = sampleName,

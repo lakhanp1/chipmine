@@ -7,8 +7,8 @@
 get_profile_plot_list(exptInfo, cluster = NULL, clusterColor = NULL,
   clustOrd = NULL, geneList, colorList = NULL,
   matrixSource = "deeptools", matrixBins = c(200, 200, 100, 10),
-  targetType = "gene", ylimFraction = NULL, rasterPar = list(use =
-  TRUE, qual = 5), ...)
+  targetType = "gene", ylimFraction = NULL, keep = c(0, 1),
+  rasterPar = list(use = TRUE, qual = 5), ...)
 }
 \arguments{
 \item{exptInfo}{experiment info as data frame with information like sampleID, type,
@@ -42,6 +42,11 @@ the region is extracted around single point. Default: gene}
 If the value is single number, it has to be floating point number to extract the quantile and use
 limit \code{[0, quantile(x)]}. If the value is numeric vector of length 2, the two numbers are used as lower
 and upper limits for ylimit of top annotation. Default: NULL.}
+
+\item{keep}{Same as \code{EnrichedHeatmap::normalizeToMatrix}. First value is used as lower quantile
+and any value in profile matrix less than lower quantile is set to lower quantile. Second value is
+used as upper quantile and any value greater than upper quantile is set to upper quantile.
+Default: \code{c(0, 1)}}
 
 \item{rasterPar}{rasterization parameters as list() with two elements: use, qual. Default:
 \code{list(use = TRUE, qual = 5)}. \code{rasterPar$use} is used for \code{use_raster} argument and
