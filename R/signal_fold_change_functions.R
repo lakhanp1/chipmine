@@ -6,18 +6,26 @@
 #' @param df data frame
 #' @param nmt column name for sample in numerator
 #' @param dmt column name for sample in denominator
-#' @param newCol new column name for log2(nmt/dmt) values. Default: lfc
+#' @param newCol new column name for \code{log2(nmt/dmt)} values. Default: lfc
 #' @param isExpressedCols A named vector with column names for isExpressed data for
 #' both polII samples
+#' @param lfcLimit All the LFC values in range \code{[-lfcLimit, lfcLimit]} are set
+#' to 0. Default: 0 i.e. no limit
 #'
 #' @return dataframe with additional fold change column
 #' @export
 #'
 #' @examples NA
-get_fold_change <- function(df, nmt, dmt, newCol = "lfc", isExpressedCols = NULL){
+get_fold_change <- function(df, nmt, dmt, newCol = "lfc", isExpressedCols = NULL, lfcLimit = 0){
 
-  df <- dplyr::mutate(df,
-                      !! newCol := log2(!!as.name(nmt) + 1) - log2(!!as.name(dmt) + 1))
+  df <- dplyr::mutate(
+    df,
+    !! newCol := log2(!!as.name(nmt) + 1) - log2(!!as.name(dmt) + 1))
+
+  ## set LFC values within range (-lfcLimit < LFC < +lfcLimit) to zero
+  df[[newCol]][
+    dplyr::between(x = df[[newCol]], left = -1 * lfcLimit, right = lfcLimit)
+    ] <- 0
 
   ## LFC correction: set lfc = 0 if both the signal values are not in top 10%
   if(!is.null(isExpressedCols)){

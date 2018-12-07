@@ -16,7 +16,8 @@ get_narrowpeak_summit_seq(npFile, id, genome, length = 200,
 
 \item{length}{Length of the region. Default: 200}
 
-\item{columnNameWithIdPrefix}{Whether to modify the column names to include sampleId. If TRUE, the new column names are of format: sampleId(colName)}
+\item{columnNameWithIdPrefix}{Whether to modify the column names to include sampleId.
+If TRUE, the new column names are of format: sampleId(colName)}
 }
 \value{
 A dataframe with three columns: name, summitRegion, summitSeq

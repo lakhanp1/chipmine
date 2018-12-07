@@ -7,7 +7,8 @@
 #' @param id sample ID
 #' @param genome BSgenome object
 #' @param length Length of the region. Default: 200
-#' @param columnNameWithIdPrefix Whether to modify the column names to include sampleId. If TRUE, the new column names are of format: sampleId(colName)
+#' @param columnNameWithIdPrefix Whether to modify the column names to include sampleId.
+#' If TRUE, the new column names are of format: sampleId(colName)
 #'
 #' @return A dataframe with three columns: name, summitRegion, summitSeq
 #' @export

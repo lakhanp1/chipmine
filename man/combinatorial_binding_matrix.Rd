@@ -4,12 +4,18 @@
 \alias{combinatorial_binding_matrix}
 \title{Generate the combinatorial peak association matrix with merged master peak list}
 \usage{
-combinatorial_binding_matrix(sampleInfo, genome, summitSeqLen = 200)
+combinatorial_binding_matrix(sampleInfo, peakFormat = "narrowPeak",
+  peakCols = c("peakId", "peakEnrichment", "peakPval"), genome = NULL,
+  summitSeqLen = 200)
 }
 \arguments{
 \item{sampleInfo}{Sample information dataframe}
 
-\item{genome}{BSgenome object for extracting summit sequence}
+\item{peakFormat}{Format of the peak file. One of \code{"narrowPeak", "broadPeak", "bed"}}
+
+\item{peakCols}{Column to extract from peak file. Default: \code{c("peakId", "peakEnrichment", "peakPval")}}
+
+\item{genome}{Optionally BSgenome object for extracting summit sequence}
 
 \item{summitSeqLen}{Length of sequence to extract at summit position. Default: 200}
 }
