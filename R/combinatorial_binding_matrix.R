@@ -7,31 +7,31 @@
 #' Additionally, it also extracts the sequence around summit position
 #'
 #' @param sampleInfo Sample information dataframe
-#' @param genome BSgenome object for extracting summit sequence
+#' @param peakFormat Format of the peak file. One of \code{"narrowPeak", "broadPeak", "bed"}
+#' @param peakCols Column to extract from peak file. Default: \code{c("peakId", "peakEnrichment", "peakPval")}
+#' @param genome Optionally BSgenome object for extracting summit sequence
 #' @param summitSeqLen Length of sequence to extract at summit position. Default: 200
 #'
 #' @return A dataframe with a masterlist of peak regions generated after merging all peak regions from all samples. For each sample, its association with regions in the masterlist is reported.
 #' @export
 #'
 #' @examples NA
-combinatorial_binding_matrix = function(sampleInfo, genome, summitSeqLen = 200){
+combinatorial_binding_matrix <- function(sampleInfo, peakFormat = "narrowPeak",
+                                         peakCols = c("peakId", "peakEnrichment", "peakPval"),
+                                         genome = NULL, summitSeqLen = 200){
 
-  ## read the narrowpeak files in the GRanges object
-  narrowpeakCols = c(signalValue = "numeric", pValue = "numeric",
-                     qValue = "numeric", peak = "integer")
+  peakList <- GenomicRanges::GRangesList(lapply(X = sampleInfo$narrowpeakFile,
+                                                FUN = rtracklayer::import, format = peakFormat))
 
-  peakList = GenomicRanges::GRangesList(lapply(X = sampleInfo$narrowpeakFile,
-                                               FUN = rtracklayer::import, format = "bed", extraCols = narrowpeakCols))
-
-  names(peakList) = sampleInfo$sampleId
+  names(peakList) <- sampleInfo$sampleId
 
 
   ## create a GRangesList masterlist of peak regions
-  peakRegions = GenomicRanges::reduce(unlist(peakList, recursive = TRUE, use.names = T))
+  peakRegions <- GenomicRanges::reduce(unlist(peakList, recursive = TRUE, use.names = T))
   mcols(peakRegions) = data.frame(name = paste("peak_region", 1:length(peakRegions), sep = "_"), stringsAsFactors = F)
 
   ## master list as dataframe
-  masterList = data.frame(
+  masterList <- data.frame(
     chr = seqnames(peakRegions),
     start = start(peakRegions),
     end = end(peakRegions),
@@ -39,46 +39,46 @@ combinatorial_binding_matrix = function(sampleInfo, genome, summitSeqLen = 200){
     stringsAsFactors = F
   )
 
-  # np = names(peakList)[1]
 
   ## find the overlap of individual peaklist with the masterlist
-  # for (np in names(peakList)) {
   for (i in 1:nrow(sampleInfo)) {
 
-    np = sampleInfo$sampleId[i]
+    sampleName <- sampleInfo$sampleId[i]
+    peakIdCol <- paste("peakId.", sampleName, sep = "")
+    overlapPeakCol <- paste("overlap.", sampleName, sep = "")
 
-    cat("Reading peak information for sample: ", np, "\n")
+    cat("Reading peak information for sample: ", sampleName, "\n")
 
     ## findOverlaps
-    hits = as.data.frame(GenomicRanges::findOverlaps(query = peakRegions, subject = peakList[[np]]))
-    hits$peakRegionName = peakRegions$name[hits$queryHits]
-    hits[[np]] = peakList[[np]]$name[hits$subjectHits]
+    hits <- as.data.frame(GenomicRanges::findOverlaps(query = peakRegions, subject = peakList[[sampleName]]))
+    hits$peakRegionName <- peakRegions$name[hits$queryHits]
+    hits[[peakIdCol]] <- peakList[[sampleName]]$name[hits$subjectHits]
 
-    hits$queryHits = NULL
-    hits$subjectHits = NULL
+    hits$queryHits <- NULL
+    hits$subjectHits <- NULL
 
+    ## get the additional columns from peak file
+    dt <- read_peak_annotation_file(title = sampleName,
+                                    file = sampleInfo$narrowpeakAnno[i],
+                                    cols = peakCols)
 
-    peakIdCol = paste("peakId.", np, sep = "")
-    overlapPeakCol = paste("overlap.", np, sep = "")
+    dt[[overlapPeakCol]] <- TRUE
 
-    dt = read_peak_annotation_file(title = np,
-                                   file = sampleInfo$narrowpeakAnno[i],
-                                   cols = c("peakId", "peakEnrichment", "peakPval", "peakSummit"))
+    hits <- dplyr::left_join(x = hits, y = dt, by = setNames(peakIdCol, peakIdCol)) %>%
+      dplyr::select("peakRegionName", !!peakIdCol, !! overlapPeakCol, dplyr::everything())
 
-    dt[[overlapPeakCol]] = TRUE
+    if(! is.null(genome)){
+      ## get the sequence around summit
+      summitSeq <- get_narrowpeak_summit_seq(npFile = sampleInfo$narrowpeakFile[i],
+                                             id = sampleName,
+                                             genome = genome,
+                                             length = summitSeqLen)
 
-    ## get the sequence around summit
-    summitSeq = get_narrowpeak_summit_seq(npFile = sampleInfo$narrowpeakFile[i],
-                                          id = np,
-                                          genome = genome,
-                                          length = summitSeqLen)
+      hits <- dplyr::left_join(x = hits, y = summitSeq, by = setNames("name", sampleName))
+    }
 
-
-    hits = dplyr::left_join(x = hits, y = dt, by = setNames(peakIdCol, np)) %>%
-      dplyr::left_join(y = summitSeq, by = setNames("name", np))
-
-
-    masterList = dplyr::left_join(x = masterList, y = hits, by = c("name" = "peakRegionName"))
+    ## join with master data
+    masterList <- dplyr::left_join(x = masterList, y = hits, by = c("name" = "peakRegionName"))
 
     cat("Done...\n")
 
