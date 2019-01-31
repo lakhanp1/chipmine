@@ -47,7 +47,7 @@ combinatorial_binding_matrix <- function(sampleInfo, peakFormat = "narrowPeak",
     peakIdCol <- paste("peakId.", sampleName, sep = "")
     overlapPeakCol <- paste("overlap.", sampleName, sep = "")
 
-    cat("Reading peak information for sample: ", sampleName, "\n")
+    # cat("Reading peak information for sample: ", sampleName, "\n")
 
     ## findOverlaps
     hits <- as.data.frame(GenomicRanges::findOverlaps(query = peakRegions, subject = peakList[[sampleName]]))
@@ -57,7 +57,7 @@ combinatorial_binding_matrix <- function(sampleInfo, peakFormat = "narrowPeak",
     hits$queryHits <- NULL
     hits$subjectHits <- NULL
 
-    ## get the additional columns from peak file
+    ## get the additional columns from peak annotaion file: *.narrowPeak.nearestCDS.tab
     dt <- read_peak_annotation_file(title = sampleName,
                                     file = sampleInfo$narrowpeakAnno[i],
                                     cols = peakCols)
@@ -78,9 +78,10 @@ combinatorial_binding_matrix <- function(sampleInfo, peakFormat = "narrowPeak",
     }
 
     ## join with master data
-    masterList <- dplyr::left_join(x = masterList, y = hits, by = c("name" = "peakRegionName"))
+    masterList <- dplyr::left_join(x = masterList, y = hits, by = c("name" = "peakRegionName")) %>%
+      tidyr::replace_na(replace = purrr::set_names(list(FALSE), nm = overlapPeakCol))
 
-    cat("Done...\n")
+    # cat("Done...\n")
 
   }
 

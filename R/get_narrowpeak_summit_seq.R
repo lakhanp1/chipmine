@@ -19,8 +19,8 @@
 get_narrowpeak_summit_seq = function(npFile, id, genome, length = 200, columnNameWithIdPrefix = TRUE){
 
   cat("Extracting DNA sequences for sample", id,"\n")
-  cat("\tRegion:", length, "bp around summits of file", npFile, "\n")
-  cat("\tGenome:", attributes(genome)$organism, "\n")
+  # cat("\tRegion:", length, "bp around summits of file", npFile, "\n")
+  # cat("\tGenome:", attributes(genome)$organism, "\n")
 
   seqAroundSummit = round(length / 2)
   narrowpeakCols = c(signalValue = "numeric", pValue = "numeric",
