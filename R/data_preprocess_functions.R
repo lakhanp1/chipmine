@@ -55,12 +55,28 @@ preProcess_polII_expression <- function(expMat, sampleId, expFraction, polIIExpF
 #' @param bwFile bigWig format coverage track file
 #' @param fcCutoff fold enrichment cutoff for the peak. Default: 1 i.e. no cutoff
 #' @param pvalCutoff log10_pvalue cutoff for the peak. Default: 1 i.e. no cutoff
+#' @param columns A vector of column names which should be returned. Allowed values are: \code{c(
+#' "hasPeak", "peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
+#' "peakSummit", "peakDist", "summitDist", "bidirectional", "featureCovFrac", "relativeSummitPos",
+#' "peakRegion", "peakCoverage")}. Default: all columns are returned
 #'
 #' @return A peak annotation as dataframe
 #' @export
 #'
 #' @examples NA
-import_peak_annotation <- function(sampleId, peakAnnoFile, peakFile, bwFile, fcCutoff = 1, pvalCutoff = 1){
+import_peak_annotation <- function(sampleId, peakAnnoFile, peakFile, bwFile,
+                                   fcCutoff = 1, pvalCutoff = 1,
+                                   columns = NULL){
+
+
+  # "hasPeak", "peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
+  # "peakSummit", "peakDist", "summitDist", "bidirectional", "featureCovFrac", "relativeSummitPos",
+  # "peakRegion", "peakCoverage"
+
+  renameCols <- c("peakId", "peakEnrichment", "peakPval", "peakQval", "peakSummit", "peakDist", "summitDist",
+                  "peakType", "bidirectional", "featureCovFrac", "relativeSummitPos", "peakRegion", "peakCoverage")
+
+  names(renameCols) <- paste(renameCols, sampleId, sep = ".")
 
   peakFormat <- dplyr::case_when(
     grepl(pattern = ".narrowPeak$", x = peakFile, perl = T) ~ "narrowPeak",
@@ -72,7 +88,8 @@ import_peak_annotation <- function(sampleId, peakAnnoFile, peakFile, bwFile, fcC
   peakAnt <- suppressMessages(readr::read_tsv(file = peakAnnoFile, col_names = T)) %>%
     dplyr::filter(!is.na(gName)) %>%
     dplyr::filter(peakEnrichment >= !!fcCutoff) %>%
-    dplyr::filter(peakPval >= !!pvalCutoff)
+    dplyr::filter(peakPval >= !!pvalCutoff) %>%
+    dplyr::mutate(peakRegion = paste(peakChr, ":", peakStart, "-", peakEnd, sep = ""))
 
 
   ## if there are no peaks called in the data, this is needed to avoid the errors in the left_join functions downstream
@@ -85,11 +102,19 @@ import_peak_annotation <- function(sampleId, peakAnnoFile, peakFile, bwFile, fcC
 
   } else{
     ## get peak region coverage
-    peakCov <- region_coverage(regions = peakFile, bwFile = bwFile, format = peakFormat)
-    peakCovDf <- peakCov[, c("name", "coverage")]
+    peakCov <- region_coverage(regions = peakFile, bwFile = bwFile, format = peakFormat, name = "peakCoverage")
+    peakCovDf <- peakCov[, c("name", "peakCoverage")]
 
     peakAnt <- dplyr::left_join(x = peakAnt, y = peakCovDf, by = c("peakId" = "name"))
+
   }
+
+  if(!is.null(columns)){
+    peakAnt <- dplyr::select(peakAnt, !!! columns)
+    renameCols <- renameCols[renameCols %in% columns]
+  }
+
+  peakAnt <- dplyr::rename(peakAnt, !!! renameCols)
 
   return(peakAnt)
 }
@@ -115,18 +140,18 @@ peak_targets_at_TSS <- function(sampleId, peakAnotation, bindingInGene = FALSE){
 
   ## new column names
   tfCols <- sapply(
-    X = c("hasPeak", "peakId", "pval", "peakType", "peakCoverage", "peakDist", "summitDist",
-          "peakSummit", "enrichment", "upstreamExpr", "peakExpr", "relativeDist", "hasTesPeak",
-          "tesPeakType", "tesPeakId", "tesSummitDist", "tesEnrichment", "tesPval"),
+    X = c("hasPeak", "peakPosition", "peakType", "peakEnrichment", "relativeSummitPos"),
     FUN = function(x){ paste(x, ".", sampleId, sep = "") },
     simplify = F, USE.NAMES = T
   )
+
 
   ## TSS peak type preference order:
   tssTargetTypes <- data.frame(
     tssPeakType = c("includeFeature", "overlapStart", "insideOverlapStart",
                     "insideOverlapStartOverlapEnd", "upstream", "inside", "pseudo_upstream"),
     preference = 1:7,
+    peakPosition = "TSS",
     stringsAsFactors = F)
 
   if(isTRUE(bindingInGene)){
@@ -135,35 +160,31 @@ peak_targets_at_TSS <- function(sampleId, peakAnotation, bindingInGene = FALSE){
                       "insideOverlapStartOverlapEnd", "inside", "insideOverlapEnd",
                       "overlapEnd", "upstream", "pseudo_upstream"),
       preference = c(1, 2, 3, 3, 3, 3, 4, 5, 6),
+      peakPosition = "TSS",
       stringsAsFactors = F)
   }
 
 
-  tsspeaks <- dplyr::left_join(x = peakAnotation, y = tssTargetTypes, by = c("type" = "tssPeakType")) %>%
+  tsspeaks <- dplyr::left_join(x = peakAnotation, y = tssTargetTypes,
+                               by = structure("tssPeakType", names = tfCols$peakType)) %>%
     filter(!is.na(preference))
 
   ## select the peaks which are in gene body and select the strongest peak
-  insidePeaks <- dplyr::filter(tsspeaks, type == "inside") %>%
+  insidePeaks <- dplyr::filter_at(tsspeaks, .vars = vars(unname(tfCols$peakType)),
+                                  .vars_predicate = all_vars(. == "inside")) %>%
     dplyr::group_by(gName) %>%
-    dplyr::arrange(desc(peakEnrichment), relativeSummitPos, .by_group = TRUE) %>%
+    dplyr::arrange(desc(!! as.name(tfCols$peakEnrichment)), !! as.name(tfCols$relativeSummitPos), .by_group = TRUE) %>%
     dplyr::slice(1L) %>%
     dplyr::ungroup()
 
-  nonInsidePeaks <- dplyr::filter(tsspeaks, type != "inside")
+  ## other peaks which are not inside
+  nonInsidePeaks <- dplyr::filter_at(tsspeaks, .vars = vars(tfCols$peakType),
+                                     .vars_predicate = all_vars(. != "inside"))
 
-  # filter(!grepl(pattern = "pseudo|overlapEnd", x = type, perl = T))
-
-  ## select best peak for each gene based on peak type preference and distance
+  ## prepare TSS peakset and rename columns
   tssPeakset <- dplyr::bind_rows(insidePeaks, nonInsidePeaks) %>%
     dplyr::mutate(!! tfCols$hasPeak := TRUE) %>%
-    dplyr::rename(!! tfCols$peakSummit := peakSummit,
-                  !! tfCols$peakId := peakId,
-                  !! tfCols$peakDist := peakDist,
-                  !! tfCols$summitDist := summitDist,
-                  !! tfCols$peakType := type,
-                  !! tfCols$enrichment := peakEnrichment,
-                  !! tfCols$pval := peakPval,
-                  !! tfCols$peakCoverage := coverage)
+    dplyr::rename(!! tfCols$peakPosition := peakPosition)
 
   return(tssPeakset)
 }
@@ -187,9 +208,7 @@ peak_targets_at_TSS <- function(sampleId, peakAnotation, bindingInGene = FALSE){
 #' @examples NA
 peak_targets_at_TES <- function(sampleId, peakAnotation){
 
-  tfCols <- sapply(c("hasPeak", "peakId", "pval", "peakType", "peakCoverage", "peakDist", "summitDist",
-                     "peakSummit", "enrichment", "upstreamExpr", "peakExpr", "relativeDist", "hasTesPeak",
-                     "tesPeakType", "tesPeakId", "tesSummitDist", "tesEnrichment", "tesPval"),
+  tfCols <- sapply(c("hasPeak", "peakPosition", "peakType"),
                    FUN = function(x){ paste(x, ".", sampleId, sep = "") },
                    simplify = F, USE.NAMES = T)
 
@@ -197,21 +216,18 @@ peak_targets_at_TES <- function(sampleId, peakAnotation){
   tesTargetTypes <- data.frame(
     tesPeakType = c("overlapEnd", "pseudo_overlapEnd", "insideOverlapEnd",
                     "pseudo_insideOverlapEnd", "pseudo_inside"),
-    preference = 1:5, stringsAsFactors = F)
+    preference = 1:5,
+    peakPosition = "TES",
+    stringsAsFactors = F)
 
 
-  tesPeaks <- dplyr::left_join(x = peakAnotation, y = tesTargetTypes, by = c("type" = "tesPeakType")) %>%
+  tesPeaks <- dplyr::left_join(x = peakAnotation, y = tesTargetTypes,
+                               by = structure("tesPeakType", names = tfCols$peakType)) %>%
     dplyr::filter(!is.na(preference))
 
   tesPeakset <- tesPeaks %>%
-    dplyr::mutate(!! tfCols$hasTesPeak := TRUE) %>%
-    dplyr::select(gName, !!tfCols$hasTesPeak, peakId, summitDist, type, peakEnrichment, peakPval, preference) %>%
-    dplyr::rename(!! tfCols$tesPeakId := peakId,
-                  !! tfCols$tesSummitDist := summitDist,
-                  !! tfCols$tesPeakType := type,
-                  !! tfCols$tesEnrichment := peakEnrichment,
-                  !! tfCols$tesPval := peakPval)
-
+    dplyr::mutate(!! tfCols$hasPeak := TRUE) %>%
+    dplyr::rename(!! tfCols$peakPosition := peakPosition)
 
   return(tesPeakset)
 }
@@ -275,9 +291,7 @@ preProcess_macs2_results <- function(sampleId, peakAnnotation, cdsFile, peakFile
 
 
 
-  tfCols <- sapply(c("hasPeak", "peakId", "pval", "peakType", "peakCoverage", "peakDist", "summitDist",
-                     "peakSummit", "enrichment", "upstreamExpr", "peakExpr", "relativeDist", "hasTesPeak",
-                     "tesPeakType", "tesPeakId", "tesSummitDist", "tesEnrichment", "tesPval"),
+  tfCols <- sapply(c("peakDist", "featureCovFrac", "hasPeak", "peakCoverage", "peakPosition", "peakId", "peakType"),
                    FUN = function(x){ paste(x, ".", sampleId, sep = "") },
                    simplify = F, USE.NAMES = T)
 
@@ -285,7 +299,8 @@ preProcess_macs2_results <- function(sampleId, peakAnnotation, cdsFile, peakFile
   filteredTssPeaks <- peak_targets_at_TSS(sampleId = sampleId, peakAnotation = peakAnnDf,
                                           bindingInGene = bindingInGene) %>%
     dplyr::group_by(gName) %>%
-    dplyr::arrange(preference, abs(!! as.name(tfCols$peakDist)), dplyr::desc(featureCovFrac), .by_group = TRUE) %>%
+    dplyr::arrange(preference, abs(!! as.name(tfCols$peakDist)), dplyr::desc(!! as.name(tfCols$featureCovFrac)),
+                   .by_group = TRUE) %>%
     dplyr::slice(1L) %>%
     dplyr::ungroup() %>%
     dplyr::select(-preference)
@@ -307,22 +322,21 @@ preProcess_macs2_results <- function(sampleId, peakAnnotation, cdsFile, peakFile
     filteredTesPeaks$gName <- as.character(filteredTesPeaks$gName)
   }
 
+  filteredPeaks <- dplyr::bind_rows(filteredTssPeaks, filteredTesPeaks)
+
   ## associate the peak with genes
   geneSet <- data.table::fread(file = cdsFile, header = F, select = c(1,2,3,4,6),
                                col.names = c("chr", "start", "end", "gene", "strand"))
 
-  finalDf <- dplyr::left_join(x = geneSet, y = filteredTssPeaks, by = c("gene" = "gName"))  %>%
+  finalDf <- dplyr::left_join(x = geneSet, y = filteredPeaks, by = c("gene" = "gName"))  %>%
     dplyr::left_join(y = promoterCovDf, by = c("gene" = "name")) %>%
     dplyr::mutate(
       !! tfCols$hasPeak := ifelse(is.na(!! as.name(tfCols$hasPeak)), FALSE, !!as.name(tfCols$hasPeak) ),
       !! tfCols$peakCoverage := ifelse(
         is.na(!! as.name(tfCols$peakCoverage)), promoterCov, !!as.name(tfCols$peakCoverage) )
     ) %>%
-    dplyr::select(1:5, !! tfCols$hasPeak, everything(), -promoterCov) %>%
-    dplyr::left_join(y = filteredTesPeaks, by = c("gene" = "gName")) %>%
-    dplyr::mutate(!! tfCols$hasTesPeak := ifelse(
-      is.na(!! as.name(tfCols$hasTesPeak)), FALSE, !!as.name(tfCols$hasTesPeak) )
-    )
+    dplyr::select(1:5, !! tfCols$hasPeak, !! tfCols$peakPosition, tfCols$peakType, tfCols$peakId,
+                  everything(), -promoterCov)
 
   ## optionally save the data
   if(!is.null(outFile)){

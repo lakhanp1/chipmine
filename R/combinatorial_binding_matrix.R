@@ -57,10 +57,12 @@ combinatorial_binding_matrix <- function(sampleInfo, peakFormat = "narrowPeak",
     hits$queryHits <- NULL
     hits$subjectHits <- NULL
 
-    ## get the additional columns from peak annotaion file: *.narrowPeak.nearestCDS.tab
-    dt <- read_peak_annotation_file(title = sampleName,
-                                    file = sampleInfo$narrowpeakAnno[i],
-                                    cols = peakCols)
+    dt <- import_peak_annotation(sampleId = sampleName,
+                                 peakAnnoFile = sampleInfo$narrowpeakAnno[i],
+                                 peakFile = sampleInfo$narrowpeakFile[i],
+                                 bwFile = sampleInfo$bwFile[i],
+                                 columns = peakCols)
+
 
     dt[[overlapPeakCol]] <- TRUE
 

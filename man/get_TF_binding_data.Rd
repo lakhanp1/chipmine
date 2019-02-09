@@ -16,9 +16,8 @@ get_TF_binding_data(genesDf = NULL, exptInfo, allColumns = FALSE)
 \value{
 Dataframe with all columns when allColumns is TRUE.
 If allColumns = FALSE, "hasPeak.sampleId",  "peakId.sampleId",  "peakDist.sampleId",
-"summitDist.sampleId",  "peakType.sampleId",   "enrichment.sampleId",  "pval.sampleId",
-"tesPeakType.sampleId",  "tesEnrichment.sampleId",  "tesPval.sampleId"  columns are
-returned from TF peak annotation file
+"summitDist.sampleId",  "peakType.sampleId",   "enrichment.sampleId",  "pval.sampleId"
+ columns are returned from TF peak annotation file
 }
 \description{
 This function extract the columns from SAMPLE_ID_peaks.annotated.tab file for

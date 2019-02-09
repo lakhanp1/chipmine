@@ -5,7 +5,7 @@
 \title{Import peak annotation data}
 \usage{
 import_peak_annotation(sampleId, peakAnnoFile, peakFile, bwFile,
-  fcCutoff = 1, pvalCutoff = 1)
+  fcCutoff = 1, pvalCutoff = 1, columns = NULL)
 }
 \arguments{
 \item{sampleId}{sample ID}
@@ -20,6 +20,11 @@ bedtools closest | perl bedtoolsClosestPeakAnnotate.pl}}
 \item{fcCutoff}{fold enrichment cutoff for the peak. Default: 1 i.e. no cutoff}
 
 \item{pvalCutoff}{log10_pvalue cutoff for the peak. Default: 1 i.e. no cutoff}
+
+\item{columns}{A vector of column names which should be returned. Allowed values are: \code{c(
+"hasPeak", "peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
+"peakSummit", "peakDist", "summitDist", "bidirectional", "featureCovFrac", "relativeSummitPos",
+"peakRegion", "peakCoverage")}. Default: all columns are returned}
 }
 \value{
 A peak annotation as dataframe

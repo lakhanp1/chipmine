@@ -13,9 +13,8 @@
 #'
 #' @return Dataframe with all columns when allColumns is TRUE.
 #' If allColumns = FALSE, "hasPeak.sampleId",  "peakId.sampleId",  "peakDist.sampleId",
-#' "summitDist.sampleId",  "peakType.sampleId",   "enrichment.sampleId",  "pval.sampleId",
-#' "tesPeakType.sampleId",  "tesEnrichment.sampleId",  "tesPval.sampleId"  columns are
-#' returned from TF peak annotation file
+#' "summitDist.sampleId",  "peakType.sampleId",   "enrichment.sampleId",  "pval.sampleId"
+#'  columns are returned from TF peak annotation file
 #' @export
 #'
 #' @examples NA
@@ -33,7 +32,13 @@ get_TF_binding_data <- function(genesDf = NULL, exptInfo, allColumns = FALSE){
         next()
       }
 
-      colNames <- paste(c("hasPeak.", "peakId.", "peakDist.", "summitDist.", "peakType.", "enrichment.", "peakCoverage.", "pval.", "tesPeakType.", "tesEnrichment.", "tesPval."), exptInfo$sampleId[i], sep = "")
+      # "hasPeak", "peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
+      # "peakSummit", "peakDist", "summitDist", "bidirectional", "featureCovFrac", "relativeSummitPos",
+      # "peakRegion", "peakCoverage"
+
+      colNames <- paste(c("hasPeak", "peakPosition", "peakType", "peakId", "peakDist", "summitDist",
+                          "peakEnrichment", "peakCoverage", "peakPval"), exptInfo$sampleId[i], sep = ".")
+
 
       df <- data.table::fread(input = exptInfo$tfPeakFile[i], header = T, stringsAsFactors = F,
                              drop = c("chr", "start", "end", "strand"), sep = "\t", data.table = F)
