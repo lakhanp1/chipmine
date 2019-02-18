@@ -58,9 +58,7 @@ UTR_annotate <- function(queryGr, subjectGrl, utrType, txdb){
 }
 
 
-
 ##################################################################################
-
 
 
 #' Map peaks to given GRanges regions
@@ -161,11 +159,15 @@ set_target_df_to_pseudo <- function(target){
 }
 
 
-
 ##################################################################################
 
 
 #' Annotate upstream peaks on transcripts
+#'
+#' Known issue: upstream targets will not be found for a peak which is inside
+#' the CDS of a gene. It gets filtered when number of CDS overlapping in the
+#' peak-target gap region are counted. By default current overlapping CDS is
+#'  counted and target is filtered.
 #'
 #' @param peaksGr GRanges object for peak data
 #' @param featuresGr A transcript GRanges object
@@ -175,7 +177,7 @@ set_target_df_to_pseudo <- function(target){
 #' @export
 #'
 #' @examples NA
-upstream_annotate <- function(peaksGr, featuresGr, ...){
+upstream_annotate <- function(peaksGr, featuresGr, txdb, ...){
   ## using transcripts as query because we need to handle bidirectional peaks
   ## if peaks is used as query, only one downstream gene is reported for each peak
   ## so it will be difficult to extract bidirectional peaks
@@ -184,7 +186,7 @@ upstream_annotate <- function(peaksGr, featuresGr, ...){
   upstreamHits <- GenomicRanges::follow(x = featuresGr, subject = peaksGr, select = "all")
 
   ## find the number of genes between peak and its target.
-  ## only those targets are true where there is no gene inbetween
+  ## only those targets are true where there is no CDS inbetween
   ## build a GRanges object of the gap region between peak and target gene
   peakTargetGapsGr <- GenomicRanges::pgap(x = featuresGr[upstreamHits@from],
                                           y = peaksGr[upstreamHits@to])
@@ -192,9 +194,22 @@ upstream_annotate <- function(peaksGr, featuresGr, ...){
   names(peakTargetGapsGr) <- mcols(featuresGr[upstreamHits@from])$tx_id
   peakTargetGapsGr <- unstrand(peakTargetGapsGr)
 
+  ## build a subject GRanges for tx - (5UTR + 3UTR)
+  ## Such custom regions are used because genes have 3' UTR. A peak in UTR region of
+  ## a gene can be upstream of another gene
+  fiveUtrGr <- unlist(range(GenomicFeatures::fiveUTRsByTranscript(txdb)))
+  threeUtrGr <- unlist(range(GenomicFeatures::threeUTRsByTranscript(txdb)))
+  txMinusFiveUtr <- GenomicRanges::setdiff(x = GenomicFeatures::transcripts(txdb),
+                                           y = fiveUtrGr,
+                                           ignore.strand= TRUE)
+
+  txMinusUtrs <- GenomicRanges::setdiff(x = txMinusFiveUtr,
+                                        y = threeUtrGr,
+                                        ignore.strand= TRUE)
+
   ## count overlapping genes in gap region
   genesBetween <- GenomicRanges::countOverlaps(query = peakTargetGapsGr,
-                                               subject = GenomicFeatures::genes(txdb),
+                                               subject = txMinusUtrs,
                                                ignore.strand = TRUE)
 
   genesBetweenDf <- data.frame(tx_id = as.numeric(names(genesBetween)),
@@ -245,8 +260,8 @@ upstream_annotate <- function(peaksGr, featuresGr, ...){
 }
 
 
-
 ##################################################################################
+
 
 
 #' True target for bidirectional peak
@@ -324,8 +339,5 @@ nearest_upstream_bidirectional <- function(bdirTargets, skewFraction = 0.2, minT
 
 
 ##################################################################################
-
-
-
 
 
