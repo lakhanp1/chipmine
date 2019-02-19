@@ -61,7 +61,8 @@ combinatorial_binding_matrix <- function(sampleInfo, peakFormat = "narrowPeak",
                                  peakAnnoFile = sampleInfo$narrowpeakAnno[i],
                                  peakFile = sampleInfo$narrowpeakFile[i],
                                  bwFile = sampleInfo$bwFile[i],
-                                 columns = peakCols)
+                                 columns = peakCols) %>%
+      dplyr::distinct()
 
 
     dt[[overlapPeakCol]] <- TRUE

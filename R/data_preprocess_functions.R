@@ -86,7 +86,6 @@ import_peak_annotation <- function(sampleId, peakAnnoFile, peakFile, bwFile,
 
   ## read peak annotation output
   peakAnt <- suppressMessages(readr::read_tsv(file = peakAnnoFile, col_names = T)) %>%
-    dplyr::filter(!is.na(gName)) %>%
     dplyr::filter(peakEnrichment >= !!fcCutoff) %>%
     dplyr::filter(peakPval >= !!pvalCutoff) %>%
     dplyr::mutate(peakRegion = paste(peakChr, ":", peakStart, "-", peakEnd, sep = ""))
@@ -149,7 +148,7 @@ peak_targets_at_TSS <- function(sampleId, peakAnotation, bindingInGene = FALSE){
   ## TSS peak type preference order:
   tssTargetTypes <- data.frame(
     tssPeakType = c("includeFeature", "overlapStart", "insideOverlapStart",
-                    "insideOverlapStartOverlapEnd", "upstream", "inside", "pseudo_upstream"),
+                    "insideOverlapStartOverlapEnd", "inside", "upstream", "pseudo_upstream"),
     preference = 1:7,
     peakPosition = "TSS",
     stringsAsFactors = F)
@@ -286,7 +285,8 @@ preProcess_macs2_results <- function(sampleId, peakAnnotation, cdsFile, peakFile
                                         peakAnnoFile = peakAnnotation,
                                         peakFile = peakFile,
                                         bwFile = bwFile,
-                                        fcCutoff = fcCutoff, pvalCutoff = pvalCutoff)
+                                        fcCutoff = fcCutoff, pvalCutoff = pvalCutoff) %>%
+      dplyr::filter(!is.na(gName))
   }
 
 

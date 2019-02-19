@@ -53,7 +53,7 @@ best_replicate_peakset <- function(sampleInfo, cdsFile, ...){
     ...) %>%
     dplyr::select(gene, starts_with("hasPeak"), starts_with("peakId"), starts_with("peakPosition"),
                   starts_with("peakType"), starts_with("peakDist"), starts_with("peakPval"),
-                  starts_with("peakEnrichment"), starts_with("relativeSummitPos"))
+                  starts_with("peakEnrichment"), starts_with("relativeSummitPos"), starts_with("bidirectional"))
 
   # "hasPeak", "peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
   # "peakSummit", "peakDist", "summitDist", "bidirectional", "featureCovFrac", "relativeSummitPos",
