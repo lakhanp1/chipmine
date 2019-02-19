@@ -185,31 +185,30 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb, ...){
   ## so two transcripts can mark one single peak
   upstreamHits <- GenomicRanges::follow(x = featuresGr, subject = peaksGr, select = "all")
 
+  ## for the peaks which overlap any feature, prepare a new peak region which is
+  ## same as the feature. This is because some peaks are withing gene body. When
+  ## countOverlaps() is run for such peak, by default the gene within which peak
+  ## is present is also counted. So to avoid this, whenever a peak is withing gene
+  ## use the gene itself instead of peak. Use a temp GRanges to hold this data.
+  tempPeaksGr <- peaksGr
+  peakFeatureOvlp <- GenomicRanges::findOverlaps(query = tempPeaksGr, subject = featuresGr, type = "within")
+  start(tempPeaksGr)[peakFeatureOvlp@from] <- start(featuresGr)[peakFeatureOvlp@to]
+  end(tempPeaksGr)[peakFeatureOvlp@from] <- end(featuresGr)[peakFeatureOvlp@to]
+
+
   ## find the number of genes between peak and its target.
-  ## only those targets are true where there is no CDS inbetween
+  ## only those targets are true where there is no other feature inbetween
   ## build a GRanges object of the gap region between peak and target gene
   peakTargetGapsGr <- GenomicRanges::pgap(x = featuresGr[upstreamHits@from],
-                                          y = peaksGr[upstreamHits@to])
+                                          y = tempPeaksGr[upstreamHits@to])
 
   names(peakTargetGapsGr) <- mcols(featuresGr[upstreamHits@from])$tx_id
   peakTargetGapsGr <- unstrand(peakTargetGapsGr)
 
-  ## build a subject GRanges for tx - (5UTR + 3UTR)
-  ## Such custom regions are used because genes have 3' UTR. A peak in UTR region of
-  ## a gene can be upstream of another gene
-  fiveUtrGr <- unlist(range(GenomicFeatures::fiveUTRsByTranscript(txdb)))
-  threeUtrGr <- unlist(range(GenomicFeatures::threeUTRsByTranscript(txdb)))
-  txMinusFiveUtr <- GenomicRanges::setdiff(x = GenomicFeatures::transcripts(txdb),
-                                           y = fiveUtrGr,
-                                           ignore.strand= TRUE)
-
-  txMinusUtrs <- GenomicRanges::setdiff(x = txMinusFiveUtr,
-                                        y = threeUtrGr,
-                                        ignore.strand= TRUE)
 
   ## count overlapping genes in gap region
   genesBetween <- GenomicRanges::countOverlaps(query = peakTargetGapsGr,
-                                               subject = txMinusUtrs,
+                                               subject = GenomicFeatures::genes(txdb),
                                                ignore.strand = TRUE)
 
   genesBetweenDf <- data.frame(tx_id = as.numeric(names(genesBetween)),
@@ -315,18 +314,25 @@ nearest_upstream_bidirectional <- function(bdirTargets, skewFraction = 0.2, minT
     peakWidth <- posTg$peakEnd - posTg$peakStart
     peakFraction <- peakWidth * skewFraction
 
-    ## if the distance between the TSS of two bidirectional targets < minTSS_gapForPseudo:
-    ## CANNOT decide the pseudo target confidently
+
     if(gapWidth > minTSS_gapForPseudo){
 
       if((posTg$peakEnd - peakFraction) <= gapCenter){
         ## negative strand target is true; set positive strand target to pseudo
         posTg <- set_target_df_to_pseudo(target = posTg)
-
       } else if((posTg$peakStart + peakFraction) >= gapCenter){
         ## positive strand target is true; set negative strand target to pseudo
         negTg <- set_target_df_to_pseudo(target = negTg)
-
+      }
+    } else{
+      ## if the distance between the TSS of two bidirectional targets < minTSS_gapForPseudo:
+      ## CANNOT decide the pseudo target confidently
+      if(posTg$peakEnd <= gapCenter){
+        ## negative strand target is true; set positive strand target to pseudo
+        posTg <- set_target_df_to_pseudo(target = posTg)
+      } else if(posTg$peakStart >= gapCenter){
+        ## positive strand target is true; set negative strand target to pseudo
+        negTg <- set_target_df_to_pseudo(target = negTg)
       }
     }
 
