@@ -23,6 +23,9 @@ best_replicate_peakset <- function(sampleInfo, cdsFile, ...){
   bestRep <- sampleInfo$sampleId[bestRepIndex]
   bestRepPeakIdCol <- paste("peakId.", bestRep, sep = "")
 
+  if(is.null(sampleInfo$pval_cutoff)){
+    sampleInfo$pval_cutoff <- 1
+  }
   # dplyr::group_by_at(mat, vars(starts_with("overlap."))) %>%
   #   dplyr::summarise(n = n())
 
@@ -39,7 +42,7 @@ best_replicate_peakset <- function(sampleInfo, cdsFile, ...){
     peakAnnoFile = sampleInfo$narrowpeakAnno[ bestRepIndex ],
     peakFile = sampleInfo$narrowpeakFile[ bestRepIndex ],
     bwFile = sampleInfo$bwFile[ bestRepIndex ],
-    fcCutoff = 1, pvalCutoff = 1)
+    fcCutoff = 1, pvalCutoff = sampleInfo$pval_cutoff[ bestRepIndex ])
 
   bestRepAnn <- dplyr::left_join(x = commonPeaks, y = peakAnn,
                                  by = structure(bestRepPeakIdCol, names = bestRepPeakIdCol))
