@@ -185,35 +185,75 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb, ...){
   ## so two transcripts can mark one single peak
   upstreamHits <- GenomicRanges::follow(x = featuresGr, subject = peaksGr, select = "all")
 
-  ## for the peaks which overlap any feature, prepare a new peak region which is
-  ## same as the feature. This is because some peaks are withing gene body. When
-  ## countOverlaps() is run for such peak, by default the gene within which peak
-  ## is present is also counted. So to avoid this, whenever a peak is withing gene
-  ## use the gene itself instead of peak. Use a temp GRanges to hold this data.
-  tempPeaksGr <- peaksGr
-  peakFeatureOvlp <- GenomicRanges::findOverlaps(query = tempPeaksGr, subject = featuresGr, type = "within")
-  start(tempPeaksGr)[peakFeatureOvlp@from] <- start(featuresGr)[peakFeatureOvlp@to]
-  end(tempPeaksGr)[peakFeatureOvlp@from] <- end(featuresGr)[peakFeatureOvlp@to]
+  ## build a subject GRanges for tx - (5UTR + 3UTR)
+  ## Such custom regions are used because genes have 3' UTR. A peak in UTR region of
+  ## a gene can be upstream of another gene
+  fiveUtrGr <- unlist(range(GenomicFeatures::fiveUTRsByTranscript(txdb)))
+  threeUtrGr <- unlist(range(GenomicFeatures::threeUTRsByTranscript(txdb)))
+  txMinusFiveUtr <- GenomicRanges::setdiff(x = GenomicFeatures::transcripts(txdb),
+                                           y = fiveUtrGr,
+                                           ignore.strand= TRUE)
+
+  txMinusUtrs <- GenomicRanges::setdiff(x = txMinusFiveUtr,
+                                        y = threeUtrGr,
+                                        ignore.strand= TRUE)
 
 
   ## find the number of genes between peak and its target.
   ## only those targets are true where there is no other feature inbetween
   ## build a GRanges object of the gap region between peak and target gene
+
+  ## generate peak-target gap GRanges
   peakTargetGapsGr <- GenomicRanges::pgap(x = featuresGr[upstreamHits@from],
-                                          y = tempPeaksGr[upstreamHits@to])
+                                          y = peaksGr[upstreamHits@to])
 
   names(peakTargetGapsGr) <- mcols(featuresGr[upstreamHits@from])$tx_id
   peakTargetGapsGr <- unstrand(peakTargetGapsGr)
 
 
-  ## count overlapping genes in gap region
-  genesBetween <- GenomicRanges::countOverlaps(query = peakTargetGapsGr,
-                                               subject = GenomicFeatures::genes(txdb),
-                                               ignore.strand = TRUE)
+  ## find first overlapping gene/feature in gap GRanges
+  ## no need to find all.
+  featureInGap <- GenomicRanges::findOverlaps(query = peakTargetGapsGr,
+                                              subject = txMinusUtrs,
+                                              select = "first",
+                                              ignore.strand = TRUE)
 
-  genesBetweenDf <- data.frame(tx_id = as.numeric(names(genesBetween)),
-                               nGenesBetween = genesBetween,
-                               stringsAsFactors = FALSE)
+  isFeatureInBetweenDf <- data.frame(
+    gapGrRow = 1:length(featureInGap),
+    tx_id = as.numeric(names(peakTargetGapsGr)),
+    firstOverlapFeature = featureInGap,
+    # fractionOvlp = 1,
+    stringsAsFactors = FALSE
+  ) %>%
+    dplyr::filter(!is.na(firstOverlapFeature))
+
+  ## calculate fraction overlap: needed for the peak which is inside a gene
+  isFeatureInBetweenDf$intersectWd <- width(
+    GenomicRanges::pintersect(
+      x = peakTargetGapsGr[isFeatureInBetweenDf$gapGrRow],
+      y = txMinusUtrs[isFeatureInBetweenDf$firstOverlapFeature],
+      ignore.strand = TRUE)
+  )
+
+  isFeatureInBetweenDf$ovlpFeatureWd <- width(txMinusUtrs[isFeatureInBetweenDf$firstOverlapFeature])
+  isFeatureInBetweenDf$fractionOvlp <- isFeatureInBetweenDf$intersectWd / isFeatureInBetweenDf$ovlpFeatureWd
+
+
+  ## count total overlapping genes in gap region
+  featuresBetween <- GenomicRanges::countOverlaps(query = peakTargetGapsGr,
+                                                  subject = txMinusUtrs,
+                                                  ignore.strand = TRUE)
+
+  featuresBetweenDf <- data.frame(tx_id = as.numeric(names(featuresBetween)),
+                                  nFeaturesBetween = featuresBetween,
+                                  stringsAsFactors = FALSE) %>%
+    dplyr::left_join(y = isFeatureInBetweenDf, by = "tx_id") %>%
+    dplyr::mutate(fractionOvlp = dplyr::case_when(
+      nFeaturesBetween == 0 ~ 0,
+      nFeaturesBetween > 1 ~ 1,
+      TRUE ~ fractionOvlp
+    )) %>%
+    dplyr::select(tx_id, nFeaturesBetween, fractionOvlp)
 
 
   ## build upstream peaks data and filter unnecessary peaks where there is/are genes between peak and target
@@ -232,9 +272,10 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb, ...){
   mcols(upstreamPeaks)$targetStrand = strand(featuresGr[upstreamHits@from])
 
 
+  ## select only immediate downstream targets
   upstreamPeaksDf <- as.data.frame(upstreamPeaks, stringsAsFactors = FALSE) %>%
-    dplyr::left_join(y = genesBetweenDf, by = c("tx_id" = "tx_id")) %>%
-    dplyr::filter(nGenesBetween == 0) %>%
+    dplyr::left_join(y = featuresBetweenDf, by = c("tx_id" = "tx_id")) %>%
+    dplyr::filter(fractionOvlp <= 0.2) %>%
     dplyr::mutate(
       featureCovFrac = 0,
       summitDist = dplyr::case_when(
@@ -244,6 +285,7 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb, ...){
     )
 
 
+  ## find pseudo_upstream targets
   bidirectionalPairs <- dplyr::group_by(upstreamPeaksDf, name) %>%
     dplyr::arrange(desc(peakDist), .by_group = T) %>%
     dplyr::mutate(n = n()) %>%
@@ -251,7 +293,7 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb, ...){
     dplyr::ungroup() %>%
     dplyr::arrange(seqnames, start) %>%
     as.data.frame() %>%
-    dplyr::select(-targetStart, -targetEnd, -targetStrand, -nGenesBetween, -n)
+    dplyr::select(-targetStart, -targetEnd, -targetStrand, -nFeaturesBetween, -fractionOvlp, -n)
 
   upstreamPeaksAn <- makeGRangesFromDataFrame(bidirectionalPairs, keep.extra.columns = T)
 
