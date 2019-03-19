@@ -4,23 +4,27 @@
 \alias{upstream_annotate}
 \title{Annotate upstream peaks on transcripts}
 \usage{
-upstream_annotate(peaksGr, featuresGr, txdb, ...)
+upstream_annotate(peaksGr, featuresGr, txdb = NULL, ...)
 }
 \arguments{
 \item{peaksGr}{GRanges object for peak data}
 
 \item{featuresGr}{A transcript GRanges object}
 
+\item{txdb}{Optional TxDB object. A UTR less region is created using TxDB and used
+to find the overlap between peak and its downstream target. A max fractional
+overlap of 0.2 with geneA is allowed in a case when peak overlaps with a geneA and
+is upstream of geneB. This is useful for the peaks which are near TES of a geneA.
+If TxDB object is not provided, featuresGr is used. Default: featuresGr is used.}
+
 \item{...}{Other arguments for \code{nearest_upstream_bidirectional()} function}
 }
 \value{
-A modified peak GRanges object with two additional columns: \code{peakType, tx_id}
+A modified peak GRanges object with additional columns: \code{ tx_id,
+peakType, featureCovFrac, peakDist, summitDist}
 }
 \description{
-Known issue: upstream targets will not be found for a peak which is inside
-the CDS of a gene. It gets filtered when number of CDS overlapping in the
-peak-target gap region are counted. By default current overlapping CDS is
- counted and target is filtered.
+Annotate upstream peaks on transcripts
 }
 \examples{
 NA

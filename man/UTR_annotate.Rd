@@ -14,9 +14,12 @@ or \code{GenomicFeatures::threeUTRsByTranscript()}}
 
 \item{utrType}{A character string either of \code{"5UTR"} or \code{"3UTR"}. This string is added
 as peakType column value for the peaks which overlap the respective UTR region.}
+
+\item{txdb}{TxDB object}
 }
 \value{
-A modified peak GRanges object with two additional columns: \code{peakType, tx_id}
+A modified peak GRanges object with additional columns: \code{ tx_id,
+peakType, featureCovFrac, peakDist, summitDist}
 }
 \description{
 Annotate peak targets in UTR regions

@@ -10,14 +10,17 @@ region_overlap_annotate(queryGr, subjectGr, includeFractionCut = 0.7,
 \arguments{
 \item{queryGr}{GRanges object generated from narrowPeak or broadPeak file}
 
+\item{subjectGr}{GRanges object for regions on which peaks needs to be mapped. E.g:
+\code{GenomicFeatures::cdsBy()} or \code{GenomicFeatures::transcripts()}}
+
 \item{includeFractionCut}{A cutoff on peak coverage value of CDS. If peak covers more
 than this proportion of CDS, it is annotated as \code{inside_CDS}. Default: 0.7}
 
-\item{subjectGrl}{GRanges object for regions on which peaks needs to be mapped. E.g:
-\code{GenomicFeatures::cdsBy()} or \code{GenomicFeatures::transcripts()}}
+\item{name}{Feature type to be used as suffix in peak type annotation. Eg. CDS, gene etc.}
 }
 \value{
-A modified peak GRanges object with two additional columns: \code{peakType, tx_id}
+A modified peak GRanges object with additional columns: \code{ tx_id,
+peakType, featureCovFrac, peakDist, summitDist}
 }
 \description{
 This function annotates the peaks onto a regions into e.g. \code{CDS_start, CDS_end, include_CDS,
