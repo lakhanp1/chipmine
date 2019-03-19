@@ -30,7 +30,7 @@ get_narrowpeak_summit_seq = function(npFile, id, genome, length = 200, columnNam
 
   ## reset the start and end of the GRanges object to the region around summit position
   start(np) = BiocGenerics::start(np) + np$peak - seqAroundSummit
-  end(np) = BiocGenerics::start(np) + length
+  end(np) = BiocGenerics::start(np) + length - 1
 
   ## get the DNA sequence for region
   np$summitSeq = BSgenome::getSeq(x = genome, names = np, as.character = TRUE)
