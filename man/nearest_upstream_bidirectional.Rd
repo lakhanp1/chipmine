@@ -13,7 +13,7 @@ nearest_upstream_bidirectional(bdirTargets, skewFraction = 0.2,
 \item{skewFraction}{Minimum fraction of peak region allowed on the side of false target
 from the midpoint of two target genes. Default: 0.2}
 
-\item{minTSS_gapForPseudo}{Valid distance between two target genes TSS to decide one as psuedo}
+\item{minTSS_gapForPseudo}{Valid distance between two target genes TSS to mark one as psuedo}
 }
 \value{
 Same dataframe in which peakType for one of the target is marked as pseudo
