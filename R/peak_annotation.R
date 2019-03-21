@@ -1,6 +1,39 @@
 
 #' Annotate narrowPeak using TxDB
 #'
+#' This function annotate the MACS2 called peaks with appropriate target transcript and
+#' gene from TxDB object. Please refer to the \strong{Details} section for some
+#' suggestions while doing peak annotation. \cr
+#' Peaks are annnotated with following \strong{broad categories} and \emph{specific
+#' types} (listed in decreasing order of preference):
+#' \enumerate{
+#' \item \strong{featureInPeak:} \emph{"include_tx", "include_CDS"}
+#' \item \strong{nearStart:} \emph{"5UTR", "CDS_start", "tx_start"}
+#' \item \strong{nearEnd:} \emph{"3UTR", "tx_end", "CDS_end"}
+#' \item \strong{peakInFeature:} \emph{"inside_tx", "inside_CDS"}
+#' \item \strong{upstreamTss:} \emph{"upstream", "pseudo_upstream"}
+#' }
+#' Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
+#' annotated to two target genes/features and one of it is more optimum than other.
+#' The less optimum target type is prefixed with \emph{pseudo}. Please refer to the
+#' \strong{Details} section for specific information on this.
+#'
+#' Some important observations to do before annotating ChIPseq data:
+#' \enumerate{
+#' \item Whether the signal is like TF/polII i.e. factor binds in gene or not.
+#' See \code{bindingInGene, promoterLength} arguments for the details.
+#' \item For the genes which are within peak region, what is the gene size (are
+#' genes shorter in length than normal) and how far is the next downstream gene.
+#' See \code{includeFractionCut} argument for the details.
+#' \item Are there any TES or 3' UTR peaks and how confident are they?
+#' \item Check the TXTYPE in TxDB object and see which type of features are of
+#' interest to you. Usually tRNA, rRNA are not needed. See \code{excludeType}
+#' argument for the details.
+#' }
+#' These observations will help to decide appropriate parameters while annotating
+#' the peaks using TxDB object.
+#'
+#'
 #' @param peakFile A narroPeak file
 #' @param txdb TxDB object which will be used for annotation
 #' @param includeFractionCut Number between [0, 1]. If a peak covers more than this
@@ -11,11 +44,9 @@
 #' @param insideSkewToEndCut A floating point number in range [0, 1]. If a peak is
 #' present inside feature/gene and the relative summit position is > insideSkewToEndCut,
 #' it is closer to the end of the feature. Default: 0.7
-#' @param bidirectionCut Distance cutoff to decide a peak as bidirectional for two
-#' target genes. Both the target genes should be withing these bp distance from peak.
-#' Default: 500
 #' @param excludeType Types of transcripts to exclude from annotation. Should be a
 #' character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}
+#' @param output Optionally store the annotation output to a file
 #'
 #' @return A GenomicRanges object with peak annotation
 #' @export
@@ -23,8 +54,9 @@
 #' @examples NA
 narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
                                 bindingInGene = FALSE, promoterLength = 500,
-                                insideSkewToEndCut = 0.7, bidirectionCut = 500,
-                                excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")){
+                                insideSkewToEndCut = 0.7,
+                                excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
+                                output = NULL){
 
 
 
@@ -75,19 +107,19 @@ narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
 
 
   ## prepare target preference list and peak category list
-  ## this order is IMP for: select 3UTR between 3UTR and inside_tx
+  ## this order is IMP for: select 3UTR between 3UTR and inside_tx as it is more specific
   peakTypes <- data.frame(
-    peakType = c("include_tx", "include_CDS", "5UTR", "CDS_start", "tx_start", "3UTR", "inside_tx", "inside_CDS", "upstream", "pseudo_upstream", "tx_end", "CDS_end"),
-    peakPosition = c("TSS", "TSS", "TSS", "TSS", "TSS", "TES", "TSS", "TSS", "TSS", "TSS", "TES", "TES"),
+    peakType = c("include_tx", "include_CDS", "5UTR", "CDS_start", "tx_start", "3UTR", "tx_end", "CDS_end", "inside_tx", "inside_CDS", "upstream", "pseudo_upstream"),
+    peakPosition = c("TSS", "TSS", "TSS", "TSS", "TSS", "TES", "TES", "TES", "TSS", "TSS", "TSS", "TSS"),
     preference = 1:12,
     stringsAsFactors = FALSE)
 
   peakCategories <- list(
-    upstreamTss = c("upstream", "pseudo_upstream"),
+    featureInPeak = c("include_tx", "include_CDS"),
     nearStart = c("5UTR", "CDS_start", "tx_start"),
     nearEnd = c("3UTR", "tx_end", "CDS_end"),
     peakInFeature = c("inside_tx", "inside_CDS"),
-    featureInPeak = c("include_tx", "include_CDS")
+    upstreamTss = c("upstream", "pseudo_upstream")
   )
 
   peakCategoryDf <- map_dfr(.x = peakCategories,
@@ -119,7 +151,6 @@ narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
     dplyr::slice(1L) %>%
     dplyr::ungroup()
 
-
   bestPeakGeneTargetsGr <- makeGRangesFromDataFrame(df = bestPeakGeneTargets, keep.extra.columns = T)
 
   # ## for summary and debugging
@@ -143,7 +174,7 @@ narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
     insideSkewToEndCut = insideSkewToEndCut,
     promoterLength = promoterLength)
 
-  peakTargetsGr <- unlist(peakTargetGrl, use.names = FALSE)
+  peakTargetsGr <- sort(unlist(peakTargetGrl, use.names = FALSE))
 
   ## rename columns: "peakId", "peakEnrichment", "peakPval", "peakQval"
   mcols(peakTargetsGr)$peakId <- mcols(peakTargetsGr)$name
@@ -161,10 +192,15 @@ narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
   mcols(peakTargetsGr)$targetStart <- NULL
   mcols(peakTargetsGr)$targetEnd <- NULL
   mcols(peakTargetsGr)$targetStrand <- NULL
-  mcols(peakTargetsGr)$peakCategory <- NULL
+  # mcols(peakTargetsGr)$peakCategory <- NULL
   mcols(peakTargetsGr)$tx_id <- NULL
   mcols(peakTargetsGr)$txType <- NULL
   names(peakTargetsGr) <- NULL
+
+  ## optionally store the data
+  if(!is.null(output)){
+    readr::write_tsv(x = as.data.frame(mcols(peakTargetsGr)), path = output)
+  }
 
   return(peakTargetsGr)
 }

@@ -6,8 +6,8 @@
 \usage{
 narrowPeak_annotate(peakFile, txdb, includeFractionCut = 0.7,
   bindingInGene = FALSE, promoterLength = 500,
-  insideSkewToEndCut = 0.7, bidirectionCut = 500,
-  excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"))
+  insideSkewToEndCut = 0.7, excludeType = c("tRNA", "rRNA", "snRNA",
+  "snoRNA", "ncRNA"), output = NULL)
 }
 \arguments{
 \item{peakFile}{A narroPeak file}
@@ -26,18 +26,47 @@ useful for polII ChIPseq data. Default: FALSE}
 present inside feature/gene and the relative summit position is > insideSkewToEndCut,
 it is closer to the end of the feature. Default: 0.7}
 
-\item{bidirectionCut}{Distance cutoff to decide a peak as bidirectional for two
-target genes. Both the target genes should be withing these bp distance from peak.
-Default: 500}
-
 \item{excludeType}{Types of transcripts to exclude from annotation. Should be a
 character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}}
+
+\item{output}{Optionally store the annotation output to a file}
 }
 \value{
 A GenomicRanges object with peak annotation
 }
 \description{
-Annotate narrowPeak using TxDB
+This function annotate the MACS2 called peaks with appropriate target transcript and
+gene from TxDB object. Please refer to the \strong{Details} section for some
+suggestions while doing peak annotation. \cr
+Peaks are annnotated with following \strong{broad categories} and \emph{specific
+types} (listed in decreasing order of preference):
+\enumerate{
+\item \strong{featureInPeak:} \emph{"include_tx", "include_CDS"}
+\item \strong{nearStart:} \emph{"5UTR", "CDS_start", "tx_start"}
+\item \strong{nearEnd:} \emph{"3UTR", "tx_end", "CDS_end"}
+\item \strong{peakInFeature:} \emph{"inside_tx", "inside_CDS"}
+\item \strong{upstreamTss:} \emph{"upstream", "pseudo_upstream"}
+}
+Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
+annotated to two target genes/features and one of it is more optimum than other.
+The less optimum target type is prefixed with \emph{pseudo}. Please refer to the
+\strong{Details} section for specific information on this.
+}
+\details{
+Some important observations to do before annotating ChIPseq data:
+\enumerate{
+\item Whether the signal is like TF/polII i.e. factor binds in gene or not.
+See \code{bindingInGene, promoterLength} arguments for the details.
+\item For the genes which are within peak region, what is the gene size (are
+genes shorter in length than normal) and how far is the next downstream gene.
+See \code{includeFractionCut} argument for the details.
+\item Are there any TES or 3' UTR peaks and how confident are they?
+\item Check the TXTYPE in TxDB object and see which type of features are of
+interest to you. Usually tRNA, rRNA are not needed. See \code{excludeType}
+argument for the details.
+}
+These observations will help to decide appropriate parameters while annotating
+the peaks using TxDB object.
 }
 \examples{
 NA
