@@ -16,14 +16,14 @@ Depends:
 	circlize (>= 0.4.5),
 	ComplexHeatmap (>= 1.15.1),
 	EnrichedHeatmap (>= 1.6.0),
+	GenomicRanges (>= 1.34.0),
+	rtracklayer (>= 1.40.3)
 Imports:
 	magrittr,
 	VennDiagram (>= 1.6.17),   
 	RColorBrewer,
-	GenomicRanges,
 	imputeTS,
 	lazyeval,
 	ggpubr (>= 0.1.5),
 	scales,
-	rtracklayer (>= 1.40.3)
 RoxygenNote: 6.1.1
