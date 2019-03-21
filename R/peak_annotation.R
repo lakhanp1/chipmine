@@ -1,4 +1,180 @@
 
+#' Annotate narrowPeak using TxDB
+#'
+#' @param peakFile A narroPeak file
+#' @param txdb TxDB object which will be used for annotation
+#' @param includeFractionCut Number between [0, 1]. If a peak covers more than this
+#' fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7
+#' @param bindingInGene Logical: whether the ChIPseq TF binds in gene body. This is
+#' useful for polII ChIPseq data. Default: FALSE
+#' @param promoterLength Promoter length in number of nucleotides. Default: 500
+#' @param insideSkewToEndCut A floating point number in range [0, 1]. If a peak is
+#' present inside feature/gene and the relative summit position is > insideSkewToEndCut,
+#' it is closer to the end of the feature. Default: 0.7
+#' @param bidirectionCut Distance cutoff to decide a peak as bidirectional for two
+#' target genes. Both the target genes should be withing these bp distance from peak.
+#' Default: 500
+#' @param excludeType Types of transcripts to exclude from annotation. Should be a
+#' character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}
+#'
+#' @return A GenomicRanges object with peak annotation
+#' @export
+#'
+#' @examples NA
+narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
+                                bindingInGene = FALSE, promoterLength = 500,
+                                insideSkewToEndCut = 0.7, bidirectionCut = 500,
+                                excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")){
+
+
+
+  ## calculate peak related features
+  peaks <- rtracklayer::import(con = peakFile, format = "narrowPeak")
+  if(is.null(mcols(peaks)$peak)){
+    mcols(peaks)$peak <- as.integer(width(peaks) / 2)
+  }
+
+  mcols(peaks)$peakChr <- as.character(seqnames(peaks))
+  mcols(peaks)$peakStart <- start(peaks)
+  mcols(peaks)$peakEnd <- end(peaks)
+  mcols(peaks)$peakSummit <- GenomicRanges::start(peaks) + mcols(peaks)$peak
+
+  mcols(peaks)$relativeSummitPos <- as.numeric(
+    sprintf("%.3f", (mcols(peaks)$peakSummit - start(peaks)) / width(peaks))
+  )
+
+
+
+  ## 5' UTR annotation
+  fiveUtrGrl <- GenomicFeatures::fiveUTRsByTranscript(txdb)
+  fiveUtrTargets <- UTR_annotate(queryGr = peaks, subjectGrl = fiveUtrGrl, utrType = "5UTR", txdb = txdb)
+
+  ## 3' UTR region annotations
+  threeUtrGrl <- GenomicFeatures::threeUTRsByTranscript(txdb)
+  threeUtrTargets <- UTR_annotate(queryGr = peaks, subjectGrl = threeUtrGrl, utrType = "3UTR", txdb = txdb)
+
+
+  ## CDS region annotations
+  cdsGrl <- GenomicFeatures::cdsBy(x = txdb, by = "tx")
+  cdsGr <- unlist(range(cdsGrl))
+  mcols(cdsGr)$tx_id <- names(cdsGr)
+  cdsTargets <- region_overlap_annotate(queryGr = peaks,
+                                        subjectGr = cdsGr,
+                                        includeFractionCut = includeFractionCut,
+                                        name = "CDS")
+
+  # Transcript region annotations
+  transcriptsGr <- GenomicFeatures::transcripts(txdb)
+  transcriptTargets <- region_overlap_annotate(queryGr = peaks,
+                                               subjectGr = transcriptsGr,
+                                               includeFractionCut = includeFractionCut,
+                                               name = "tx")
+
+  ## annotate upstream targets
+  upstreamTargets <- upstream_annotate(peaksGr = peaks, featuresGr = transcriptsGr, txdb = txdb)
+
+
+  ## prepare target preference list and peak category list
+  ## this order is IMP for: select 3UTR between 3UTR and inside_tx
+  peakTypes <- data.frame(
+    peakType = c("include_tx", "include_CDS", "5UTR", "CDS_start", "tx_start", "3UTR", "inside_tx", "inside_CDS", "upstream", "pseudo_upstream", "tx_end", "CDS_end"),
+    peakPosition = c("TSS", "TSS", "TSS", "TSS", "TSS", "TES", "TSS", "TSS", "TSS", "TSS", "TES", "TES"),
+    preference = 1:12,
+    stringsAsFactors = FALSE)
+
+  peakCategories <- list(
+    upstreamTss = c("upstream", "pseudo_upstream"),
+    nearStart = c("5UTR", "CDS_start", "tx_start"),
+    nearEnd = c("3UTR", "tx_end", "CDS_end"),
+    peakInFeature = c("inside_tx", "inside_CDS"),
+    featureInPeak = c("include_tx", "include_CDS")
+  )
+
+  peakCategoryDf <- map_dfr(.x = peakCategories,
+                            .f = function(x){data.frame(peakType = x, stringsAsFactors = F)},
+                            .id = "peakCategory")
+
+  txToGene <- suppressMessages(
+    AnnotationDbi::select(x = txdb, keys = AnnotationDbi::keys(x = txdb, keytype = "TXID"),
+                                    columns = c("GENEID", "TXNAME", "TXTYPE"), keytype = "TXID")) %>%
+    dplyr::mutate(TXID = as.character(TXID)) %>%
+    dplyr::rename(geneId = GENEID, txName = TXNAME, txType = TXTYPE)
+
+  ## combine annotations
+  peakAnnotations <- c(fiveUtrTargets, threeUtrTargets, cdsTargets, transcriptTargets, upstreamTargets)
+
+  ## remove "tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"
+  allTargetsDf <- as.data.frame(peakAnnotations) %>%
+    dplyr::left_join(y = txToGene, by = c("tx_id" = "TXID")) %>%
+    dplyr::left_join(y = peakTypes, by = c("peakType" = "peakType")) %>%
+    dplyr::left_join(y = peakCategoryDf, by = c("peakType" = "peakType")) %>%
+    dplyr::filter(! txType %in% excludeType)
+
+
+  ## extract one best TSS and TES region peak for each peak-gene combination using the preference
+  bestPeakGeneTargets <- allTargetsDf %>%
+    dplyr::mutate(bidirectional = 0) %>%
+    dplyr::group_by(name, tx_id) %>%
+    dplyr::arrange(preference, .by_group = TRUE) %>%
+    dplyr::slice(1L) %>%
+    dplyr::ungroup()
+
+
+  bestPeakGeneTargetsGr <- makeGRangesFromDataFrame(df = bestPeakGeneTargets, keep.extra.columns = T)
+
+  # ## for summary and debugging
+  # tmpDf <- dplyr::group_by(bestPeakGeneTargets, name) %>%
+  #   dplyr::summarise(n = n(),
+  #                    peakType = paste(peakType, collapse = ","),
+  #                    peakCat = paste(peakCategory, collapse = ","),
+  #                    gene = paste(GENEID, collapse = ",")) %>%
+  #   dplyr::filter(n > 1) %>%
+  #   dplyr::distinct(peakType, .keep_all = T) %>%
+  #   as.data.frame()
+
+  # ## for testing select_optimal_targets()
+  # tempTargetGrl <- GenomicRanges::split(x = bestPeakGeneTargetsGr, f = mcols(bestPeakGeneTargetsGr)$name)
+  # select_optimal_targets(peakGr = tempTargetGrl[[1]])
+
+  ## for each peak, find optimum target/s
+  peakTargetGrl <- endoapply(
+    X = GenomicRanges::split(x = bestPeakGeneTargetsGr, f = mcols(bestPeakGeneTargetsGr)$name),
+    FUN = select_optimal_targets,
+    insideSkewToEndCut = insideSkewToEndCut,
+    promoterLength = promoterLength)
+
+  peakTargetsGr <- unlist(peakTargetGrl, use.names = FALSE)
+
+  ## rename columns: "peakId", "peakEnrichment", "peakPval", "peakQval"
+  mcols(peakTargetsGr)$peakId <- mcols(peakTargetsGr)$name
+  mcols(peakTargetsGr)$peakEnrichment <- mcols(peakTargetsGr)$signalValue
+  mcols(peakTargetsGr)$peakPval <- mcols(peakTargetsGr)$pValue
+  mcols(peakTargetsGr)$peakQval <- mcols(peakTargetsGr)$qValue
+
+  ## remove unnecessary columns
+  mcols(peakTargetsGr)$name <- NULL
+  mcols(peakTargetsGr)$signalValue <- NULL
+  mcols(peakTargetsGr)$pValue <- NULL
+  mcols(peakTargetsGr)$qValue <- NULL
+  mcols(peakTargetsGr)$peak <- NULL
+  mcols(peakTargetsGr)$score <- NULL
+  mcols(peakTargetsGr)$targetStart <- NULL
+  mcols(peakTargetsGr)$targetEnd <- NULL
+  mcols(peakTargetsGr)$targetStrand <- NULL
+  mcols(peakTargetsGr)$peakCategory <- NULL
+  mcols(peakTargetsGr)$tx_id <- NULL
+  mcols(peakTargetsGr)$txType <- NULL
+  names(peakTargetsGr) <- NULL
+
+  return(peakTargetsGr)
+}
+
+
+
+
+##################################################################################
+
+
 #' Annotate peak targets in UTR regions
 #'
 #' @param queryGr GRanges object generated from narrowPeak or broadPeak file
@@ -543,7 +719,7 @@ select_optimal_targets <- function(peakGr, insideSkewToEndCut = 0.7, promoterLen
     }
 
     ## rebuild the original upstreamTss GRanges
-    typesGrl$upstreamTss <- unlist(upstreamGrl)
+    typesGrl$upstreamTss <- unlist(upstreamGrl, use.names = FALSE)
   }
 
 
@@ -600,3 +776,4 @@ select_optimal_targets <- function(peakGr, insideSkewToEndCut = 0.7, promoterLen
 }
 
 
+##################################################################################
