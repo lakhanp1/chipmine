@@ -24,19 +24,15 @@ na_impute = function(index, mat){
 #'
 #' @param bwFile BigWig file for the signal
 #' @param regions bed file for the regions/genes of interest or a GenomicRanges object
-#' @param genes A vector of gene IDs which are to be plotted.. Only these genes' profile is
-#' extracted from the profile matrix for plotting.
 #' @param signalName Signal name
-#' @param readLocal Logical. Whether to read the matrix from local path. If TRUE, file
-#' provided by localPath is used to read the profile matrix. Default: TRUE
+#' @param extend extend argument of normalizeToMatrix function. Default: c(2000, 1000)
+#' @param w w argument of normalizeToMatrix function: Default: 10
+#' @param target One of "gene", "tss", "tes", "point", "region". If "tss"/"tes"/"point",
+#' the region is extened around single point i.e. TSS or TES or single point (e.g. summit).
+#' Otherwise,the extension is done around the "gene"/"region"
 #' @param storeLocal Logical. Whether to store the matrix locally as gzipped file.
 #'  Default: FALSE
 #' @param localPath File path pointing to locally stored matrix
-#' @param extend extend argument of normalizeToMatrix function. Default: c(2000, 1000)
-#' @param target One of "gene", "tss", "tes", "point". If "tss"/"tes"/"point", the region is
-#' extened around single point i.e. TSS or TES or single point (e.g. summit). Otherwise,
-#' the extension is done around the "gene" region
-#' @param w w argument of normalizeToMatrix function: Default: 10
 #' @param ... other arguments passed to either `import_profile_from_file` or `normalizeToMatrix`
 #'  function
 #'
@@ -44,92 +40,77 @@ na_impute = function(index, mat){
 #' @export
 #'
 #' @examples NULL
-bigwig_profile_matrix <- function(bwFile, regions, signalName, genes,
-                                  readLocal = TRUE, storeLocal = FALSE, localPath,
-                                  extend = c(2000, 1000),
+bigwig_profile_matrix <- function(bwFile, regions, signalName,
+                                  extend = c(2000, 1000), w = 10,
                                   target = "gene",
-                                  w = 10,
+                                  storeLocal = FALSE, localPath,
                                   ...){
 
 
   profileMat <- NULL
 
-  if(isTRUE(readLocal)){
-    ## read the locally saved profile matrix
+  cat("Generating normalized matrix from bigWig file\n")
 
-    profileMat <- import_profile_from_file(file = localPath,
-                                           signalName = signalName,
-                                           selectGenes = genes,
-                                           ...)
+  bwGr <- rtracklayer::import(con = bwFile, format = "BigWig")
 
+  if(class(regions) == "GRanges"){
+    geneBedGr <- regions
 
+  } else if(file.exists(regions)){
+    geneBedGr <- rtracklayer::import(con = regions, format = "bed")
+
+  }
+
+  if(is.null(mcols(geneBedGr)$name)){
+    warning("missing name column in regions")
+  }
+
+  names(geneBedGr) <- geneBedGr$name
+
+  bedRegion <- NULL
+
+  if(tolower(target) %in% c("tss", "point")){
+    ## TSS position as granges
+    bedRegion <- GenomicRanges::promoters(x = geneBedGr, upstream = 0, downstream = 1)
+
+  } else if(tolower(target) == "tes"){
+    ## TES position as granges
+    bedRegion <- get_TES(gr = geneBedGr)
+
+  } else if(tolower(target) %in% c("gene", "region")){
+    bedRegion <- geneBedGr
   } else{
+    stop("Unused 'target' argument: ", target, ". Provide one of gene, tss or tes")
+  }
 
-    cat("Generating normalized matrix from bigWig file\n")
+  profileMat <- EnrichedHeatmap::normalizeToMatrix(signal = bwGr,
+                                                   target = bedRegion,
+                                                   extend = extend,
+                                                   w = w,
+                                                   value_column = "score",
+                                                   ...)
 
-    bwGr <- rtracklayer::import(con = bwFile, format = "BigWig")
 
-    if(class(regions) == "GRanges"){
-      geneBedGr <- regions
+  attr(profileMat, "signal_name") = signalName
+  attr(profileMat, "target_name") = toupper(target)
 
-    } else if(file.exists(regions)){
-      geneBedGr <- rtracklayer::import(con = regions, format = "bed")
 
+  ## save the matrix locally
+  if(isTRUE(storeLocal)){
+
+    tempFile <- paste(localPath, ".temp_mat.tab", sep = "")
+
+    data.table::fwrite(x = as.data.frame(profileMat[1:nrow(profileMat), 1:ncol(profileMat)]),
+                       file = tempFile, col.names = F, row.names = T, sep = "\t", quote = F, eol = "\n")
+
+    ## store the matrix in gzipped format and delete the temp file
+    system2(command = "gzip", args = c("-f", tempFile))
+
+    tempGzFile <- paste(tempFile, ".gz", sep = "")
+
+    if(file.rename(from = tempGzFile, to = localPath)){
+      cat("Stored the matrix into file", localPath, "\n")
     }
-
-    if(is.null(mcols(geneBedGr)$name)){
-      warning("missing name column in regions")
-    }
-
-    names(geneBedGr) <- geneBedGr$name
-
-    bedRegion <- NULL
-
-    if(tolower(target) %in% c("tss", "point")){
-      ## TSS position as granges
-      bedRegion <- GenomicRanges::promoters(x = geneBedGr, upstream = 0, downstream = 1)
-
-    } else if(tolower(target) == "tes"){
-      ## TES position as granges
-      bedRegion <- get_TES(gr = geneBedGr)
-
-    } else if(tolower(target) == "gene"){
-      bedRegion <- geneBedGr
-    } else{
-      stop("Unused 'target' argument: ", target, ". Provide one of gene, tss or tes")
-    }
-
-    profileMat <- EnrichedHeatmap::normalizeToMatrix(signal = bwGr,
-                                                     target = bedRegion,
-                                                     extend = extend,
-                                                     w = w,
-                                                     value_column = "score",
-                                                     ...)
-
-
-    attr(profileMat, "signal_name") = signalName
-    attr(profileMat, "target_name") = toupper(target)
-
-
-    ## save the matrix locally
-    if(isTRUE(storeLocal)){
-
-      tempFile <- paste(localPath, ".temp_mat.tab", sep = "")
-
-      data.table::fwrite(x = as.data.frame(profileMat[1:nrow(profileMat), 1:ncol(profileMat)]),
-                         file = tempFile, col.names = F, row.names = T, sep = "\t", quote = F, eol = "\n")
-
-      ## store the matrix in gzipped format and delete the temp file
-      system2(command = "gzip", args = c("-f", tempFile))
-
-      tempGzFile <- paste(tempFile, ".gz", sep = "")
-
-      if(file.rename(from = tempGzFile, to = localPath)){
-        cat("Stored the matrix into file", localPath, "\n")
-      }
-
-    }
-
 
   }
 
@@ -151,8 +132,8 @@ bigwig_profile_matrix <- function(bwFile, regions, signalName, genes,
 #'
 #' @param file profile matrix for e.g. generated by deeptools' \code{computeMatrix scale-regions}
 #'  command
-#' @param source A character string for the source of the matrix being read. One of "deeptools",
-#'  "miao", "normalizedmatrix"
+#' @param source A character string for the source of the matrix being read. One of \code{"deeptools",
+#'  "miao", "normalizedmatrix"}. Default: normalizedmatrix
 #' @param signalName name of the signal track
 #' @param selectGenes A vector of gene IDs which are to be plotted.. Only these genes' profile is extracted
 #' from the profile matrix for plotting.
@@ -173,13 +154,13 @@ bigwig_profile_matrix <- function(bwFile, regions, signalName, genes,
 #' @export
 #'
 #' @examples NA
-import_profile_from_file = function(file, source = "deeptools", signalName, selectGenes,
+import_profile_from_file = function(file, source = "normalizedmatrix", signalName, selectGenes,
                                     up = 200, target = 200, down = 100, binSize = 10,
                                     targetType = "gene",
                                     keep = c(0, 1),
                                     returnDf = FALSE){
 
-  if(! tolower(targetType) %in% c("gene", "tss", "tes", "point")){
+  if(! tolower(targetType) %in% c("gene", "region", "tss", "tes", "point")){
     stop("Unused targetType argument: ", targetType, "Please provide one of gene, TSS, TES")
   }
 
@@ -194,14 +175,14 @@ import_profile_from_file = function(file, source = "deeptools", signalName, sele
   freadSkip <- 0
 
   if(tolower(source) == "deeptools"){
-    extraCols <- c("chr", "start", "end", "geneID", "length", "strand")
+    extraCols <- c("chr", "start", "end", "geneId", "length", "strand")
     freadSkip <- 1
 
   } else if(tolower(source) == "miao"){
-    extraCols <- c("chr", "start", "end", "strand", "geneID")
+    extraCols <- c("chr", "start", "end", "strand", "geneId")
 
   } else if(all(grepl(pattern = "^normalizedmatrix", x = source, ignore.case = T, perl = T))){
-    extraCols <- c("geneID")
+    extraCols <- c("geneId")
   }
 
   ## profile matrix column names
@@ -229,21 +210,21 @@ import_profile_from_file = function(file, source = "deeptools", signalName, sele
   }
 
 
-  extraCols[extraCols != "geneID"]
+  extraCols[extraCols != "geneId"]
 
   df <- data.table::fread(
     cmd = z1, sep = "\t", header = F, skip = freadSkip, na.strings = "nan",
     col.names = header, data.table = F) %>%
     {
-      if(length(extraCols[extraCols != "geneID"]) == 0){
+      if(length(extraCols[extraCols != "geneId"]) == 0){
         .
       } else{
-        dplyr::select(., -c(!!! extraCols[extraCols != "geneID"]))
+        dplyr::select(., -c(!!! extraCols[extraCols != "geneId"]))
       }
     }
 
 
-  profileDf <- dplyr::left_join(x = geneDf, y = df, by = c("gene" = "geneID")) %>%
+  profileDf <- dplyr::left_join(x = geneDf, y = df, by = c("gene" = "geneId")) %>%
     tibble::column_to_rownames(var = "gene")
 
 
@@ -332,7 +313,7 @@ import_profile_from_file = function(file, source = "deeptools", signalName, sele
 #' @export
 #'
 #' @examples NA
-profile_matrix_list <- function(exptInfo, geneList, ...){
+import_profiles <- function(exptInfo, geneList, ...){
 
   matList <- NULL
 
@@ -351,8 +332,6 @@ profile_matrix_list <- function(exptInfo, geneList, ...){
   return(matList)
 
 }
-
-
 
 ##################################################################################
 
