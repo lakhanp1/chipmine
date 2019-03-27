@@ -23,7 +23,7 @@ na_impute = function(index, mat){
 #' Generate profile matrix using normalizeToMatrix()
 #'
 #' @param bwFile BigWig file for the signal
-#' @param bedFile bed file for the genome of interest
+#' @param regions bed file for the regions/genes of interest or a GenomicRanges object
 #' @param genes A vector of gene IDs which are to be plotted.. Only these genes' profile is
 #' extracted from the profile matrix for plotting.
 #' @param signalName Signal name
@@ -44,7 +44,7 @@ na_impute = function(index, mat){
 #' @export
 #'
 #' @examples NULL
-bigwig_profile_matrix <- function(bwFile, bedFile, signalName, genes,
+bigwig_profile_matrix <- function(bwFile, regions, signalName, genes,
                                   readLocal = TRUE, storeLocal = FALSE, localPath,
                                   extend = c(2000, 1000),
                                   target = "gene",
@@ -69,7 +69,18 @@ bigwig_profile_matrix <- function(bwFile, bedFile, signalName, genes,
 
     bwGr <- rtracklayer::import(con = bwFile, format = "BigWig")
 
-    geneBedGr <- rtracklayer::import(con = bedFile, format = "bed")
+    if(class(regions) == "GRanges"){
+      geneBedGr <- regions
+
+    } else if(file.exists(regions)){
+      geneBedGr <- rtracklayer::import(con = regions, format = "bed")
+
+    }
+
+    if(is.null(mcols(geneBedGr)$name)){
+      warning("missing name column in regions")
+    }
+
     names(geneBedGr) <- geneBedGr$name
 
     bedRegion <- NULL
