@@ -9,7 +9,7 @@
 #' and hence does perform scalling or normalization.
 #'
 #' @param regions Either GenomicRanges object or a file in bed, narrowPeak or broadPeak format
-#' @param format format of the peak file. Should be one of \emph{bed}, \emph{narrowPeak} or 
+#' @param format format of the peak file. Should be one of \emph{bed}, \emph{narrowPeak} or
 #' \emph{broadPeak}. This option does not matter if the 'regions' argument if a GRanges object.
 #' @param bwFile bigWig file from which the coverage will be calculated
 #' @param name Name of the coverage column. Default: coverage
@@ -41,7 +41,7 @@ region_coverage <- function(regions, format = "narrowPeak", bwFile, name = "cove
       subject = bwGr[[chr]],
       ranges(regionGr[seqnames(regionGr) == chr]))) / width(regionGr[seqnames(regionGr) == chr])
 
-    mcols(regionGr[seqnames(regionGr) == chr])[[ name ]] <- chrScore
+    mcols(regionGr[seqnames(regionGr) == chr])[[ name ]] <- as.numeric(sprintf("%.3f", chrScore))
 
   }
 

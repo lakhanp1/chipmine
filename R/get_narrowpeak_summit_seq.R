@@ -19,8 +19,8 @@
 get_narrowpeak_summit_seq = function(npFile, id, genome, length = 200, columnNameWithIdPrefix = TRUE){
 
   cat("Extracting DNA sequences for sample", id,"\n")
-  cat("\tRegion:", length, "bp around summits of file", npFile, "\n")
-  cat("\tGenome:", attributes(genome)$organism, "\n")
+  # cat("\tRegion:", length, "bp around summits of file", npFile, "\n")
+  # cat("\tGenome:", attributes(genome)$organism, "\n")
 
   seqAroundSummit = round(length / 2)
   narrowpeakCols = c(signalValue = "numeric", pValue = "numeric",
@@ -30,7 +30,7 @@ get_narrowpeak_summit_seq = function(npFile, id, genome, length = 200, columnNam
 
   ## reset the start and end of the GRanges object to the region around summit position
   start(np) = BiocGenerics::start(np) + np$peak - seqAroundSummit
-  end(np) = BiocGenerics::start(np) + length
+  end(np) = BiocGenerics::start(np) + length - 1
 
   ## get the DNA sequence for region
   np$summitSeq = BSgenome::getSeq(x = genome, names = np, as.character = TRUE)

@@ -4,12 +4,15 @@
 \alias{combinatorial_binding_matrix}
 \title{Generate the combinatorial peak association matrix with merged master peak list}
 \usage{
-combinatorial_binding_matrix(sampleInfo, peakFormat = "narrowPeak",
-  peakCols = c("peakId", "peakEnrichment", "peakPval"), genome = NULL,
-  summitSeqLen = 200)
+combinatorial_binding_matrix(sampleInfo, peakRegions = NULL,
+  peakFormat = "narrowPeak", peakCols = c("peakId", "peakEnrichment",
+  "peakPval"), genome = NULL, summitSeqLen = 200)
 }
 \arguments{
 \item{sampleInfo}{Sample information dataframe}
+
+\item{peakRegions}{Optional GRanges object which has master peak regions. If not provided,
+peaks from narrowPeak files are merged to create new master peakset.}
 
 \item{peakFormat}{Format of the peak file. One of \code{"narrowPeak", "broadPeak", "bed"}}
 
@@ -20,7 +23,7 @@ combinatorial_binding_matrix(sampleInfo, peakFormat = "narrowPeak",
 \item{summitSeqLen}{Length of sequence to extract at summit position. Default: 200}
 }
 \value{
-A dataframe with a masterlist of peak regions generated after merging all peak regions from all samples. For each sample, its association with regions in the masterlist is reported.
+A dataframe with a masterDf of peak regions generated after merging all peak regions from all samples. For each sample, its association with regions in the masterDf is reported.
 }
 \description{
 This method reads all the narrowPeak files for given TFs and create a merged peak region list.

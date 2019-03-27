@@ -34,8 +34,7 @@ plot_MA_gg = function(df, s1, s2, title = NA, colorCol, pseudoCount = 0.1, ylim 
     {
       if(!is.null(ylim)){
         dplyr::mutate(.data = .,
-                      M = dplyr::if_else(M < ylim[1], true = ylim[1], false = M)) %>%
-          dplyr::mutate(M = dplyr::if_else(M > ylim[2], true = ylim[2], false = M))
+                      M = scales::squish(M, range = ylim))
       } else{
         .
       }
