@@ -26,8 +26,6 @@ best_replicate_peakset <- function(sampleInfo, cdsFile, ...){
   if(is.null(sampleInfo$pval_cutoff)){
     sampleInfo$pval_cutoff <- 1
   }
-  # dplyr::group_by_at(mat, vars(starts_with("overlap."))) %>%
-  #   dplyr::summarise(n = n())
 
   ## identify common peaks between replicates
   commonPeaks <- dplyr::filter_at(.tbl = mat, .vars = vars(starts_with("overlap.")),
@@ -42,7 +40,7 @@ best_replicate_peakset <- function(sampleInfo, cdsFile, ...){
     peakAnnoFile = sampleInfo$narrowpeakAnno[ bestRepIndex ],
     peakFile = sampleInfo$narrowpeakFile[ bestRepIndex ],
     bwFile = sampleInfo$bwFile[ bestRepIndex ],
-    fcCutoff = 1, pvalCutoff = sampleInfo$pval_cutoff[ bestRepIndex ])
+    fcCutoff = 1, pvalCutoff = 1)
 
   bestRepAnn <- dplyr::left_join(x = commonPeaks, y = peakAnn,
                                  by = structure(bestRepPeakIdCol, names = bestRepPeakIdCol))
@@ -60,12 +58,13 @@ best_replicate_peakset <- function(sampleInfo, cdsFile, ...){
 
   # "hasPeak", "peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
   # "peakSummit", "peakDist", "summitDist", "bidirectional", "featureCovFrac", "relativeSummitPos",
-  # "peakRegion", "peakCoverage"
+  # "peakRegion", "peakCoverage", "preference"
 
   ## generate confident peak and target gene list data
   confidentPeaks <- dplyr::left_join(x = commonPeaks, y = bestRepTargets,
                                      by = structure(bestRepPeakIdCol, names = bestRepPeakIdCol)) %>%
-    dplyr::select(gene, starts_with("hasPeak."), everything())
+    dplyr::select(gene, starts_with("hasPeak."), everything()) %>%
+    dplyr::filter_at(.vars = vars(starts_with("hasPeak.")), .vars_predicate = all_vars(. == TRUE))
 
   return(confidentPeaks)
 }

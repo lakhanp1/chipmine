@@ -7,16 +7,18 @@
 #' Additionally, it also extracts the sequence around summit position
 #'
 #' @param sampleInfo Sample information dataframe
+#' @param peakRegions Optional GRanges object which has master peak regions. If not provided,
+#' peaks from narrowPeak files are merged to create new master peakset.
 #' @param peakFormat Format of the peak file. One of \code{"narrowPeak", "broadPeak", "bed"}
 #' @param peakCols Column to extract from peak file. Default: \code{c("peakId", "peakEnrichment", "peakPval")}
 #' @param genome Optionally BSgenome object for extracting summit sequence
 #' @param summitSeqLen Length of sequence to extract at summit position. Default: 200
 #'
-#' @return A dataframe with a masterlist of peak regions generated after merging all peak regions from all samples. For each sample, its association with regions in the masterlist is reported.
+#' @return A dataframe with a masterDf of peak regions generated after merging all peak regions from all samples. For each sample, its association with regions in the masterDf is reported.
 #' @export
 #'
 #' @examples NA
-combinatorial_binding_matrix <- function(sampleInfo, peakFormat = "narrowPeak",
+combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFormat = "narrowPeak",
                                          peakCols = c("peakId", "peakEnrichment", "peakPval"),
                                          genome = NULL, summitSeqLen = 200){
 
@@ -27,27 +29,27 @@ combinatorial_binding_matrix <- function(sampleInfo, peakFormat = "narrowPeak",
 
 
   ## create a GRangesList masterlist of peak regions
-  peakRegions <- GenomicRanges::reduce(unlist(peakList, recursive = TRUE, use.names = T))
-  mcols(peakRegions) = data.frame(name = paste("peak_region", 1:length(peakRegions), sep = "_"), stringsAsFactors = F)
+  if(is.null(peakRegions)){
+    peakRegions <- GenomicRanges::reduce(unlist(peakList, recursive = TRUE, use.names = T))
+  }
+
+  ## region name column
+  if(is.null(mcols(peakRegions)$name)){
+    mcols(peakRegions)$name <- paste("peak_region", 1:length(peakRegions), sep = "_")
+  }
 
   ## master list as dataframe
-  masterList <- data.frame(
-    chr = seqnames(peakRegions),
-    start = start(peakRegions),
-    end = end(peakRegions),
-    name = peakRegions$name,
-    stringsAsFactors = F
-  )
+  masterDf <- as.data.frame(peakRegions) %>%
+    dplyr::select(-width, -strand)
 
+  masterDf <- dplyr::mutate_if(.tbl = masterDf, .predicate = is.factor, .funs = as.character)
 
-  ## find the overlap of individual peaklist with the masterlist
+  ## find the overlap of individual peaklist with the masterDf
   for (i in 1:nrow(sampleInfo)) {
 
     sampleName <- sampleInfo$sampleId[i]
     peakIdCol <- paste("peakId.", sampleName, sep = "")
     overlapPeakCol <- paste("overlap.", sampleName, sep = "")
-
-    # cat("Reading peak information for sample: ", sampleName, "\n")
 
     ## findOverlaps
     hits <- as.data.frame(GenomicRanges::findOverlaps(query = peakRegions, subject = peakList[[sampleName]]))
@@ -81,14 +83,14 @@ combinatorial_binding_matrix <- function(sampleInfo, peakFormat = "narrowPeak",
     }
 
     ## join with master data
-    masterList <- dplyr::left_join(x = masterList, y = hits, by = c("name" = "peakRegionName")) %>%
+    masterDf <- dplyr::left_join(x = masterDf, y = hits, by = c("name" = "peakRegionName")) %>%
       tidyr::replace_na(replace = purrr::set_names(list(FALSE), nm = overlapPeakCol))
 
-    # cat("Done...\n")
 
   }
 
-  return(masterList)
+
+  return(masterDf)
 
 }
 
