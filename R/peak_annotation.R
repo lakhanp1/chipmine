@@ -59,6 +59,17 @@ narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
                                 output = NULL){
 
 
+  ## transcript to gene map
+  txToGene <- suppressMessages(
+    AnnotationDbi::select(x = txdb, keys = AnnotationDbi::keys(x = txdb, keytype = "TXID"),
+                          columns = c("GENEID", "TXNAME", "TXTYPE"), keytype = "TXID")) %>%
+    dplyr::mutate(TXID = as.character(TXID)) %>%
+    dplyr::rename(geneId = GENEID, txName = TXNAME, txType = TXTYPE)
+
+  ## decide which transcript types to select for the annotation
+  allTxTypes <- unique(txToGene$txType)
+  selectType <- allTxTypes[which(!allTxTypes %in% excludeType)]
+
 
   ## calculate peak related features
   peaks <- rtracklayer::import(con = peakFile, format = "narrowPeak")
@@ -74,7 +85,6 @@ narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
   mcols(peaks)$relativeSummitPos <- as.numeric(
     sprintf("%.3f", (mcols(peaks)$peakSummit - start(peaks)) / width(peaks))
   )
-
 
 
   ## 5' UTR annotation
@@ -96,7 +106,9 @@ narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
                                         name = "CDS")
 
   # Transcript region annotations
-  transcriptsGr <- GenomicFeatures::transcripts(txdb)
+  transcriptsGr <- GenomicFeatures::transcripts(txdb, columns = c("tx_id", "tx_name", "tx_type"),
+                                                filter = list(tx_type = selectType))
+
   transcriptTargets <- region_overlap_annotate(queryGr = peaks,
                                                subjectGr = transcriptsGr,
                                                includeFractionCut = includeFractionCut,
@@ -126,11 +138,6 @@ narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
                             .f = function(x){data.frame(peakType = x, stringsAsFactors = F)},
                             .id = "peakCategory")
 
-  txToGene <- suppressMessages(
-    AnnotationDbi::select(x = txdb, keys = AnnotationDbi::keys(x = txdb, keytype = "TXID"),
-                                    columns = c("GENEID", "TXNAME", "TXTYPE"), keytype = "TXID")) %>%
-    dplyr::mutate(TXID = as.character(TXID)) %>%
-    dplyr::rename(geneId = GENEID, txName = TXNAME, txType = TXTYPE)
 
   ## combine annotations
   peakAnnotations <- c(fiveUtrTargets, threeUtrTargets, cdsTargets, transcriptTargets, upstreamTargets)
@@ -165,7 +172,7 @@ narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
 
   # ## for testing select_optimal_targets()
   # tempTargetGrl <- GenomicRanges::split(x = bestPeakGeneTargetsGr, f = mcols(bestPeakGeneTargetsGr)$name)
-  # select_optimal_targets(peakGr = tempTargetGrl[[1]])
+  # select_optimal_targets(peakGr = tempTargetGrl$CREEHA_CONTROL4_withCtrl_peak_1596)
 
   ## for each peak, find optimum target/s
   peakTargetGrl <- endoapply(
@@ -174,7 +181,15 @@ narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
     insideSkewToEndCut = insideSkewToEndCut,
     promoterLength = promoterLength)
 
-  peakTargetsGr <- sort(unlist(peakTargetGrl, use.names = FALSE))
+  peakTargetsGr <- unlist(peakTargetGrl, use.names = FALSE)
+
+  ## add the unannotated peaks
+  peakTargetsGr <- c(peakTargetsGr,
+                     peaks[which(!peaks$name %in% peakTargetsGr$name)],
+                     ignore.mcols=FALSE)
+
+
+  peakTargetsGr <- sort(peakTargetsGr)
 
   ## rename columns: "peakId", "peakEnrichment", "peakPval", "peakQval"
   mcols(peakTargetsGr)$peakId <- mcols(peakTargetsGr)$name
@@ -673,7 +688,7 @@ nearest_upstream_bidirectional <- function(bdirTargets, skewFraction = 0.2, minT
 #'
 #' @examples NA
 select_optimal_targets <- function(peakGr, insideSkewToEndCut = 0.7, promoterLength = 500,
-                                bindingInGene = FALSE){
+                                   bindingInGene = FALSE){
   ## if only one target, return as it is
   if(length(peakGr) == 1){
     return(peakGr)
