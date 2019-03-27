@@ -11,7 +11,7 @@ region_coverage(regions, format = "narrowPeak", bwFile,
 \item{regions}{Either GenomicRanges object or a file in bed, narrowPeak or broadPeak format}
 
 \item{format}{format of the peak file. Should be one of \emph{bed}, \emph{narrowPeak} or
-\emph{broadPeak}. This option does not matter if the 'regions' argument if a GRanges object.}
+\emph{broadPeak}. This options must be provided if \code{regions} is a file.}
 
 \item{bwFile}{bigWig file from which the coverage will be calculated}
 
