@@ -118,7 +118,7 @@ multi_profile_plots <- function(exptInfo,
   htList <- NULL
 
   if(isTRUE(drawClusterAn)){
-    htList <- profileList[[ exptInfo$sampleId[1] ]][[ "rowAnno" ]]
+    htList <- profileList[[ exptInfo$sampleId[1] ]][[ "rowGroupHt" ]]
     plotGaps <- c(2)
   }
 
