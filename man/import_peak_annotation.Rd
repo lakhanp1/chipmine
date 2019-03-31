@@ -21,7 +21,7 @@ import_peak_annotation(sampleId, peakAnnoFile, peakFile, bwFile,
 \item{pvalCutoff}{log10_pvalue cutoff for the peak. Default: 1 i.e. no cutoff}
 
 \item{columns}{A vector of column names which should be returned. Allowed values are: \code{c(
-"hasPeak", "peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
+"peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
 "peakSummit", "peakDist", "summitDist", "bidirectional", "featureCovFrac", "relativeSummitPos",
 "peakRegion", "peakCoverage")}. Default: all columns are returned}
 }
