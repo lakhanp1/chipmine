@@ -114,8 +114,9 @@ narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
                                                includeFractionCut = includeFractionCut,
                                                name = "tx")
 
-  ## annotate upstream targets
-  upstreamTargets <- upstream_annotate(peaksGr = peaks, featuresGr = transcriptsGr, txdb = txdb)
+  ## annotate upstream targets: IMP to give txTypes so that rRNA, tRNA, snRNAs will be removed
+  upstreamTargets <- upstream_annotate(peaksGr = peaks, featuresGr = transcriptsGr,
+                                       txdb = txdb, txTypes = selectType)
 
 
   ## prepare target preference list and peak category list
@@ -432,6 +433,8 @@ set_peakTarget_to_pseudo <- function(target){
 #' overlap of 0.2 with geneA is allowed in a case when peak overlaps with a geneA and
 #' is upstream of geneB. This is useful for the peaks which are near TES of a geneA.
 #' If TxDB object is not provided, featuresGr is used. Default: featuresGr is used.
+#' @param txTypes Types of transcripts to include from annotation. Should be a
+#' character vector. This options is used only if TxDB object is provided. Default: NULL
 #' @param ... Other arguments for \code{nearest_upstream_bidirectional()} function
 #'
 #' @return A modified peak GRanges object with additional columns: \code{ tx_id,
@@ -439,7 +442,7 @@ set_peakTarget_to_pseudo <- function(target){
 #' @export
 #'
 #' @examples NA
-upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, ...){
+upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL, ...){
 
   ## select immediate downstream feature to the peak
   peakDownFeatures <- GenomicRanges::precede(x = peaksGr, subject = featuresGr,
@@ -493,7 +496,15 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, ...){
   if(!is.null(txdb)){
     fiveUtrGr <- unlist(range(GenomicFeatures::fiveUTRsByTranscript(txdb)))
     threeUtrGr <- unlist(range(GenomicFeatures::threeUTRsByTranscript(txdb)))
-    txMinusFiveUtr <- GenomicRanges::setdiff(x = GenomicFeatures::transcripts(txdb),
+
+    if(is.null(txTypes)){
+      transcriptsGr <- GenomicFeatures::transcripts(txdb, columns = c("tx_id", "tx_name", "tx_type"))
+    } else{
+      transcriptsGr <- GenomicFeatures::transcripts(txdb, columns = c("tx_id", "tx_name", "tx_type"),
+                                                    filter = list(tx_type = txTypes))
+    }
+
+    txMinusFiveUtr <- GenomicRanges::setdiff(x = transcriptsGr,
                                              y = fiveUtrGr,
                                              ignore.strand= TRUE)
 
@@ -608,8 +619,10 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, ...){
 nearest_upstream_bidirectional <- function(bdirTargets, skewFraction = 0.2, minTSS_gapForPseudo = 500){
 
 
-  ##     target1              peak                         target2
-  ## ==<=====<=====<===     -------             ===>=====>=====>=====>==
+  ##     target1                    |                    target2
+  ## ==<=====<=====<===      peak1  |           ===>=====>=====>=====>==
+  ##                        ------- |   peak2
+  ##                                |  -------
   ##                                |
   ##                    center between two targets
   ## True target: target1: more than 80% of the peak lies on target1 side
@@ -638,20 +651,20 @@ nearest_upstream_bidirectional <- function(bdirTargets, skewFraction = 0.2, minT
     if(gapWidth > minTSS_gapForPseudo){
 
       if((posTg$peakEnd - peakFraction) <= gapCenter){
-        ## negative strand target is true; set positive strand target to pseudo
+        ## negative strand target is true (peak1); set positive strand target to pseudo
         posTg <- set_peakTarget_to_pseudo(target = posTg)
       } else if((posTg$peakStart + peakFraction) >= gapCenter){
-        ## positive strand target is true; set negative strand target to pseudo
+        ## positive strand target is true (peak2); set negative strand target to pseudo
         negTg <- set_peakTarget_to_pseudo(target = negTg)
       }
     } else{
       ## if the distance between the TSS of two bidirectional targets < minTSS_gapForPseudo:
       ## CANNOT decide the pseudo target confidently
       if(posTg$peakEnd <= gapCenter){
-        ## negative strand target is true; set positive strand target to pseudo
+        ## negative strand target is true (peak1); set positive strand target to pseudo
         posTg <- set_peakTarget_to_pseudo(target = posTg)
       } else if(posTg$peakStart >= gapCenter){
-        ## positive strand target is true; set negative strand target to pseudo
+        ## positive strand target is true (peak2); set negative strand target to pseudo
         negTg <- set_peakTarget_to_pseudo(target = negTg)
       }
     }
