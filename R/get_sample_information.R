@@ -8,7 +8,7 @@
 #' @param matrixSource Source of profile matrix. One of "deeptools", "miao", "normalizedmatrix",
 #' "normalizedmatrix_5kb", "TSS_4kb_2kb_normalized", "TES_2kb_4kb_normalized", "TSS_3kb_3kb_normalized",
 #' "TES_3kb_3kb_normalized". Default: deeptools
-#' @param samples A vector of Sample IDs which are to be processed
+#' @param samples A vector of Sample IDs which are to be processed. Default: All samples are used
 #' @param profileType Type of profile. This will be added as suffix to the profile name
 #' @param macs2Control Whether control was used for macs2 peak calling. Default: TRUE
 #'
@@ -16,20 +16,19 @@
 #' @export
 #'
 #' @examples NA
-get_sample_information = function(exptInfoFile, samples, dataPath, matrixSource = "deeptools",
-                                  profileType = "profile", macs2Control = TRUE){
+get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matrixSource = "deeptools",
+                                   profileType = "profile", macs2Control = TRUE){
 
   ## read the experiment sample details and select only those which are to be plotted
-  exptData = data.table::fread(input = exptInfoFile,
-                               sep = "\t",
-                               stringsAsFactors = F,
-                               header = T,
-                               data.table = F) %>%
-    dplyr::filter(sampleId %in% samples)
+  exptData <- suppressMessages(readr::read_tsv(file = exptInfoFile))
 
-  exptData$sampleId = factor(exptData$sampleId, levels = samples)
+  if(!is.null(samples)){
+    exptData <- dplyr::filter(exptData, sampleId %in% samples)
+  }
 
-  exptData = exptData[order(exptData$sampleId), ] %>%
+  exptData$sampleId <- factor(exptData$sampleId, levels = unique(exptData$sampleId))
+
+  exptData <- exptData[order(exptData$sampleId), ] %>%
     dplyr::mutate_if(is.factor, as.character) %>%
     dplyr::mutate(
       profileName = paste(sampleId, profileType, sep = "_"),
