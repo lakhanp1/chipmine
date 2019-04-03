@@ -235,7 +235,7 @@ profile_heatmap <- function(profileMat,
   if(isTRUE(showAnnotation)){
     topAnn <- HeatmapAnnotation(
       lines = anno_enriched(gp = gpar(col = clusterColor),
-                            show_error = T,
+                            show_error = F,
                             ylim = ylimit
       ),
       height = unit(2, "cm")
