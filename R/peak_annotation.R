@@ -453,7 +453,8 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL, 
   ## because peak is downstream to the feature with strand == "-"
   peakDownHits <- data.frame(
     from = 1:length(peaksGr), peakId = mcols(peaksGr)$name,
-    to = peakDownFeatures, featureStrand = strand(featuresGr[peakDownFeatures]),
+    to = peakDownFeatures,
+    featureStrand = as.vector(strand(featuresGr))[peakDownFeatures],
     txName = featuresGr$tx_name[peakDownFeatures],
     stringsAsFactors = FALSE) %>%
     dplyr::filter(featureStrand == "+")
@@ -467,7 +468,8 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL, 
   ## because peak is downstream to the feature with strand == "+"
   peakUpHits <- data.frame(
     from = 1:length(peaksGr), peakId = mcols(peaksGr)$name,
-    to = peakUpFeatures, featureStrand = strand(featuresGr[peakUpFeatures]),
+    to = peakUpFeatures,
+    featureStrand = as.vector(strand(featuresGr))[peakUpFeatures],
     txName = featuresGr$tx_name[peakUpFeatures],
     stringsAsFactors = FALSE) %>%
     dplyr::filter(featureStrand == "-")
