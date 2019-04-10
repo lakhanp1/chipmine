@@ -28,6 +28,10 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matri
 
   exptData$sampleId <- factor(exptData$sampleId, levels = unique(exptData$sampleId))
 
+  if(is.null(exptData$sampleName)){
+    exptData$sampleName <- exptData$sampleId
+  }
+
   exptData <- exptData[order(exptData$sampleId), ] %>%
     dplyr::mutate_if(is.factor, as.character) %>%
     dplyr::mutate(

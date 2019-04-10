@@ -34,7 +34,8 @@
 #' the peaks using TxDB object.
 #'
 #'
-#' @param peakFile A narroPeak file
+#' @param peakFile A narroPeak or broadPeak file. If a broadPeak file, peak center is
+#' used as summit as broadPeak file does not report summit
 #' @param txdb TxDB object which will be used for annotation
 #' @param includeFractionCut Number between [0, 1]. If a peak covers more than this
 #' fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7
@@ -52,7 +53,7 @@
 #' @export
 #'
 #' @examples NA
-narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
+narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, includeFractionCut = 0.7,
                                 bindingInGene = FALSE, promoterLength = 500,
                                 insideSkewToEndCut = 0.7,
                                 excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
@@ -70,9 +71,12 @@ narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
   allTxTypes <- unique(txToGene$txType)
   selectType <- allTxTypes[which(!allTxTypes %in% excludeType)]
 
+  ## extract transcript GRanges
+  transcriptsGr <- GenomicFeatures::transcripts(txdb, columns = c("tx_id", "tx_name", "tx_type"),
+                                                filter = list(tx_type = selectType))
 
   ## calculate peak related features
-  peaks <- rtracklayer::import(con = peakFile, format = "narrowPeak")
+  peaks <- rtracklayer::import(con = peakFile, format = fileFormat)
   if(is.null(mcols(peaks)$peak)){
     mcols(peaks)$peak <- as.integer(width(peaks) / 2)
   }
@@ -105,10 +109,7 @@ narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
                                         includeFractionCut = includeFractionCut,
                                         name = "CDS")
 
-  # Transcript region annotations
-  transcriptsGr <- GenomicFeatures::transcripts(txdb, columns = c("tx_id", "tx_name", "tx_type"),
-                                                filter = list(tx_type = selectType))
-
+  ## Transcript region annotations
   transcriptTargets <- region_overlap_annotate(queryGr = peaks,
                                                subjectGr = transcriptsGr,
                                                includeFractionCut = includeFractionCut,
@@ -180,7 +181,7 @@ narrowPeak_annotate <- function(peakFile, txdb, includeFractionCut = 0.7,
     X = GenomicRanges::split(x = bestPeakGeneTargetsGr, f = mcols(bestPeakGeneTargetsGr)$name),
     FUN = select_optimal_targets,
     insideSkewToEndCut = insideSkewToEndCut,
-    promoterLength = promoterLength)
+    promoterLength = promoterLength, bindingInGene = bindingInGene)
 
   peakTargetsGr <- unlist(peakTargetGrl, use.names = FALSE)
 
@@ -789,7 +790,7 @@ select_optimal_targets <- function(peakGr, insideSkewToEndCut = 0.7, promoterLen
 
   ##
   if(bindingInGene){
-    ## 5) for the TF which has known binding over gene body (E.g. polII ChIP)
+    ## 5) for the TF which has known binding over gene body (E.g. polII ChIP or histone marks)
     ## preference is for featureInPeak. all other targets are pseudo
     if(peakFound$featureInPeak){
       typesGrl$upstreamTss <- NULL

@@ -279,7 +279,7 @@ get_profile_plot_list <- function(exptInfo,
     ## build the profile heatmap
     profile2 <- profile_heatmap(profileMat = mat,
                                 signalName = exptInfo$profileName[i],
-                                columnTitle = exptInfo$sampleId[i],
+                                columnTitle = exptInfo$sampleName[i],
                                 geneGroups = cluster,
                                 profileColor = colFun,
                                 clusterColor = clusterColor,
