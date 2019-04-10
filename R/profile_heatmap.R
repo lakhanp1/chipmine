@@ -106,14 +106,14 @@ profile_heatmap <- function(profileMat,
     if(is.data.frame(geneGroups)){
       ## read the clustering information from dataframe
 
-      cat("Using the provided clusterData...\n")
+      # cat("Using the provided clusterData...\n")
       clusterData <- as.data.frame(geneGroups)
       rownames(clusterData) <- NULL
 
     } else if(file.exists(geneGroups)) {
       ## read clustering information from cluster file
 
-      cat("Reading k-means clustering information sample", signalName, "\nNumber of clusters:", numClust, "\n")
+      # cat("Reading k-means clustering information sample", signalName, "\nNumber of clusters:", numClust, "\n")
 
       clusterData <- data.table::fread(file = geneGroups, sep = "\t",
                                        header = T, stringsAsFactors = F, data.table = F)
@@ -181,7 +181,7 @@ profile_heatmap <- function(profileMat,
     if(is.null(clusterColor)){
 
       clusterNames <- levels(clusterData$cluster)
-      cat("Colors for clusters not provided. Generating new colors for clusters: ", clusterNames, "\n")
+      # cat("Colors for clusters not provided. Generating new colors for clusters: ", clusterNames, "\n")
 
       # clusterColor <- structure(rainbow(length(clusterNames)), names = clusterNames)
       clusterColor <- structure(pkg.env$customColors[1:length(clusterNames)], names = clusterNames)
@@ -197,7 +197,7 @@ profile_heatmap <- function(profileMat,
       clusterColor <- clusterColor[clusterNames]
     }
 
-    print(clusterColor)
+    # print(clusterColor)
 
 
     ## annotation legend

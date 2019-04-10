@@ -7,7 +7,7 @@
 #' @param dataPath Path where the data is stored
 #' @param matrixSource Source of profile matrix. One of "deeptools", "miao", "normalizedmatrix",
 #' "normalizedmatrix_5kb", "TSS_4kb_2kb_normalized", "TES_2kb_4kb_normalized", "TSS_3kb_3kb_normalized",
-#' "TES_3kb_3kb_normalized". Default: deeptools
+#' "TES_3kb_3kb_normalized". Default: normalizedmatrix
 #' @param samples A vector of Sample IDs which are to be processed. Default: All samples are used
 #' @param profileType Type of profile. This will be added as suffix to the profile name
 #' @param macs2Control Whether control was used for macs2 peak calling. Default: TRUE
@@ -16,7 +16,7 @@
 #' @export
 #'
 #' @examples NA
-get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matrixSource = "deeptools",
+get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matrixSource = "normalizedmatrix",
                                    profileType = "profile", macs2Control = TRUE){
 
   ## read the experiment sample details and select only those which are to be plotted

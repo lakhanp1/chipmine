@@ -26,7 +26,7 @@ Default: FALSE}
 
 \item{localPath}{File path pointing to locally stored matrix}
 
-\item{...}{other arguments passed to either `import_profile_from_file` or `normalizeToMatrix`
+\item{...}{other arguments passed to function \code{normalizeToMatrix}
 function}
 }
 \value{

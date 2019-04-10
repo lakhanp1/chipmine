@@ -31,7 +31,7 @@ na_impute = function(index, mat){
 #' @param storeLocal Logical. Whether to store the matrix locally as gzipped file.
 #'  Default: FALSE
 #' @param localPath File path pointing to locally stored matrix
-#' @param ... other arguments passed to either `import_profile_from_file` or `normalizeToMatrix`
+#' @param ... other arguments passed to function \code{normalizeToMatrix}
 #'  function
 #'
 #' @return profile matrix of class normalizedMatrix
