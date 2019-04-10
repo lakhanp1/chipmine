@@ -99,7 +99,7 @@ colScale = function(x,
 #' @return A row scaled matrix
 #' @export
 #'
-#' @examples
+#' @examples NA
 rowScale = function(x,
                     center = TRUE,
                     scale = TRUE,

@@ -258,6 +258,10 @@ UTR_annotate <- function(queryGr, subjectGrl, utrType, txdb){
 
   utrOvlp <- GenomicRanges::findOverlaps(query = queryGr, subject = utrGr)
 
+  if(length(utrOp) == 0){
+    return(NULL)
+  }
+
   queryTargets <- queryGr[utrOvlp@from]
   mcols(queryTargets)$tx_id <- mcols(utrGr)$tx_id[utrOvlp@to]
   mcols(queryTargets)$peakType <- utrType
@@ -344,6 +348,10 @@ region_overlap_annotate <- function(queryGr, subjectGr, includeFractionCut = 0.7
 
   ovlpHits <- GenomicRanges::findOverlaps(query = queryGr, subject = subjectGr)
 
+  if(length(ovlpHits) == 0){
+    return(NULL)
+  }
+
   queryTargets <- queryGr[ovlpHits@from]
   mcols(queryTargets)$tx_id <- mcols(subjectGr)$tx_id[ovlpHits@to]
   mcols(queryTargets)$peakType <- insideFeature
@@ -411,7 +419,7 @@ region_overlap_annotate <- function(queryGr, subjectGr, includeFractionCut = 0.7
 #' @return Same object with \code{pseudo} prefix to peakType column values
 #' @export
 #'
-#' @examples
+#' @examples NA
 set_peakTarget_to_pseudo <- function(target){
   if(any(class(target) %in% "GRanges")){
     mcols(target)$peakType <- paste("pseudo_", mcols(target)$peakType, sep = "")
@@ -474,6 +482,9 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL, 
     stringsAsFactors = FALSE) %>%
     dplyr::filter(featureStrand == "-")
 
+  if(nrow(peakUpHits) == 0 && nrow(peakDownHits) == 0){
+    return(NULL)
+  }
 
   ## merge the putative upstream hits
   upstreamHits <- dplyr::bind_rows(peakDownHits, peakUpHits) %>%

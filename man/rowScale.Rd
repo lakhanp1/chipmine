@@ -38,3 +38,6 @@ by dividing centered columns of x by standard deviation. If \code{center} is
 \code{FALSE}, the root mean square of column. Refer to \code{\link[base]{scale}}
 for details.
 }
+\examples{
+NA
+}
