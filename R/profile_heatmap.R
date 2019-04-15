@@ -112,12 +112,8 @@ profile_heatmap <- function(profileMat,
 
     } else if(file.exists(geneGroups)) {
       ## read clustering information from cluster file
-
       # cat("Reading k-means clustering information sample", signalName, "\nNumber of clusters:", numClust, "\n")
-
-      clusterData <- data.table::fread(file = geneGroups, sep = "\t",
-                                       header = T, stringsAsFactors = F, data.table = F)
-
+      clusterData <- readr::read_tsv(file = geneGroups)
     }
 
   } else if( is.null(geneGroups) ){
@@ -130,45 +126,40 @@ profile_heatmap <- function(profileMat,
 
   if( !is.null(clusterData) ){
 
-    ## very important to not use factors in the clusterData at this step
-    clusterData <- as.data.frame(clusterData, stringsAsFactors = FALSE, row.names = NULL) %>%
-      dplyr::select(gene, cluster) %>%
-      dplyr::mutate(cluster = as.character(cluster)) %>%
+    clusterData <- dplyr::select(clusterData, gene, cluster) %>%
       tibble::column_to_rownames(var = "gene") %>%
       as.data.frame()
 
+    if(!is.factor(clusterData$cluster)){
 
-    ## decide the order of split clusters
-    if(is.null(clusterOrder)){
-      ## IMP: convert the cluster column to factor to ensure the order of the clusters when heatmap is split
-      ## make sure that the levels argument is sorted as Cluster_1, Cluster_2, 3, 4..
-      ## and not as Cluster_1, Cluster_10, 11, 12, 2, 3
-      clusterData$cluster <- factor(
-        x = clusterData$cluster,
-        levels = unique(c(
-          paste("Cluster", 1:(length(unique(clusterData$cluster)) + 10), sep = "_"),
-          grep(pattern = "^Cluster_\\d+", x = sort(unique(clusterData$cluster)), invert = TRUE, value = TRUE)
-        ))
-      )
-    } else{
-      ## use custom cluster order
+      if(is.null(clusterOrder)){
+        ## IMP: convert the cluster column to factor to ensure the order of the clusters when heatmap is split
+        ## make sure that the levels argument is sorted as Cluster_1, Cluster_2, 3, 4..
+        ## and not as Cluster_1, Cluster_10, 11, 12, 2, 3
+        clusterData$cluster <- factor(
+          x = clusterData$cluster,
+          levels = unique(c(
+            paste("Cluster", 1:(length(unique(clusterData$cluster)) + 10), sep = "_"),
+            grep(pattern = "^Cluster_\\d+", x = sort(unique(clusterData$cluster)), invert = TRUE, value = TRUE)
+          ))
+        )
+      } else{
+        ## use custom cluster order
+        ## check if all the cluster IDs in data are present in clusterOrder
+        if(! all(unique(clusterData$cluster) %in% clusterOrder)){
+          stop("Missing cluster IDs in the clusterOrder provided for custom clustering\n",
+               "Provided order: ", clusterOrder, "\n",
+               "Current clusters: ", unique(clusterData$cluster))
+        }
 
-      ## check if all the cluster IDs in data are present in clusterOrder
-      if(! all(unique(clusterData$cluster) %in% clusterOrder)){
-        stop("Missing cluster IDs in the clusterOrder provided for custom clustering\n",
-             "Provided order: ", clusterOrder, "\n",
-             "Current clusters: ", unique(clusterData$cluster))
+        clusterData$cluster <- factor(
+          x = clusterData$cluster,
+          levels = clusterOrder)
+
       }
-
-      clusterData$cluster <- factor(
-        x = clusterData$cluster,
-        levels = clusterOrder)
-
     }
 
-
     clusterData$cluster <- droplevels(clusterData$cluster)
-
 
     ## make sure that the rows of clusterdata and profile matrix are in same order
     ## if the order is different, the splitting will be changed
@@ -272,7 +263,7 @@ profile_heatmap <- function(profileMat,
     split = clusterData,
     top_annotation = topAnn,
     row_title_rot = 0,
-    heatmap_legend_param = list(title = columnTitle),
+    heatmap_legend_param = list(title = columnTitle, legend_height = unit(2, "cm")),
     pos_line_gp = posLineGpar,
     use_raster = rasterPar$use,
     raster_quality = rasterPar$qual,

@@ -23,7 +23,8 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matri
   exptData <- suppressMessages(readr::read_tsv(file = exptInfoFile))
 
   if(!is.null(samples)){
-    exptData <- dplyr::filter(exptData, sampleId %in% samples)
+    exptData <- dplyr::left_join(x = data.frame(sampleId = samples, stringsAsFactors = F),
+                                 y = exptData, by = "sampleId")
   }
 
   exptData$sampleId <- factor(exptData$sampleId, levels = unique(exptData$sampleId))

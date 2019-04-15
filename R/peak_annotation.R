@@ -140,55 +140,80 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
                             .f = function(x){data.frame(peakType = x, stringsAsFactors = F)},
                             .id = "peakCategory")
 
-
   ## combine annotations
-  peakAnnotations <- c(fiveUtrTargets, threeUtrTargets, cdsTargets, transcriptTargets, upstreamTargets)
+  peakAnnotations <- NULL
+  if(!is.null(fiveUtrTargets)){ peakAnnotations <- append(peakAnnotations, fiveUtrTargets) }
+  if(!is.null(threeUtrTargets)){ peakAnnotations <- append(peakAnnotations, threeUtrTargets) }
+  if(!is.null(cdsTargets)){ peakAnnotations <- append(peakAnnotations, cdsTargets) }
+  if(!is.null(transcriptTargets)){ peakAnnotations <- append(peakAnnotations, transcriptTargets) }
+  if(!is.null(upstreamTargets)){ peakAnnotations <- append(peakAnnotations, upstreamTargets) }
 
-  ## remove "tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"
-  allTargetsDf <- as.data.frame(peakAnnotations) %>%
-    dplyr::left_join(y = txToGene, by = c("tx_id" = "TXID")) %>%
-    dplyr::left_join(y = peakTypes, by = c("peakType" = "peakType")) %>%
-    dplyr::left_join(y = peakCategoryDf, by = c("peakType" = "peakType")) %>%
-    dplyr::filter(! txType %in% excludeType)
+  if(!is.null(peakAnnotations)){
+
+    ## remove "tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"
+    allTargetsDf <- as.data.frame(peakAnnotations) %>%
+      dplyr::left_join(y = txToGene, by = c("tx_id" = "TXID")) %>%
+      dplyr::left_join(y = peakTypes, by = c("peakType" = "peakType")) %>%
+      dplyr::left_join(y = peakCategoryDf, by = c("peakType" = "peakType")) %>%
+      dplyr::filter(! txType %in% excludeType)
 
 
-  ## extract one best TSS and TES region peak for each peak-gene combination using the preference
-  bestPeakGeneTargets <- allTargetsDf %>%
-    dplyr::mutate(bidirectional = 0) %>%
-    dplyr::group_by(name, tx_id) %>%
-    dplyr::arrange(preference, .by_group = TRUE) %>%
-    dplyr::slice(1L) %>%
-    dplyr::ungroup()
+    ## extract one best TSS and TES region peak for each peak-gene combination using the preference
+    bestPeakGeneTargets <- allTargetsDf %>%
+      dplyr::mutate(bidirectional = 0) %>%
+      dplyr::group_by(name, tx_id) %>%
+      dplyr::arrange(preference, .by_group = TRUE) %>%
+      dplyr::slice(1L) %>%
+      dplyr::ungroup()
 
-  bestPeakGeneTargetsGr <- makeGRangesFromDataFrame(df = bestPeakGeneTargets, keep.extra.columns = T)
+    bestPeakGeneTargetsGr <- makeGRangesFromDataFrame(df = bestPeakGeneTargets, keep.extra.columns = T)
 
-  # ## for summary and debugging
-  # tmpDf <- dplyr::group_by(bestPeakGeneTargets, name) %>%
-  #   dplyr::summarise(n = n(),
-  #                    peakType = paste(peakType, collapse = ","),
-  #                    peakCat = paste(peakCategory, collapse = ","),
-  #                    gene = paste(GENEID, collapse = ",")) %>%
-  #   dplyr::filter(n > 1) %>%
-  #   dplyr::distinct(peakType, .keep_all = T) %>%
-  #   as.data.frame()
+    # ## for summary and debugging
+    # tmpDf <- dplyr::group_by(bestPeakGeneTargets, name) %>%
+    #   dplyr::summarise(n = n(),
+    #                    peakType = paste(peakType, collapse = ","),
+    #                    peakCat = paste(peakCategory, collapse = ","),
+    #                    gene = paste(GENEID, collapse = ",")) %>%
+    #   dplyr::filter(n > 1) %>%
+    #   dplyr::distinct(peakType, .keep_all = T) %>%
+    #   as.data.frame()
 
-  # ## for testing select_optimal_targets()
-  # tempTargetGrl <- GenomicRanges::split(x = bestPeakGeneTargetsGr, f = mcols(bestPeakGeneTargetsGr)$name)
-  # select_optimal_targets(peakGr = tempTargetGrl$CREEHA_CONTROL4_withCtrl_peak_1596)
+    # ## for testing select_optimal_targets()
+    # tempTargetGrl <- GenomicRanges::split(x = bestPeakGeneTargetsGr, f = mcols(bestPeakGeneTargetsGr)$name)
+    # select_optimal_targets(peakGr = tempTargetGrl$CREEHA_CONTROL4_withCtrl_peak_1596)
 
-  ## for each peak, find optimum target/s
-  peakTargetGrl <- endoapply(
-    X = GenomicRanges::split(x = bestPeakGeneTargetsGr, f = mcols(bestPeakGeneTargetsGr)$name),
-    FUN = select_optimal_targets,
-    insideSkewToEndCut = insideSkewToEndCut,
-    promoterLength = promoterLength, bindingInGene = bindingInGene)
+    ## for each peak, find optimum target/s
+    peakTargetGrl <- endoapply(
+      X = GenomicRanges::split(x = bestPeakGeneTargetsGr, f = mcols(bestPeakGeneTargetsGr)$name),
+      FUN = select_optimal_targets,
+      insideSkewToEndCut = insideSkewToEndCut,
+      promoterLength = promoterLength, bindingInGene = bindingInGene)
 
-  peakTargetsGr <- unlist(peakTargetGrl, use.names = FALSE)
+    peakTargetsGr <- unlist(peakTargetGrl, use.names = FALSE)
 
-  ## add the unannotated peaks
-  peakTargetsGr <- c(peakTargetsGr,
-                     peaks[which(!peaks$name %in% peakTargetsGr$name)],
-                     ignore.mcols=FALSE)
+    ## add the unannotated peaks
+    peakTargetsGr <- c(peakTargetsGr,
+                       peaks[which(!peaks$name %in% peakTargetsGr$name)],
+                       ignore.mcols=FALSE)
+
+
+  } else{
+    ## use the original peakset
+    peakTargetsGr <- peaks
+
+    mcols(peakTargetsGr)$peakType <- NA
+    mcols(peakTargetsGr)$peakDist <- NA
+    mcols(peakTargetsGr)$featureCovFrac <- NA
+    mcols(peakTargetsGr)$summitDist <- NA
+    mcols(peakTargetsGr)$geneId <- NA
+    mcols(peakTargetsGr)$txName <- NA
+    mcols(peakTargetsGr)$peakPosition <- NA
+    mcols(peakTargetsGr)$preference <- NA
+    mcols(peakTargetsGr)$peakCategory <- NA
+    mcols(peakTargetsGr)$bidirectional <- NA
+
+  }
+
 
 
   peakTargetsGr <- sort(peakTargetsGr)
@@ -258,7 +283,7 @@ UTR_annotate <- function(queryGr, subjectGrl, utrType, txdb){
 
   utrOvlp <- GenomicRanges::findOverlaps(query = queryGr, subject = utrGr)
 
-  if(length(utrOp) == 0){
+  if(length(utrOvlp) == 0){
     return(NULL)
   }
 
