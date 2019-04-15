@@ -180,14 +180,15 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
 
     # ## for testing select_optimal_targets()
     # tempTargetGrl <- GenomicRanges::split(x = bestPeakGeneTargetsGr, f = mcols(bestPeakGeneTargetsGr)$name)
-    # select_optimal_targets(peakGr = tempTargetGrl$CREEHA_CONTROL4_withCtrl_peak_1596)
+    # select_optimal_targets(peakGr = tempTargetGrl[[462]])
 
     ## for each peak, find optimum target/s
     peakTargetGrl <- endoapply(
       X = GenomicRanges::split(x = bestPeakGeneTargetsGr, f = mcols(bestPeakGeneTargetsGr)$name),
       FUN = select_optimal_targets,
       insideSkewToEndCut = insideSkewToEndCut,
-      promoterLength = promoterLength, bindingInGene = bindingInGene)
+      promoterLength = promoterLength, bindingInGene = bindingInGene
+    )
 
     peakTargetsGr <- unlist(peakTargetGrl, use.names = FALSE)
 
@@ -741,6 +742,11 @@ nearest_upstream_bidirectional <- function(bdirTargets, skewFraction = 0.2, minT
 #' @examples NA
 select_optimal_targets <- function(peakGr, insideSkewToEndCut = 0.7, promoterLength = 500,
                                    bindingInGene = FALSE){
+
+  # if(!any(class(peakGr) %in% "GRanges")){
+  #   stop("peakGr is not a GRanges class object. class(peakGr)", class(peakGr))
+  # }
+
   ## if only one target, return as it is
   if(length(peakGr) == 1){
     return(peakGr)
@@ -836,38 +842,39 @@ select_optimal_targets <- function(peakGr, insideSkewToEndCut = 0.7, promoterLen
     }
   } else{
 
-    ## for upstreamTss peak
-    if(peakFound$upstreamTss){
+    ## for upstreamTss peaks: make sure the keep 6) and 7) independent
+    ## if they are kept under same block of if(peakFound$upstreamTss)
+    ## and both peakFound$nearEnd and  peakFound$peakInFeature are TRUE,
+    ## 7) will give error if 6) has already set typesGrl$upstreamTss <- NULL
 
-      ## 6) if there is upstreamTss peak and also nearEnd peak,
-      ## set the upstreamTss to NULL if it is far than promoterLength
-      ## ELSE just set the nearEnd peak to pseudo
-      if(peakFound$nearEnd){
+    ## 6) if there is upstreamTss peak and also nearEnd peak,
+    ## set the upstreamTss to NULL if it is far than promoterLength
+    ## ELSE just set the nearEnd peak to pseudo
+    if(peakFound$upstreamTss && peakFound$nearEnd){
 
-        if(abs(mcols(typesGrl$upstreamTss)$peakDist[1]) > promoterLength){
-          typesGrl$upstreamTss <- NULL
-          peakFound$upstreamTss <- FALSE
-        } else{
-          typesGrl$nearEnd <- set_peakTarget_to_pseudo(target = typesGrl$nearEnd)
-        }
+      if(abs(mcols(typesGrl$upstreamTss)$peakDist[1]) > promoterLength){
+        typesGrl$upstreamTss <- NULL
+        peakFound$upstreamTss <- FALSE
+      } else{
+        typesGrl$nearEnd <- set_peakTarget_to_pseudo(target = typesGrl$nearEnd)
       }
+    }
 
-      ## 7) if there is upstreamTss peak and also peakInFeature type peak
-      if(peakFound$peakInFeature){
+    ## 7) if there is upstreamTss peak and also peakInFeature type peak
+    if(peakFound$upstreamTss && peakFound$peakInFeature){
 
-        ## if upstreamTss is within promoter range
-        if(abs(mcols(typesGrl$upstreamTss)$peakDist[1]) <= promoterLength){
-          if(mcols(typesGrl$peakInFeature)$relativeSummitPos[1] > insideSkewToEndCut){
-            ## peak lies near end for peakInFeature. set peakInFeature to pseudo
-            typesGrl$peakInFeature <- set_peakTarget_to_pseudo(target = typesGrl$peakInFeature)
-          } else{
-            ## set upstreamTss to pseudo
-            typesGrl$upstreamTss <- set_peakTarget_to_pseudo(target = typesGrl$upstreamTss)
-          }
+      ## if upstreamTss is within promoter range
+      if(abs(mcols(typesGrl$upstreamTss)$peakDist[1]) <= promoterLength){
+        if(mcols(typesGrl$peakInFeature)$relativeSummitPos[1] > insideSkewToEndCut){
+          ## peak lies near end for peakInFeature. set peakInFeature to pseudo
+          typesGrl$peakInFeature <- set_peakTarget_to_pseudo(target = typesGrl$peakInFeature)
         } else{
-          typesGrl$upstreamTss <- NULL
-          peakFound$upstreamTss <- FALSE
+          ## set upstreamTss to pseudo
+          typesGrl$upstreamTss <- set_peakTarget_to_pseudo(target = typesGrl$upstreamTss)
         }
+      } else{
+        typesGrl$upstreamTss <- NULL
+        peakFound$upstreamTss <- FALSE
       }
     }
   }
@@ -875,7 +882,6 @@ select_optimal_targets <- function(peakGr, insideSkewToEndCut = 0.7, promoterLen
   peakGr <- unlist(typesGrl, use.names = FALSE)
 
   return(peakGr)
-
 }
 
 
