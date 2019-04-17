@@ -38,8 +38,6 @@ best_replicate_peakset <- function(sampleInfo, cdsFile, ...){
   peakAnn <- import_peak_annotation(
     sampleId = sampleInfo$sampleId[ bestRepIndex ],
     peakAnnoFile = sampleInfo$narrowpeakAnno[ bestRepIndex ],
-    peakFile = sampleInfo$narrowpeakFile[ bestRepIndex ],
-    bwFile = sampleInfo$bwFile[ bestRepIndex ],
     fcCutoff = 1, pvalCutoff = 1)
 
   bestRepAnn <- dplyr::left_join(x = commonPeaks, y = peakAnn,

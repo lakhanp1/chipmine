@@ -61,8 +61,6 @@ combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFor
 
     dt <- import_peak_annotation(sampleId = sampleName,
                                  peakAnnoFile = sampleInfo$narrowpeakAnno[i],
-                                 peakFile = sampleInfo$narrowpeakFile[i],
-                                 bwFile = sampleInfo$bwFile[i],
                                  columns = peakCols) %>%
       dplyr::distinct()
 
