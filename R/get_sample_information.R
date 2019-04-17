@@ -83,9 +83,9 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matri
       ),
       narrowpeakAnno = dplyr::case_when(
         IP_tag != "polII" & isTRUE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.narrowPeak.nearestCDS.tab", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.narrowPeak.annotation.tab", sep = ""),
         IP_tag != "polII" & isFALSE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.narrowPeak.nearestCDS.tab", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.narrowPeak.annotation.tab", sep = ""),
         TRUE ~ "NA"
       ),
       broadpeakFile = dplyr::case_when(
@@ -97,20 +97,20 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matri
       ),
       broadpeakAnno = dplyr::case_when(
         IP_tag != "polII" & isTRUE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.broadPeak.nearestCDS.tab", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.broadPeak.annotation.tab", sep = ""),
         IP_tag != "polII" & isFALSE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.broadPeak.nearestCDS.tab", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.broadPeak.annotation.tab", sep = ""),
         TRUE ~ "NA"
       ),
-      tfPeakFile = dplyr::case_when(
+      peakTargetFile = dplyr::case_when(
         IP_tag != "polII" & isTRUE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.annotated.tab", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.targets.tab", sep = ""),
         IP_tag != "polII" & isFALSE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.annotated.tab", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.targets.tab", sep = ""),
         TRUE ~ "NA"
       )
     ) %>%
-    dplyr::mutate_at(c("polIIExpFile", "polIIExpMat", "clusterFile", "tfPeakFile", "mergedDataFile", "narrowpeakFile", "narrowpeakAnno", "broadpeakFile", "broadpeakAnno"),
+    dplyr::mutate_at(c("polIIExpFile", "polIIExpMat", "clusterFile", "peakTargetFile", "mergedDataFile", "narrowpeakFile", "narrowpeakAnno", "broadpeakFile", "broadpeakAnno"),
                      .funs = dplyr::funs(dplyr::na_if(., "NA")))
 
 
