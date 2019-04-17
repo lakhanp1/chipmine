@@ -26,7 +26,8 @@ to 0. Default: 0 i.e. no limit}
 dataframe with additional fold change column
 }
 \description{
-Raw log2 fold change value between two samples as log2(s2/s1)
+For each sample, any value less than 1 is set to 1 to avoid negative
+log2 value.
 }
 \examples{
 NA

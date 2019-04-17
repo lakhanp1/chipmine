@@ -3,6 +3,9 @@
 
 #' Raw log2 fold change value between two samples as log2(s2/s1)
 #'
+#' For each sample, any value less than 1 is set to 1 to avoid negative
+#' log2 value.
+#'
 #' @param df data frame
 #' @param nmt column name for sample in numerator
 #' @param dmt column name for sample in denominator
@@ -16,11 +19,14 @@
 #' @export
 #'
 #' @examples NA
-get_fold_change <- function(df, nmt, dmt, newCol = "lfc", isExpressedCols = NULL, lfcLimit = 0){
+get_fold_change <- function(df, nmt, dmt, newCol = "lfc",
+                            isExpressedCols = NULL, lfcLimit = 0){
+
+  pseudoCount <- 1
 
   df <- dplyr::mutate(
     df,
-    !! newCol := log2(!!as.name(nmt) + 1) - log2(!!as.name(dmt) + 1))
+    !! newCol := log2(pmax(!!as.name(nmt), pseudoCount)) - log2(pmax(!!as.name(dmt), pseudoCount)))
 
   ## set LFC values within range (-lfcLimit < LFC < +lfcLimit) to zero
   df[[newCol]][
