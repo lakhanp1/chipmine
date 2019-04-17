@@ -11,7 +11,7 @@
 #' \item \strong{nearStart:} \emph{"5UTR", "CDS_start", "tx_start"}
 #' \item \strong{nearEnd:} \emph{"3UTR", "tx_end", "CDS_end"}
 #' \item \strong{peakInFeature:} \emph{"inside_tx", "inside_CDS"}
-#' \item \strong{upstreamTss:} \emph{"upstream", "pseudo_upstream"}
+#' \item \strong{upstreamTss:} \emph{"promoter", "upstream"}
 #' }
 #' Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
 #' annotated to two target genes/features and one of it is more optimum than other.
@@ -36,6 +36,7 @@
 #'
 #' @param peakFile A narroPeak or broadPeak file. If a broadPeak file, peak center is
 #' used as summit as broadPeak file does not report summit
+#' @param fileFormat Format of the peak file. One of "narrowPeak" (Default) or "broadPeak".
 #' @param txdb TxDB object which will be used for annotation
 #' @param includeFractionCut Number between [0, 1]. If a peak covers more than this
 #' fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7
@@ -48,6 +49,8 @@
 #' @param excludeType Types of transcripts to exclude from annotation. Should be a
 #' character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}
 #' @param output Optionally store the annotation output to a file
+#' @param reportPseudo Logical. Whether to report peak targets which are marked as
+#' pseudo. Default: TRUE
 #'
 #' @return A GenomicRanges object with peak annotation
 #' @export
@@ -55,7 +58,7 @@
 #' @examples NA
 narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, includeFractionCut = 0.7,
                                 bindingInGene = FALSE, promoterLength = 500,
-                                insideSkewToEndCut = 0.7,
+                                insideSkewToEndCut = 0.7, reportPseudo = TRUE,
                                 excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
                                 output = NULL){
 
@@ -77,6 +80,12 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
 
   ## calculate peak related features
   peaks <- rtracklayer::import(con = peakFile, format = fileFormat)
+
+  if(length(peaks) == 0){
+    warning("no peak found in peak file")
+    return(NULL)
+  }
+
   if(is.null(mcols(peaks)$peak)){
     mcols(peaks)$peak <- as.integer(width(peaks) / 2)
   }
@@ -121,19 +130,23 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
 
 
   ## prepare target preference list and peak category list
+  ## this is internal preference list
   ## this order is IMP for: select 3UTR between 3UTR and inside_tx as it is more specific
   peakTypes <- data.frame(
-    peakType = c("include_tx", "include_CDS", "5UTR", "CDS_start", "tx_start", "3UTR", "tx_end", "CDS_end", "inside_tx", "inside_CDS", "upstream", "pseudo_upstream"),
-    peakPosition = c("TSS", "TSS", "TSS", "TSS", "TSS", "TES", "TES", "TES", "TSS", "TSS", "TSS", "TSS"),
-    preference = 1:12,
+    peakType = c("include_tx", "include_CDS", "5UTR", "CDS_start", "tx_start", "3UTR", "tx_end",
+                 "CDS_end", "inside_tx", "inside_CDS", "promoter", "upstream", "pseudo_upstream", "pseudo_upstream"),
+    peakPosition = c("TSS", "TSS", "TSS", "TSS", "TSS", "TES", "TES",
+                     "TES", "TSS", "TSS", "TSS", "TSS", "TSS", "TSS"),
+    preference = 1:14,
     stringsAsFactors = FALSE)
 
+  ## later these peak categories will be used to decide which type of target to prefer
   peakCategories <- list(
     featureInPeak = c("include_tx", "include_CDS"),
     nearStart = c("5UTR", "CDS_start", "tx_start"),
     nearEnd = c("3UTR", "tx_end", "CDS_end"),
     peakInFeature = c("inside_tx", "inside_CDS"),
-    upstreamTss = c("upstream", "pseudo_upstream")
+    upstreamTss = c("promoter", "upstream", "pseudo_upstream", "pseudo_upstream")
   )
 
   peakCategoryDf <- map_dfr(.x = peakCategories,
@@ -158,7 +171,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
       dplyr::filter(! txType %in% excludeType)
 
 
-    ## extract one best TSS and TES region peak for each peak-gene combination using the preference
+    ## extract one best transcript region annotation for each peak-tx combination using the preference
     bestPeakGeneTargets <- allTargetsDf %>%
       dplyr::mutate(bidirectional = 0) %>%
       dplyr::group_by(name, tx_id) %>%
@@ -180,7 +193,8 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
 
     # ## for testing select_optimal_targets()
     # tempTargetGrl <- GenomicRanges::split(x = bestPeakGeneTargetsGr, f = mcols(bestPeakGeneTargetsGr)$name)
-    # select_optimal_targets(peakGr = tempTargetGrl[[462]])
+    # select_optimal_targets(peakGr = tempTargetGrl$An_kdmB_20h_HA_1_withCtrl_peak_851)
+    # endoapply(X = tempTargetGrl[1:100], FUN = select_optimal_targets)
 
     ## for each peak, find optimum target/s
     peakTargetGrl <- endoapply(
@@ -197,6 +211,10 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
                        peaks[which(!peaks$name %in% peakTargetsGr$name)],
                        ignore.mcols=FALSE)
 
+    ## optionally filter peak targets which are marked as pseudo
+    if(!reportPseudo){
+      peakTargetsGr <- peakTargetsGr[grepl(pattern = "pseudo_", x = mcols(peakTargetsGr)$peakType)]
+    }
 
   } else{
     ## use the original peakset
@@ -209,7 +227,6 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
     mcols(peakTargetsGr)$geneId <- NA
     mcols(peakTargetsGr)$txName <- NA
     mcols(peakTargetsGr)$peakPosition <- NA
-    mcols(peakTargetsGr)$preference <- NA
     mcols(peakTargetsGr)$peakCategory <- NA
     mcols(peakTargetsGr)$bidirectional <- NA
 
@@ -235,9 +252,9 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
   mcols(peakTargetsGr)$targetStart <- NULL
   mcols(peakTargetsGr)$targetEnd <- NULL
   mcols(peakTargetsGr)$targetStrand <- NULL
-  # mcols(peakTargetsGr)$peakCategory <- NULL
   mcols(peakTargetsGr)$tx_id <- NULL
   mcols(peakTargetsGr)$txType <- NULL
+  mcols(peakTargetsGr)$preference <- NULL
   names(peakTargetsGr) <- NULL
 
   ## optionally store the data
@@ -270,9 +287,10 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
 #' @examples NA
 UTR_annotate <- function(queryGr, subjectGrl, utrType, txdb){
 
-  if(class(subjectGrl) != "CompressedGRangesList"){
-    stop("subjectGrl should be a GRangesList object")
-  }
+  stopifnot(is(object = queryGr, class2 = "GRanges"))
+  stopifnot(is(object = subjectGrl, class2 = "CompressedGRangesList"))
+  stopifnot(is(object = txdb, class2 = "TxDb"))
+
 
   if(! any(utrType %in% c("5UTR", "3UTR"))){
     stop("Wrong argument utrType: should be one of \"5UTR\" or \"3UTR\")")
@@ -360,6 +378,9 @@ UTR_annotate <- function(queryGr, subjectGrl, utrType, txdb){
 #'
 #' @examples NA
 region_overlap_annotate <- function(queryGr, subjectGr, includeFractionCut = 0.7, name = "CDS"){
+
+  stopifnot(is(object = queryGr, class2 = "GRanges"))
+  stopifnot(is(object = subjectGr, class2 = "GRanges"))
 
   if(includeFractionCut < 0 || includeFractionCut > 1){
     stop("Invalid includeFractionCut value. Should be in range [0, 1]")
@@ -470,6 +491,8 @@ set_peakTarget_to_pseudo <- function(target){
 #' If TxDB object is not provided, featuresGr is used. Default: featuresGr is used.
 #' @param txTypes Types of transcripts to include from annotation. Should be a
 #' character vector. This options is used only if TxDB object is provided. Default: NULL
+#' @param promoterLength Promoter region length. Upstream peaks within \code{promoterLength}
+#' distance of feature start are annotated as \code{promoter} region peaks. Default: 500
 #' @param ... Other arguments for \code{nearest_upstream_bidirectional()} function
 #'
 #' @return A modified peak GRanges object with additional columns: \code{ tx_id,
@@ -477,7 +500,11 @@ set_peakTarget_to_pseudo <- function(target){
 #' @export
 #'
 #' @examples NA
-upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL, ...){
+upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL,
+                              promoterLength = 500, ...){
+
+  stopifnot(is(object = peaksGr, class2 = "GRanges"))
+  stopifnot(is(object = featuresGr, class2 = "GRanges"))
 
   ## select immediate downstream feature to the peak
   peakDownFeatures <- GenomicRanges::precede(x = peaksGr, subject = featuresGr,
@@ -508,6 +535,8 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL, 
     stringsAsFactors = FALSE) %>%
     dplyr::filter(featureStrand == "-")
 
+  ## this has to be on dataframe and not vectors above because the dataframes
+  ## are filtering for strand
   if(nrow(peakUpHits) == 0 && nrow(peakDownHits) == 0){
     return(NULL)
   }
@@ -534,6 +563,8 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL, 
   ## a gene can be upstream of another gene
   txMinusUtrs <- featuresGr
   if(!is.null(txdb)){
+    stopifnot(is(object = txdb, class2 = "TxDb"))
+
     fiveUtrGr <- unlist(range(GenomicFeatures::fiveUTRsByTranscript(txdb)))
     threeUtrGr <- unlist(range(GenomicFeatures::threeUTRsByTranscript(txdb)))
 
@@ -609,7 +640,8 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL, 
     ) %>%
     dplyr::mutate(
       relativeSummitPos = dplyr::if_else(
-        condition = targetStrand == "-", true = 1 - relativeSummitPos, false = relativeSummitPos)
+        condition = targetStrand == "-", true = 1 - relativeSummitPos, false = relativeSummitPos),
+      peakType = if_else(abs(peakDist) < promoterLength, "promoter", peakType)
     )
 
 
@@ -657,7 +689,6 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL, 
 #'
 #' @examples NULL
 nearest_upstream_bidirectional <- function(bdirTargets, skewFraction = 0.2, minTSS_gapForPseudo = 500){
-
 
   ##     target1                    |                    target2
   ## ==<=====<=====<===      peak1  |           ===>=====>=====>=====>==
@@ -743,9 +774,7 @@ nearest_upstream_bidirectional <- function(bdirTargets, skewFraction = 0.2, minT
 select_optimal_targets <- function(peakGr, insideSkewToEndCut = 0.7, promoterLength = 500,
                                    bindingInGene = FALSE){
 
-  # if(!any(class(peakGr) %in% "GRanges")){
-  #   stop("peakGr is not a GRanges class object. class(peakGr)", class(peakGr))
-  # }
+  # stopifnot(is(object = peakGr, class2 = "GRanges"))
 
   ## if only one target, return as it is
   if(length(peakGr) == 1){
@@ -809,8 +838,15 @@ select_optimal_targets <- function(peakGr, insideSkewToEndCut = 0.7, promoterLen
 
     ## 4) upstreamTss peaks with peakDist < promoterLength: select; else reject
     if(peakFound$upstreamTss){
-      mcols(typesGrl$upstreamTss)$bidirectional <- 2
-      typesGrl$upstreamTss <- typesGrl$upstreamTss[which(abs(mcols(typesGrl$upstreamTss)$peakDist) < promoterLength)]
+
+      if(any(abs(mcols(typesGrl$upstreamTss)$peakDist) < promoterLength)){
+        mcols(typesGrl$upstreamTss)$bidirectional <- 2
+        typesGrl$upstreamTss <- typesGrl$upstreamTss[which(
+          abs(mcols(typesGrl$upstreamTss)$peakDist) < promoterLength)]
+      } else{
+        typesGrl$upstreamTss <- NULL
+        peakFound$upstreamTss <- FALSE
+      }
     }
   }
 
