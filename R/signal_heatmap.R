@@ -45,7 +45,7 @@ signal_heatmap = function(log2_matrix,
   colNameAnn <- HeatmapAnnotation(
     colName = anno_text(x = c(col_title),
                         rot = 90, just = "left",
-                        offset = unit(1, "mm")),
+                        location = unit(1, "mm")),
     annotation_height = unit.c(max_text_width(col_title))
   )
 
