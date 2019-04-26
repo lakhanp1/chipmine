@@ -5,7 +5,8 @@
 \title{Generate profile matrix using normalizeToMatrix()}
 \usage{
 bigwig_profile_matrix(bwFile, regions, signalName, extend = c(2000,
-  1000), w = 10, target = "gene", storeLocal = FALSE, localPath, ...)
+  1000), w = 10, targetName = "gene", storeLocal = FALSE, localPath,
+  ...)
 }
 \arguments{
 \item{bwFile}{BigWig file for the signal}
@@ -18,16 +19,14 @@ bigwig_profile_matrix(bwFile, regions, signalName, extend = c(2000,
 
 \item{w}{w argument of normalizeToMatrix function: Default: 10}
 
-\item{target}{One of "gene", "tss", "tes", "point", "region". If "tss"/"tes"/"point",
-the region is extened around single point i.e. TSS or TES or single point (e.g. summit).
-Otherwise,the extension is done around the "gene"/"region"}
+\item{targetName}{Name to be used for target. Eg: "gene", "TSS", "TES", "summit" etc. default: gene}
 
 \item{storeLocal}{Logical. Whether to store the matrix locally as gzipped file.
 Default: FALSE}
 
 \item{localPath}{File path pointing to locally stored matrix}
 
-\item{...}{other arguments passed to either `import_profile_from_file` or `normalizeToMatrix`
+\item{...}{other arguments passed to function \code{normalizeToMatrix}
 function}
 }
 \value{

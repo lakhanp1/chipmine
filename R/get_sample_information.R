@@ -7,8 +7,8 @@
 #' @param dataPath Path where the data is stored
 #' @param matrixSource Source of profile matrix. One of "deeptools", "miao", "normalizedmatrix",
 #' "normalizedmatrix_5kb", "TSS_4kb_2kb_normalized", "TES_2kb_4kb_normalized", "TSS_3kb_3kb_normalized",
-#' "TES_3kb_3kb_normalized". Default: deeptools
-#' @param samples A vector of Sample IDs which are to be processed
+#' "TES_3kb_3kb_normalized". Default: normalizedmatrix
+#' @param samples A vector of Sample IDs which are to be processed. Default: All samples are used
 #' @param profileType Type of profile. This will be added as suffix to the profile name
 #' @param macs2Control Whether control was used for macs2 peak calling. Default: TRUE
 #'
@@ -16,20 +16,24 @@
 #' @export
 #'
 #' @examples NA
-get_sample_information = function(exptInfoFile, samples, dataPath, matrixSource = "deeptools",
-                                  profileType = "profile", macs2Control = TRUE){
+get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matrixSource = "normalizedmatrix",
+                                   profileType = "profile", macs2Control = TRUE){
 
   ## read the experiment sample details and select only those which are to be plotted
-  exptData = data.table::fread(input = exptInfoFile,
-                               sep = "\t",
-                               stringsAsFactors = F,
-                               header = T,
-                               data.table = F) %>%
-    dplyr::filter(sampleId %in% samples)
+  exptData <- suppressMessages(readr::read_tsv(file = exptInfoFile))
 
-  exptData$sampleId = factor(exptData$sampleId, levels = samples)
+  if(!is.null(samples)){
+    exptData <- dplyr::left_join(x = data.frame(sampleId = samples, stringsAsFactors = F),
+                                 y = exptData, by = "sampleId")
+  }
 
-  exptData = exptData[order(exptData$sampleId), ] %>%
+  exptData$sampleId <- factor(exptData$sampleId, levels = unique(exptData$sampleId))
+
+  if(is.null(exptData$sampleName)){
+    exptData$sampleName <- exptData$sampleId
+  }
+
+  exptData <- exptData[order(exptData$sampleId), ] %>%
     dplyr::mutate_if(is.factor, as.character) %>%
     dplyr::mutate(
       profileName = paste(sampleId, profileType, sep = "_"),
@@ -79,9 +83,9 @@ get_sample_information = function(exptInfoFile, samples, dataPath, matrixSource 
       ),
       narrowpeakAnno = dplyr::case_when(
         IP_tag != "polII" & isTRUE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.narrowPeak.nearestCDS.tab", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.narrowPeak.annotation.tab", sep = ""),
         IP_tag != "polII" & isFALSE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.narrowPeak.nearestCDS.tab", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.narrowPeak.annotation.tab", sep = ""),
         TRUE ~ "NA"
       ),
       broadpeakFile = dplyr::case_when(
@@ -93,20 +97,20 @@ get_sample_information = function(exptInfoFile, samples, dataPath, matrixSource 
       ),
       broadpeakAnno = dplyr::case_when(
         IP_tag != "polII" & isTRUE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.broadPeak.nearestCDS.tab", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.broadPeak.annotation.tab", sep = ""),
         IP_tag != "polII" & isFALSE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.broadPeak.nearestCDS.tab", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.broadPeak.annotation.tab", sep = ""),
         TRUE ~ "NA"
       ),
-      tfPeakFile = dplyr::case_when(
+      peakTargetFile = dplyr::case_when(
         IP_tag != "polII" & isTRUE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.annotated.tab", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.targets.tab", sep = ""),
         IP_tag != "polII" & isFALSE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.annotated.tab", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.targets.tab", sep = ""),
         TRUE ~ "NA"
       )
     ) %>%
-    dplyr::mutate_at(c("polIIExpFile", "polIIExpMat", "clusterFile", "tfPeakFile", "mergedDataFile", "narrowpeakFile", "narrowpeakAnno", "broadpeakFile", "broadpeakAnno"),
+    dplyr::mutate_at(c("polIIExpFile", "polIIExpMat", "clusterFile", "peakTargetFile", "mergedDataFile", "narrowpeakFile", "narrowpeakAnno", "broadpeakFile", "broadpeakAnno"),
                      .funs = dplyr::funs(dplyr::na_if(., "NA")))
 
 

@@ -4,20 +4,20 @@
 \alias{get_sample_information}
 \title{Create sample information dataframe}
 \usage{
-get_sample_information(exptInfoFile, samples, dataPath,
-  matrixSource = "deeptools", profileType = "profile",
+get_sample_information(exptInfoFile, samples = NULL, dataPath,
+  matrixSource = "normalizedmatrix", profileType = "profile",
   macs2Control = TRUE)
 }
 \arguments{
 \item{exptInfoFile}{A tabular file with details for each sample. "sampleId" and "IP_tag" columns are must}
 
-\item{samples}{A vector of Sample IDs which are to be processed}
+\item{samples}{A vector of Sample IDs which are to be processed. Default: All samples are used}
 
 \item{dataPath}{Path where the data is stored}
 
 \item{matrixSource}{Source of profile matrix. One of "deeptools", "miao", "normalizedmatrix",
 "normalizedmatrix_5kb", "TSS_4kb_2kb_normalized", "TES_2kb_4kb_normalized", "TSS_3kb_3kb_normalized",
-"TES_3kb_3kb_normalized". Default: deeptools}
+"TES_3kb_3kb_normalized". Default: normalizedmatrix}
 
 \item{profileType}{Type of profile. This will be added as suffix to the profile name}
 

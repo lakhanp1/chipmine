@@ -7,8 +7,8 @@
 get_profile_plot_list(exptInfo, cluster = NULL, clusterColor = NULL,
   clustOrd = NULL, geneList, colorList = NULL,
   matrixSource = "normalizedmatrix", matrixBins = c(200, 200, 100, 10),
-  targetType = "gene", ylimFraction = NULL, keep = c(0, 1),
-  rasterPar = list(use = TRUE, qual = 5), ...)
+  targetType = "region", targetName = "gene", ylimFraction = NULL,
+  keep = c(0, 1), rasterPar = list(use = TRUE, qual = 5), ...)
 }
 \arguments{
 \item{exptInfo}{experiment info as data frame with information like sampleID, type,
@@ -34,9 +34,11 @@ normalizedmatrix}. Default: normalizedmatrix}
 counts for up, body, down regions and binSize for the profile matrix.
 Default: \code{c(200, 200, 100, 10)}}
 
-\item{targetType}{One of "gene", "TSS", "TES", "point". If target is "gene", target is used to decide
-the number of bins in gene body. Otherwise, for TSS/TES/point, a signle point matrix is expected where
-the region is extracted around single point. Default: gene}
+\item{targetType}{One of "region", "point". If targetType is "region", target is used to decide
+the number of bins over region. Otherwise, for "point", a signle point matrix is expected where
+the region is extracted around single point. Default: region}
+
+\item{targetName}{Name to be used for target. Eg: "gene", "TSS", "TES", "summit" etc. default: gene}
 
 \item{ylimFraction}{A named list with intensity scores to use as ylimit for top annotation.
 If the value is single number, it has to be floating point number to extract the quantile and use

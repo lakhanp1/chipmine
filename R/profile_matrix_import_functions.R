@@ -27,13 +27,11 @@ na_impute = function(index, mat){
 #' @param signalName Signal name
 #' @param extend extend argument of normalizeToMatrix function. Default: c(2000, 1000)
 #' @param w w argument of normalizeToMatrix function: Default: 10
-#' @param target One of "gene", "tss", "tes", "point", "region". If "tss"/"tes"/"point",
-#' the region is extened around single point i.e. TSS or TES or single point (e.g. summit).
-#' Otherwise,the extension is done around the "gene"/"region"
+#' @param targetName Name to be used for target. Eg: "gene", "TSS", "TES", "summit" etc. default: gene
 #' @param storeLocal Logical. Whether to store the matrix locally as gzipped file.
 #'  Default: FALSE
 #' @param localPath File path pointing to locally stored matrix
-#' @param ... other arguments passed to either `import_profile_from_file` or `normalizeToMatrix`
+#' @param ... other arguments passed to function \code{normalizeToMatrix}
 #'  function
 #'
 #' @return profile matrix of class normalizedMatrix
@@ -42,7 +40,7 @@ na_impute = function(index, mat){
 #' @examples NULL
 bigwig_profile_matrix <- function(bwFile, regions, signalName,
                                   extend = c(2000, 1000), w = 10,
-                                  target = "gene",
+                                  targetName = "gene",
                                   storeLocal = FALSE, localPath,
                                   ...){
 
@@ -53,38 +51,25 @@ bigwig_profile_matrix <- function(bwFile, regions, signalName,
 
   bwGr <- rtracklayer::import(con = bwFile, format = "BigWig")
 
+  regionGr <- NULL
   if(class(regions) == "GRanges"){
-    geneBedGr <- regions
+    regionGr <- regions
 
   } else if(file.exists(regions)){
-    geneBedGr <- rtracklayer::import(con = regions, format = "bed")
+    regionGr <- rtracklayer::import(con = regions, format = "bed")
 
   }
 
-  if(is.null(mcols(geneBedGr)$name)){
+  if(is.null(mcols(regionGr)$name)){
     warning("missing name column in regions")
   }
 
-  names(geneBedGr) <- geneBedGr$name
+  names(regionGr) <- regionGr$name
 
   bedRegion <- NULL
 
-  if(tolower(target) %in% c("tss", "point")){
-    ## TSS position as granges
-    bedRegion <- GenomicRanges::promoters(x = geneBedGr, upstream = 0, downstream = 1)
-
-  } else if(tolower(target) == "tes"){
-    ## TES position as granges
-    bedRegion <- get_TES(gr = geneBedGr)
-
-  } else if(tolower(target) %in% c("gene", "region")){
-    bedRegion <- geneBedGr
-  } else{
-    stop("Unused 'target' argument: ", target, ". Provide one of gene, tss or tes")
-  }
-
   profileMat <- EnrichedHeatmap::normalizeToMatrix(signal = bwGr,
-                                                   target = bedRegion,
+                                                   target = regionGr,
                                                    extend = extend,
                                                    w = w,
                                                    value_column = "score",
@@ -92,7 +77,7 @@ bigwig_profile_matrix <- function(bwFile, regions, signalName,
 
 
   attr(profileMat, "signal_name") = signalName
-  attr(profileMat, "target_name") = toupper(target)
+  attr(profileMat, "target_name") = toupper(targetName)
 
 
   ## save the matrix locally
@@ -141,9 +126,10 @@ bigwig_profile_matrix <- function(bwFile, regions, signalName,
 #' @param target number of bins in gene body
 #' @param down number of bins in downstream region
 #' @param binSize bin size used while generating profile matrix
-#' @param targetType One of "gene", "TSS", "TES", "point". If target is "gene", target is used to decide
-#' the number of bins in gene body. Otherwise, for TSS/TES/point, a signle point matrix is expected where
-#' the region is extracted around single point. Default: gene
+#' @param targetType One of "region", "point". If targetType is "region", target is used to decide
+#' the number of bins over region. Otherwise, for "point", a signle point matrix is expected where
+#' the region is extracted around single point. Default: region
+#' @param targetName Name to be used for target. Eg: "gene", "TSS", "TES", "summit" etc. default: gene
 #' @param keep Same as \code{EnrichedHeatmap::normalizeToMatrix}. First value is used as lower quantile
 #' and any value in profile matrix less than lower quantile is set to lower quantile. Second value is
 #' used as upper quantile and any value greater than upper quantile is set to upper quantile.
@@ -156,12 +142,12 @@ bigwig_profile_matrix <- function(bwFile, regions, signalName,
 #' @examples NA
 import_profile_from_file = function(file, source = "normalizedmatrix", signalName, selectGenes,
                                     up = 200, target = 200, down = 100, binSize = 10,
-                                    targetType = "gene",
+                                    targetType = "region", targetName = "gene",
                                     keep = c(0, 1),
                                     returnDf = FALSE){
 
-  if(! tolower(targetType) %in% c("gene", "region", "tss", "tes", "point")){
-    stop("Unused targetType argument: ", targetType, "Please provide one of gene, TSS, TES")
+  if(! tolower(targetType) %in% c("region", "point")){
+    stop("Unused targetType argument: ", targetType, "Please provide one of region, point")
   }
 
   cat("Reading profile matrix generated by ", source, "for sample:", signalName, "\n")
@@ -192,7 +178,7 @@ import_profile_from_file = function(file, source = "normalizedmatrix", signalNam
                paste(c("d"), 1:down, sep = "")
   )
 
-  if(tolower(targetType) %in% c("tss", "tes", "point")){
+  if(tolower(targetType) == "point"){
     target <- 1
     header <- c(extraCols,
                 paste(c("u"), 1:up, sep = ""),
@@ -270,14 +256,14 @@ import_profile_from_file = function(file, source = "normalizedmatrix", signalNam
   attr(profileMat, "extend") <- c(up * binSize, down * binSize)
 
   ## if the matrix is reference-point
-  if(tolower(targetType) %in% c("tss", "tes", "point")){
+  if(tolower(targetType) == "point"){
     attr(profileMat, "target_is_single_point") <- TRUE
     attr(profileMat, "target_index") <- integer(0)
     attr(profileMat, "downstream_index") <- (up+1):(up+down)
   }
 
   attr(profileMat, "signal_name") <- signalName
-  attr(profileMat, "target_name") <- toupper(targetType)
+  attr(profileMat, "target_name") <- toupper(targetName)
   attr(profileMat, "empty_value") <- "NA"
 
   class(profileMat) <- c("normalizedMatrix", "matrix")

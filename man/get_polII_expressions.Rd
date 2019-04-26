@@ -4,12 +4,14 @@
 \alias{get_polII_expressions}
 \title{PolII signal list from multiple samples}
 \usage{
-get_polII_expressions(genesDf, exptInfo)
+get_polII_expressions(genesDf, exptInfo, log2 = FALSE)
 }
 \arguments{
 \item{genesDf}{dataframe with gene column}
 
 \item{exptInfo}{dataframe with experiment information for polII samples}
+
+\item{log2}{Logical. Whether to conver polII signal to log2. Default: FALSE}
 }
 \value{
 dataframe with polII expression and isExpressed columns for samples of interest

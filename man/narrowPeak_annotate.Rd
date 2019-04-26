@@ -4,13 +4,17 @@
 \alias{narrowPeak_annotate}
 \title{Annotate narrowPeak using TxDB}
 \usage{
-narrowPeak_annotate(peakFile, txdb, includeFractionCut = 0.7,
-  bindingInGene = FALSE, promoterLength = 500,
-  insideSkewToEndCut = 0.7, excludeType = c("tRNA", "rRNA", "snRNA",
+narrowPeak_annotate(peakFile, fileFormat = "narrowPeak", txdb,
+  includeFractionCut = 0.7, bindingInGene = FALSE,
+  promoterLength = 500, insideSkewToEndCut = 0.7,
+  reportPseudo = TRUE, excludeType = c("tRNA", "rRNA", "snRNA",
   "snoRNA", "ncRNA"), output = NULL)
 }
 \arguments{
-\item{peakFile}{A narroPeak file}
+\item{peakFile}{A narroPeak or broadPeak file. If a broadPeak file, peak center is
+used as summit as broadPeak file does not report summit}
+
+\item{fileFormat}{Format of the peak file. One of "narrowPeak" (Default) or "broadPeak".}
 
 \item{txdb}{TxDB object which will be used for annotation}
 
@@ -25,6 +29,9 @@ useful for polII ChIPseq data. Default: FALSE}
 \item{insideSkewToEndCut}{A floating point number in range [0, 1]. If a peak is
 present inside feature/gene and the relative summit position is > insideSkewToEndCut,
 it is closer to the end of the feature. Default: 0.7}
+
+\item{reportPseudo}{Logical. Whether to report peak targets which are marked as
+pseudo. Default: TRUE}
 
 \item{excludeType}{Types of transcripts to exclude from annotation. Should be a
 character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}}
@@ -45,7 +52,7 @@ types} (listed in decreasing order of preference):
 \item \strong{nearStart:} \emph{"5UTR", "CDS_start", "tx_start"}
 \item \strong{nearEnd:} \emph{"3UTR", "tx_end", "CDS_end"}
 \item \strong{peakInFeature:} \emph{"inside_tx", "inside_CDS"}
-\item \strong{upstreamTss:} \emph{"upstream", "pseudo_upstream"}
+\item \strong{upstreamTss:} \emph{"promoter", "upstream"}
 }
 Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
 annotated to two target genes/features and one of it is more optimum than other.

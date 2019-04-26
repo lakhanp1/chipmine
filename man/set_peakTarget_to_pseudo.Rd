@@ -15,3 +15,6 @@ Same object with \code{pseudo} prefix to peakType column values
 \description{
 Set peakType to pseudo
 }
+\examples{
+NA
+}

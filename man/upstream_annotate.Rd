@@ -4,7 +4,8 @@
 \alias{upstream_annotate}
 \title{Annotate upstream peaks on transcripts}
 \usage{
-upstream_annotate(peaksGr, featuresGr, txdb = NULL, ...)
+upstream_annotate(peaksGr, featuresGr, txdb = NULL, txTypes = NULL,
+  promoterLength = 500, ...)
 }
 \arguments{
 \item{peaksGr}{GRanges object for peak data}
@@ -16,6 +17,12 @@ to find the overlap between peak and its downstream target. A max fractional
 overlap of 0.2 with geneA is allowed in a case when peak overlaps with a geneA and
 is upstream of geneB. This is useful for the peaks which are near TES of a geneA.
 If TxDB object is not provided, featuresGr is used. Default: featuresGr is used.}
+
+\item{txTypes}{Types of transcripts to include from annotation. Should be a
+character vector. This options is used only if TxDB object is provided. Default: NULL}
+
+\item{promoterLength}{Promoter region length. Upstream peaks within \code{promoterLength}
+distance of feature start are annotated as \code{promoter} region peaks. Default: 500}
 
 \item{...}{Other arguments for \code{nearest_upstream_bidirectional()} function}
 }
