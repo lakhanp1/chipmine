@@ -4,12 +4,10 @@
 \alias{get_peak_annotation_args}
 \title{Get peak heatmap annotation}
 \usage{
-get_peak_annotation_args(tssCol, tesCol)
+get_peak_annotation_args(anName)
 }
 \arguments{
-\item{tssCol}{column name of the TSS region peaks}
-
-\item{tesCol}{column name of the TES region peaks}
+\item{anName}{Annotation name}
 }
 \value{
 A list of two elements: peak type color and peak type legend
