@@ -1,19 +1,21 @@
 
 #' Gene length annotation as points
 #'
-#' This function generates a row annotation of gene length using row_anno_points() of
-#' ComplexHeatmap.
+#' This function generates a row annotation of gene length using
+#' \code{ComplexHeatmap::row_anno_points()} function
 #'
 #' @param bedFile a bed file with 6 columns. feature name will be used to select the genes
 #' @param genes a vector with genes for which annotation needs to be generated. IMP: gene
 #' order in this vector should be same as the gene/row order of the matrix used for the main
 #' heatmap.
+#' @param axis_param \code{axis_param} argument of \code{ComplexHeatmap::anno_points()}
+#' function.
 #'
 #' @return An anno_points heatmap annotation object
 #' @export
 #'
 #' @examples NA
-gene_length_heatmap_annotation = function(bedFile, genes){
+gene_length_heatmap_annotation = function(bedFile, genes, axis_param = default_axis_param("row")){
 
   ## read the bed file
   geneSet = data.table::fread(file = bedFile, header = F,
@@ -33,11 +35,12 @@ gene_length_heatmap_annotation = function(bedFile, genes){
   # df = data.frame(gene = genes, stringsAsFactors = F) %>%
   #   dplyr::left_join(y = geneSet, by = c("gene" = "name"))
 
-
   an = rowAnnotation(
+    name = "gene_length",
     gene_length = row_anno_points(
       x = selectGl,
       size = unit(1, "mm"),
+      axis_param = axis_param,
       gp = gpar(col = "#00000040")
     ),
     annotation_width = unit(2, "cm"),

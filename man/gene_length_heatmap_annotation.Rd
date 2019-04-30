@@ -4,7 +4,8 @@
 \alias{gene_length_heatmap_annotation}
 \title{Gene length annotation as points}
 \usage{
-gene_length_heatmap_annotation(bedFile, genes)
+gene_length_heatmap_annotation(bedFile, genes,
+  axis_param = default_axis_param("row"))
 }
 \arguments{
 \item{bedFile}{a bed file with 6 columns. feature name will be used to select the genes}
@@ -12,13 +13,16 @@ gene_length_heatmap_annotation(bedFile, genes)
 \item{genes}{a vector with genes for which annotation needs to be generated. IMP: gene
 order in this vector should be same as the gene/row order of the matrix used for the main
 heatmap.}
+
+\item{axis_param}{\code{axis_param} argument of \code{ComplexHeatmap::anno_points()}
+function.}
 }
 \value{
 An anno_points heatmap annotation object
 }
 \description{
-This function generates a row annotation of gene length using row_anno_points() of
-ComplexHeatmap.
+This function generates a row annotation of gene length using
+\code{ComplexHeatmap::row_anno_points()} function
 }
 \examples{
 NA
