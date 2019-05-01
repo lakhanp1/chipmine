@@ -1,7 +1,7 @@
 Package: chipmine
 Type: Package
 Title: Analyze ChIP-seq Data
-Version: 0.1.0
+Version: 1.3.1
 Author: Lakhansing Pardeshi
 Maintainer: The package maintainer <lakhanp1@yahoo.co.in>
 Description: This package process the ChIP-seq profile matrices, peak calling
