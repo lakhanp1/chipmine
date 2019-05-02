@@ -134,7 +134,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
   ## this order is IMP for: select 3UTR between 3UTR and inside_tx as it is more specific
   peakTypes <- data.frame(
     peakType = c("include_tx", "include_CDS", "5UTR", "CDS_start", "tx_start", "3UTR", "tx_end",
-                 "CDS_end", "inside_tx", "inside_CDS", "promoter", "upstream", "pseudo_upstream", "pseudo_upstream"),
+                 "CDS_end", "inside_tx", "inside_CDS", "promoter", "upstream", "pseudo_promoter", "pseudo_upstream"),
     peakPosition = c("TSS", "TSS", "TSS", "TSS", "TSS", "TES", "TES",
                      "TES", "TSS", "TSS", "TSS", "TSS", "TSS", "TSS"),
     preference = 1:14,
@@ -146,7 +146,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
     nearStart = c("5UTR", "CDS_start", "tx_start"),
     nearEnd = c("3UTR", "tx_end", "CDS_end"),
     peakInFeature = c("inside_tx", "inside_CDS"),
-    upstreamTss = c("promoter", "upstream", "pseudo_upstream", "pseudo_upstream")
+    upstreamTss = c("promoter", "upstream", "pseudo_promoter", "pseudo_upstream")
   )
 
   peakCategoryDf <- map_dfr(.x = peakCategories,

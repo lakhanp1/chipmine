@@ -263,16 +263,13 @@ profile_heatmap <- function(profileMat,
     split = clusterData,
     top_annotation = topAnn,
     row_title_rot = 0,
-    heatmap_legend_param = list(title = columnTitle, legend_height = unit(2, "cm")),
+    heatmap_legend_param = list(title = columnTitle, legend_height = unit(2.5, "cm")),
     pos_line_gp = posLineGpar,
     use_raster = rasterPar$use,
     raster_quality = rasterPar$qual,
     ...
   )
 
-
-
-  cat("Done!!!\n")
 
   ## reconvert the factor to character
   clusterData$cluster <- as.character(clusterData$cluster)

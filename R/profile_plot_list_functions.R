@@ -95,7 +95,7 @@ multi_profile_plots <- function(exptInfo,
                                        rasterPar = list(use = rasterize, qual = rasterQual),
                                        ...)
 
-  cat("Done!!!\n")
+  # cat("Done!!!\n")
 
   expHtList <- list()
   expHtList[["polII_color"]] <- expressionColor
@@ -110,9 +110,8 @@ multi_profile_plots <- function(exptInfo,
                                              genes = genesToPlot,
                                              htColor = expressionColor)
 
-    cat("Done!!!\n")
+    # cat("Done!!!\n")
   }
-
 
   cat("Generating heatmap list object...\n")
 
@@ -155,8 +154,6 @@ multi_profile_plots <- function(exptInfo,
   }
 
   plotGaps <- head(plotGaps, -1)
-
-  cat("Done!!!\n")
 
   returnList <- list(
     "heatmapList" = htList,
@@ -254,7 +251,6 @@ get_profile_plot_list <- function(exptInfo,
                                     targetName = targetName)
 
 
-
     qtDistr <- quantile(mat, c(seq(0, 0.9, by = 0.1), 0.95, 0.99, 0.992, 0.995, 0.999, 1), na.rm = T)
     print(qtDistr)
 
@@ -291,7 +287,6 @@ get_profile_plot_list <- function(exptInfo,
     ## append to the plot list
     allPlots[[ sampleName ]] <- profile2
 
-    cat("Done!!!\n")
   }
 
   return(allPlots)
