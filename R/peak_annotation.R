@@ -62,6 +62,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
                                 excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
                                 output = NULL){
 
+  fileFormat <- match.arg(arg = fileFormat, choices = c("narrowPeak", "broadPeak"))
 
   ## transcript to gene map
   txToGene <- suppressMessages(
@@ -126,7 +127,8 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
 
   ## annotate upstream targets: IMP to give txTypes so that rRNA, tRNA, snRNAs will be removed
   upstreamTargets <- upstream_annotate(peaksGr = peaks, featuresGr = transcriptsGr,
-                                       txdb = txdb, txTypes = selectType)
+                                       txdb = txdb, txTypes = selectType,
+                                       promoterLength = promoterLength)
 
 
   ## prepare target preference list and peak category list
@@ -171,10 +173,12 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
       dplyr::filter(! txType %in% excludeType)
 
 
-    ## extract one best transcript region annotation for each peak-tx combination using the preference
+    ## extract best transcript region annotation for each peak-gene combination using the preference
+    ## using geneId instead of tx_id: for gene which have multiple tx, 5UTR/3UTR/Intron can get
+    ## annotated with any tx
     bestPeakGeneTargets <- allTargetsDf %>%
       dplyr::mutate(bidirectional = 0) %>%
-      dplyr::group_by(name, tx_id) %>%
+      dplyr::group_by(name, geneId) %>%
       dplyr::arrange(preference, .by_group = TRUE) %>%
       dplyr::slice(1L) %>%
       dplyr::ungroup()
@@ -287,14 +291,10 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
 #' @examples NA
 UTR_annotate <- function(queryGr, subjectGrl, utrType, txdb){
 
+  utrType <- match.arg(arg = toupper(utrType), choices = c("5UTR", "3UTR"))
   stopifnot(is(object = queryGr, class2 = "GRanges"))
   stopifnot(is(object = subjectGrl, class2 = "CompressedGRangesList"))
   stopifnot(is(object = txdb, class2 = "TxDb"))
-
-
-  if(! any(utrType %in% c("5UTR", "3UTR"))){
-    stop("Wrong argument utrType: should be one of \"5UTR\" or \"3UTR\")")
-  }
 
   ## remember to combine the multi-exon UTRs from UTR GRangesList
   utrGr <- unlist(range(subjectGrl))
@@ -379,6 +379,7 @@ UTR_annotate <- function(queryGr, subjectGrl, utrType, txdb){
 #' @examples NA
 region_overlap_annotate <- function(queryGr, subjectGr, includeFractionCut = 0.7, name = "CDS"){
 
+  name <- match.arg(arg = name, choices = c("gene", "CDS", "region"))
   stopifnot(is(object = queryGr, class2 = "GRanges"))
   stopifnot(is(object = subjectGr, class2 = "GRanges"))
 
@@ -492,7 +493,7 @@ set_peakTarget_to_pseudo <- function(target){
 #' @param txTypes Types of transcripts to include from annotation. Should be a
 #' character vector. This options is used only if TxDB object is provided. Default: NULL
 #' @param promoterLength Promoter region length. Upstream peaks within \code{promoterLength}
-#' distance of feature start are annotated as \code{promoter} region peaks. Default: 500
+#' distance of feature start are annotated as \code{promoter} region peaks.
 #' @param ... Other arguments for \code{nearest_upstream_bidirectional()} function
 #'
 #' @return A modified peak GRanges object with additional columns: \code{ tx_id,
@@ -501,7 +502,7 @@ set_peakTarget_to_pseudo <- function(target){
 #'
 #' @examples NA
 upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL,
-                              promoterLength = 500, ...){
+                              promoterLength, ...){
 
   stopifnot(is(object = peaksGr, class2 = "GRanges"))
   stopifnot(is(object = featuresGr, class2 = "GRanges"))
@@ -611,10 +612,20 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL,
   isFeatureInBetweenDf$ovlpFeatureWd <- width(txMinusUtrs[isFeatureInBetweenDf$firstOverlapFeature])
   isFeatureInBetweenDf$fractionOvlp <- isFeatureInBetweenDf$intersectWd / isFeatureInBetweenDf$ovlpFeatureWd
 
+  ##    target1                     target2
+  ##  =====<=======<===       =====>=======>========>=======
+  ##                           ---                   ---
+  ##                          peak1                 peak2
+  ##                  |<----->|
+  ##                  |<---------------------------->|
+  ##
+  ## there will be cases when a peak is inside a gene and it is upstream of other gene
+  ## in above cases, peak1 can be annotated as Upstream of target1. However not peak2
+  ## because target2 has bigger fraction in-between [target1, peak2] range
   upstreamHitsFiltered <- dplyr::left_join(x = upstreamHits, y = isFeatureInBetweenDf, by = "id") %>%
     tidyr::replace_na(list(intersectWd = 0, ovlpFeatureWd = 0, fractionOvlp = 0)) %>%
     dplyr::filter(fractionOvlp <= 0.2)
-
+  ##0.2 is still very big for the large genomes such as human, mouse as genes are very long
 
   ## build upstream peaks data and filter unnecessary peaks where there is/are genes between peak and target
   upstreamPeaks <- peaksGr[upstreamHitsFiltered$from]
@@ -668,16 +679,23 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL,
 
 #' True target for bidirectional peak
 #'
-#' This function
-#'
-#'     target1              peak                         target2
-#'
-#' ==<=====<=====<===     -------             ===>=====>=====>=====>==
-#'
-#'                                |
-#'                    center between two targets
-#'
-#' True target: target1: more than 80% of the peak lies on target1 side
+#' This function uses following logic to select or reject target from bidirectional peak.
+#' \preformatted{
+#' use of minTSS_gapForPseudo (500)* and skewFraction (0.2)
+#' #                      *                                                   #
+#' #                     |<---more than 500bp--->|                            #
+#' #       target1                    |                    target2            #
+#' #   ==<=====<=====<===      peak1  |           ===>=====>=====>=====>==    #
+#' #                          ------- | peak2                                 #
+#' #                               ---|----                                   #
+#' #                                  |                                       #
+#' #                      midpoint between two targets                        #
+#' #                                                                          #
+#' peak1 => target1: more than 80% of the peak lies on target1 side
+#' peak2 => target1, targe2: peak lies on the center
+#' If gap between two bidirectional genes < minTSS_gapForPseudo (default: 500bp),
+#' peak is assigned to both the targets
+#' }
 #'
 #' @param bdirTargets A dataframe with two rows for bidirectional targets
 #' @param skewFraction Minimum fraction of peak region allowed on the side of false target
@@ -690,13 +708,6 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL,
 #' @examples NULL
 nearest_upstream_bidirectional <- function(bdirTargets, skewFraction = 0.2, minTSS_gapForPseudo = 500){
 
-  ##     target1                    |                    target2
-  ## ==<=====<=====<===      peak1  |           ===>=====>=====>=====>==
-  ##                        ------- |   peak2
-  ##                                |  -------
-  ##                                |
-  ##                    center between two targets
-  ## True target: target1: more than 80% of the peak lies on target1 side
 
   if(nrow(bdirTargets) == 1){
     return(bdirTargets)
@@ -756,6 +767,24 @@ nearest_upstream_bidirectional <- function(bdirTargets, skewFraction = 0.2, minT
 #' This function checks the different targets assigned for a peak and returns the
 #' optimum target gene/s
 #'
+#' \strong{Use of \code{insideSkewToEndCut} (0.7)* and \code{promoterLength} (500)**: }
+#' \preformatted{
+#' #                                                                #
+#' #           target1                *            target2          #
+#' #   0    0.25     0.5     0.75     |<--500-->|                   #
+#' #   =======>=======>=======>=======         =====>=====>===      #
+#' #                            ----                                #
+#' #                            peak1                               #
+#' #   |<--------0.7------->|                                       #
+#' #   **                                                           #
+#' #                                                                #
+#' In above example, peak1 is inside target1 but it is near the end
+#' Relative position of the peak is >0.7 in target1. peak1 is also
+#' upstream of target2 and within 500bp. So new annotation is
+#' target1: pasudo_inside
+#' target2: upstream
+#' }
+#'
 #' @param peakGr peak annotation in form of GRanges object. This is generated by
 #' combining \code{UTR_annotate(), region_overlap_annotate(), upstream_annotate()}
 #' functions.
@@ -771,7 +800,8 @@ nearest_upstream_bidirectional <- function(bdirTargets, skewFraction = 0.2, minT
 #' @export
 #'
 #' @examples NA
-select_optimal_targets <- function(peakGr, insideSkewToEndCut = 0.7, promoterLength = 500,
+select_optimal_targets <- function(peakGr, insideSkewToEndCut = 0.7,
+                                   promoterLength,
                                    bindingInGene = FALSE){
 
   # stopifnot(is(object = peakGr, class2 = "GRanges"))
@@ -895,6 +925,7 @@ select_optimal_targets <- function(peakGr, insideSkewToEndCut = 0.7, promoterLen
         typesGrl$nearEnd <- set_peakTarget_to_pseudo(target = typesGrl$nearEnd)
       }
     }
+
 
     ## 7) if there is upstreamTss peak and also peakInFeature type peak
     if(peakFound$upstreamTss && peakFound$peakInFeature){

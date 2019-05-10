@@ -27,3 +27,6 @@ format file from a bigWig file. For each region, it adds the depth and divide it
 region length. NOTE: It assumes that the bigWig file is already scalled (e.g. 1 million)
 and hence does perform scalling or normalization.
 }
+\examples{
+NA
+}

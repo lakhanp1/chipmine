@@ -34,7 +34,7 @@
 #' \code{rasterPar$qual} is used for \code{raster_quality} argument of \code{Heatmap} function.
 #' @param ... Other arguments for EnrichedHeatmap function
 #'
-#' @returnA list object with following elements:
+#' @return A list object with following elements:
 #' \itemize{
 #' \item heatmap: Enriched heatmap
 #' \item rowGroupHt: row group heatmap
@@ -175,10 +175,12 @@ profile_heatmap <- function(profileMat,
       # cat("Colors for clusters not provided. Generating new colors for clusters: ", clusterNames, "\n")
 
       # clusterColor <- structure(rainbow(length(clusterNames)), names = clusterNames)
-      clusterColor <- structure(pkg.env$customColors[1:length(clusterNames)], names = clusterNames)
+      clusterColor <- structure(
+        chipmineEnv$customColors[1:length(clusterNames)],
+        names = clusterNames)
 
       ## if there are too many clusters, use rainbow colors
-      if(length(clusterNames) > length(pkg.env$customColors)){
+      if(length(clusterNames) > length(chipmineEnv$customColors)){
         clusterColor <- structure(rainbow(length(clusterNames)), names = clusterNames)
       }
 

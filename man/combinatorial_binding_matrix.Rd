@@ -28,7 +28,9 @@ A dataframe with a masterDf of peak regions generated after merging all peak reg
 \description{
 This method reads all the narrowPeak files for given TFs and create a merged peak region list.
 All the original peaks are then searched for overlap against this master list and a combinatorial
-dataframe showing the presence of peak in the master peak list is returned.
+dataframe showing the presence of peak in the master peak list is returned. If a region has
+more than one peak overlapping, best peak is selected using \code{peakEnrichment} column.
+This is done to avoid the exponential growth in number of rows with increasing samples.
 Additionally, it also extracts the sequence around summit position
 }
 \examples{

@@ -13,7 +13,7 @@
 #' @return A dataframe with target gene information for confident peaks
 #' @export
 #'
-#' @examples
+#' @examples NA
 best_replicate_peakset <- function(sampleInfo, cdsFile, ...){
 
   ## generate the combinatorial binding matrix using peak overlap

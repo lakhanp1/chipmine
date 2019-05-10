@@ -26,12 +26,12 @@
 #' @export
 #'
 #' @examples NA
-colScale = function(x,
-                    center = TRUE,
-                    scale = TRUE,
-                    add_attr = TRUE,
-                    rows = NULL,
-                    cols = NULL) {
+scale_matrix_columns = function(x,
+                                center = TRUE,
+                                scale = TRUE,
+                                add_attr = TRUE,
+                                rows = NULL,
+                                cols = NULL) {
 
   if (!is.null(rows) && !is.null(cols)) {
     x <- x[rows, cols, drop = FALSE]
@@ -47,7 +47,7 @@ colScale = function(x,
 
   # Get the column sd
   if (scale) {
-    csd = matrixStats::colSds(x, center = cm)
+    csd = matrixStats::colSds(x, center = cm, na.rm = TRUE)
   } else {
     # just divide by 1 if not
     csd = rep(1, length = length(cm))
@@ -100,12 +100,12 @@ colScale = function(x,
 #' @export
 #'
 #' @examples NA
-rowScale = function(x,
-                    center = TRUE,
-                    scale = TRUE,
-                    add_attr = TRUE,
-                    rows = NULL,
-                    cols = NULL) {
+scale_matrix_rows = function(x,
+                             center = TRUE,
+                             scale = TRUE,
+                             add_attr = TRUE,
+                             rows = NULL,
+                             cols = NULL) {
 
   if (!is.null(rows) && !is.null(cols)) {
     x <- x[rows, cols, drop = FALSE]
@@ -120,7 +120,7 @@ rowScale = function(x,
 
   # Get the row sd
   if (scale) {
-    csd = matrixStats::rowSds(x, center = cm)
+    csd = matrixStats::rowSds(x, center = cm, na.rm = TRUE)
   } else {
     # just divide by 1 if not
     csd = rep(1, length = length(cm))

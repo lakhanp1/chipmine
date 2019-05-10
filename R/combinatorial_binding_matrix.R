@@ -3,7 +3,9 @@
 #'
 #' This method reads all the narrowPeak files for given TFs and create a merged peak region list.
 #' All the original peaks are then searched for overlap against this master list and a combinatorial
-#' dataframe showing the presence of peak in the master peak list is returned.
+#' dataframe showing the presence of peak in the master peak list is returned. If a region has
+#' more than one peak overlapping, best peak is selected using \code{peakEnrichment} column.
+#' This is done to avoid the exponential growth in number of rows with increasing samples.
 #' Additionally, it also extracts the sequence around summit position
 #'
 #' @param sampleInfo Sample information dataframe
@@ -40,7 +42,8 @@ combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFor
 
   ## master list as dataframe
   masterDf <- as.data.frame(peakRegions) %>%
-    dplyr::select(-width, -strand)
+    dplyr::select(-width, -strand) %>%
+    tibble::as_tibble()
 
   masterDf <- dplyr::mutate_if(.tbl = masterDf, .predicate = is.factor, .funs = as.character)
 
@@ -59,16 +62,25 @@ combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFor
     hits$queryHits <- NULL
     hits$subjectHits <- NULL
 
-    dt <- import_peak_annotation(sampleId = sampleName,
-                                 peakAnnoFile = sampleInfo$narrowpeakAnno[i],
-                                 columns = peakCols) %>%
+    dt <- import_peaks_as_df(file = sampleInfo$narrowpeakFile[i],
+                             sampleId = sampleName,
+                             peakCols = peakCols) %>%
       dplyr::distinct()
 
 
     dt[[overlapPeakCol]] <- TRUE
 
+    ## select best peak within region
     hits <- dplyr::left_join(x = hits, y = dt, by = setNames(peakIdCol, peakIdCol)) %>%
-      dplyr::select("peakRegionName", !!peakIdCol, !! overlapPeakCol, dplyr::everything())
+      dplyr::select("peakRegionName", !!peakIdCol, !! overlapPeakCol, dplyr::everything()) %>%
+      dplyr::group_by(peakRegionName) %>%
+      dplyr::arrange_at(.vars = vars(starts_with("peakEnrichment")), .funs = list(~desc(.)), .by_group = TRUE) %>%
+      dplyr::slice(1L) %>%
+      dplyr::ungroup()
+
+    # hits <- dplyr::group_by(hits, peakRegionName) %>%
+    #   dplyr::summarise(!!sampleName := n()) %>%
+    #   dplyr::ungroup()
 
     if(! is.null(genome)){
       ## get the sequence around summit
@@ -81,9 +93,9 @@ combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFor
     }
 
     ## join with master data
+    # masterDf <- dplyr::left_join(x = masterDf, y = hits, by = c("name" = "peakRegionName"))
     masterDf <- dplyr::left_join(x = masterDf, y = hits, by = c("name" = "peakRegionName")) %>%
       tidyr::replace_na(replace = purrr::set_names(list(FALSE), nm = overlapPeakCol))
-
 
   }
 
