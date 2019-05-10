@@ -175,10 +175,12 @@ profile_heatmap <- function(profileMat,
       # cat("Colors for clusters not provided. Generating new colors for clusters: ", clusterNames, "\n")
 
       # clusterColor <- structure(rainbow(length(clusterNames)), names = clusterNames)
-      clusterColor <- structure(pkg.env$customColors[1:length(clusterNames)], names = clusterNames)
+      clusterColor <- structure(
+        chipmineEnv$customColors[1:length(clusterNames)],
+        names = clusterNames)
 
       ## if there are too many clusters, use rainbow colors
-      if(length(clusterNames) > length(pkg.env$customColors)){
+      if(length(clusterNames) > length(chipmineEnv$customColors)){
         clusterColor <- structure(rainbow(length(clusterNames)), names = clusterNames)
       }
 
