@@ -62,7 +62,7 @@ preProcess_polII_expression <- function(expMat, sampleId, expFraction, polIIExpF
 #' @param bindingInGene whether the factor bind in gene body like polII or not
 #' @param fcCutoff fold enrichment cutoff for the peak. Default: 1 i.e. no cutoff
 #' @param pvalCutoff log10_pvalue cutoff for the peak. Default: 1 i.e. no cutoff
-#' @param preference A character vector with 5 values: \code c("nearStart", "peakInFeature",
+#' @param preference A character vector with 5 values: \code{c("nearStart", "peakInFeature",
 #'  "featureInPeak", "nearEnd", "upstreamTss")}. If the order of the values is used
 #'  as preference order for selecting the most appropriate peak for a gene.
 #'  Default: \code{c("nearStart", "peakInFeature", "featureInPeak", "nearEnd", "upstreamTss")}

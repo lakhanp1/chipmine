@@ -12,6 +12,10 @@ profile_matrix_kmeans(mat, km, clustFile, name, kmIter = 100,
 
 \item{km}{number of cluster centers}
 
+\item{clustFile}{File to which cluster data will be stored}
+
+\item{name}{Sample name}
+
 \item{kmIter}{iter.max    argument of stats::kmeans() function. Default: 100}
 
 \item{kmStarts}{nstart argument of stats::kmeans() function. Default: 150}

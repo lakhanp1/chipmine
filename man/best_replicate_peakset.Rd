@@ -22,3 +22,6 @@ function to generate a peak overlap matrix and selects the peaks which are
 present in all the replicates. Then it uses the best replicate to extract the
 target gene infomation.
 }
+\examples{
+NA
+}

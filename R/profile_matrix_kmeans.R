@@ -8,8 +8,8 @@
 #'
 #' @param mat profile matrix
 #' @param km number of cluster centers
-#' @param clustFile
-#' @param name
+#' @param clustFile File to which cluster data will be stored
+#' @param name Sample name
 #' @param kmIter iter.max	argument of stats::kmeans() function. Default: 100
 #' @param kmStarts nstart argument of stats::kmeans() function. Default: 150
 #' @param ... other arguments for stats::kmeans() function

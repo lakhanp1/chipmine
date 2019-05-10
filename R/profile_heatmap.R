@@ -34,7 +34,7 @@
 #' \code{rasterPar$qual} is used for \code{raster_quality} argument of \code{Heatmap} function.
 #' @param ... Other arguments for EnrichedHeatmap function
 #'
-#' @returnA list object with following elements:
+#' @return A list object with following elements:
 #' \itemize{
 #' \item heatmap: Enriched heatmap
 #' \item rowGroupHt: row group heatmap

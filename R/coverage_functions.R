@@ -18,7 +18,7 @@
 #' coverage column. Otherwise a dataframe is returned.
 #' @export
 #'
-#' @examples
+#' @examples NA
 region_coverage <- function(regions, format = "narrowPeak", bwFile, name = "coverage"){
 
   regionGr <- NULL
