@@ -19,17 +19,23 @@ from the midpoint of two target genes. Default: 0.2}
 Same dataframe in which peakType for one of the target is marked as pseudo
 }
 \description{
-This function
+This function uses following logic to select or reject target from bidirectional peak.
+\preformatted{
+use of minTSS_gapForPseudo (500)* and skewFraction (0.2)
+#                      *                                                   #
+#                     |<---more than 500bp--->|                            #
+#       target1                    |                    target2            #
+#   ==<=====<=====<===      peak1  |           ===>=====>=====>=====>==    #
+#                          ------- | peak2                                 #
+#                               ---|----                                   #
+#                                  |                                       #
+#                      midpoint between two targets                        #
+#                                                                          #
+peak1 => target1: more than 80% of the peak lies on target1 side
+peak2 => target1, targe2: peak lies on the center
+If gap between two bidirectional genes < minTSS_gapForPseudo (default: 500bp),
+peak is assigned to both the targets
 }
-\details{
-target1              peak                         target2
-
-==<=====<=====<===     -------             ===>=====>=====>=====>==
-
-|
-                   center between two targets
-
-True target: target1: more than 80% of the peak lies on target1 side
 }
 \examples{
 NULL

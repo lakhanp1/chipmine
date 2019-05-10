@@ -5,7 +5,7 @@
 \title{Annotate upstream peaks on transcripts}
 \usage{
 upstream_annotate(peaksGr, featuresGr, txdb = NULL, txTypes = NULL,
-  promoterLength = 500, ...)
+  promoterLength, ...)
 }
 \arguments{
 \item{peaksGr}{GRanges object for peak data}
@@ -22,7 +22,7 @@ If TxDB object is not provided, featuresGr is used. Default: featuresGr is used.
 character vector. This options is used only if TxDB object is provided. Default: NULL}
 
 \item{promoterLength}{Promoter region length. Upstream peaks within \code{promoterLength}
-distance of feature start are annotated as \code{promoter} region peaks. Default: 500}
+distance of feature start are annotated as \code{promoter} region peaks.}
 
 \item{...}{Other arguments for \code{nearest_upstream_bidirectional()} function}
 }

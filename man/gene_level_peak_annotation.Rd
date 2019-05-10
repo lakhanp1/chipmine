@@ -24,6 +24,11 @@ rows can be provided for special downstream usage.}
 
 \item{bwFile}{bigWig format coverage track file}
 
+\item{preference}{A character vector with 5 values: \code{c("nearStart", "peakInFeature",
+"featureInPeak", "nearEnd", "upstreamTss")}. If the order of the values is used
+as preference order for selecting the most appropriate peak for a gene.
+Default: \code{c("nearStart", "peakInFeature", "featureInPeak", "nearEnd", "upstreamTss")}}
+
 \item{outFile}{Optional output file. Default: NULL which means the output is not stored}
 
 \item{bindingInGene}{whether the factor bind in gene body like polII or not}
