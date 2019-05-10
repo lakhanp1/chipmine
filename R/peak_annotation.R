@@ -62,6 +62,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
                                 excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
                                 output = NULL){
 
+  ## started working for peak_annotation on larger genomes
   fileFormat <- match.arg(arg = fileFormat, choices = c("narrowPeak", "broadPeak"))
 
   ## transcript to gene map
