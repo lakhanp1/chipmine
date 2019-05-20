@@ -20,7 +20,8 @@
 #'
 #' Some important observations to do before annotating ChIPseq data:
 #' \enumerate{
-#' \item Whether the signal is like TF/polII i.e. factor binds in gene or not.
+#' \item Whether the signal is like TF/polII i.e. factor binds across whole gene or not.
+#' Also see if binding is throughout the genome like CTCF factor.
 #' See \code{bindingInGene, promoterLength} arguments for the details.
 #' \item For the genes which are within peak region, what is the gene size (are
 #' genes shorter in length than normal) and how far is the next downstream gene.
@@ -62,23 +63,16 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
                                 excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
                                 output = NULL){
 
+  stopifnot(is(object = txdb, class2 = "TxDb"))
+
   ## started working for peak_annotation on larger genomes
   fileFormat <- match.arg(arg = fileFormat, choices = c("narrowPeak", "broadPeak"))
 
-  ## transcript to gene map
-  txToGene <- suppressMessages(
-    AnnotationDbi::select(x = txdb, keys = AnnotationDbi::keys(x = txdb, keytype = "TXID"),
-                          columns = c("GENEID", "TXNAME", "TXTYPE"), keytype = "TXID")) %>%
-    dplyr::mutate(TXID = as.character(TXID)) %>%
-    dplyr::rename(geneId = GENEID, txName = TXNAME, txType = TXTYPE)
+  ## new environment for global variables which takes time to generate
+  ## create once and use multiple times
+  # txdbEnv <- new.env(parent = emptyenv())
 
-  ## decide which transcript types to select for the annotation
-  allTxTypes <- unique(txToGene$txType)
-  selectType <- allTxTypes[which(!allTxTypes %in% excludeType)]
-
-  ## extract transcript GRanges
-  transcriptsGr <- GenomicFeatures::transcripts(txdb, columns = c("tx_id", "tx_name", "tx_type"),
-                                                filter = list(tx_type = selectType))
+  transcriptsGr <- get_txdb_transcripts_gr(txdb = txdb, excludeType = excludeType)
 
   ## calculate peak related features
   peaks <- rtracklayer::import(con = peakFile, format = fileFormat)
@@ -103,22 +97,28 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
 
 
   ## 5' UTR annotation
-  fiveUtrGrl <- GenomicFeatures::fiveUTRsByTranscript(txdb)
+  fiveUtrGrl <- get_txdb_fiveUtr_grl(txdb = txdb)
   fiveUtrTargets <- UTR_annotate(queryGr = peaks, subjectGrl = fiveUtrGrl, utrType = "5UTR", txdb = txdb)
 
   ## 3' UTR region annotations
-  threeUtrGrl <- GenomicFeatures::threeUTRsByTranscript(txdb)
+  threeUtrGrl <- get_txdb_threeUtr_grl(txdb = txdb)
   threeUtrTargets <- UTR_annotate(queryGr = peaks, subjectGrl = threeUtrGrl, utrType = "3UTR", txdb = txdb)
 
+  ## exons
+  exonsGr <- get_txdb_exons_gr(txdb = txdb)
 
-  ## CDS region annotations
-  cdsGrl <- GenomicFeatures::cdsBy(x = txdb, by = "tx")
-  cdsGr <- unlist(range(cdsGrl))
-  mcols(cdsGr)$tx_id <- names(cdsGr)
-  cdsTargets <- region_overlap_annotate(queryGr = peaks,
-                                        subjectGr = cdsGr,
-                                        includeFractionCut = includeFractionCut,
-                                        name = "CDS")
+  ## introns
+  intronsGr <- get_txdb_introns_gr(txdb)
+
+
+  # ## CDS region annotations
+  # cdsGrl <- GenomicFeatures::cdsBy(x = txdb, by = "tx")
+  # cdsGr <- unlist(range(cdsGrl))
+  # mcols(cdsGr)$tx_id <- names(cdsGr)
+  # cdsTargets <- region_overlap_annotate(queryGr = peaks,
+  #                                       subjectGr = cdsGr,
+  #                                       includeFractionCut = includeFractionCut,
+  #                                       name = "CDS")
 
   ## Transcript region annotations
   transcriptTargets <- region_overlap_annotate(queryGr = peaks,
@@ -126,9 +126,9 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
                                                includeFractionCut = includeFractionCut,
                                                name = "tx")
 
-  ## annotate upstream targets: IMP to give txTypes so that rRNA, tRNA, snRNAs will be removed
+  ## annotate upstream targets: IMP to give excludeType so that rRNA, tRNA, snRNAs will be removed
   upstreamTargets <- upstream_annotate(peaksGr = peaks, featuresGr = transcriptsGr,
-                                       txdb = txdb, txTypes = selectType,
+                                       txdb = txdb, excludeType = excludeType,
                                        promoterLength = promoterLength)
 
 
@@ -314,24 +314,30 @@ UTR_annotate <- function(queryGr, subjectGrl, utrType, txdb){
 
   ## get respective transcripts for each UTR
   ## featureCovFrac is at transcript level
-  transcriptsGrl <- GenomicFeatures::mapIdsToRanges(x = txdb,
+  txSubsetGrl <- GenomicFeatures::mapIdsToRanges(x = txdb,
                                                     keys = list(tx_id = mcols(queryTargets)$tx_id),
-                                                    type = "tx")
-  transcriptGr <- unlist(transcriptsGrl)
+                                                    type = "tx", columns = c("gene_id"))
 
+  txSubsetGr <- unlist(txSubsetGrl)
 
-
-  mcols(queryTargets)$targetStart = start(transcriptGr)
-  mcols(queryTargets)$targetEnd = end(transcriptGr)
-  mcols(queryTargets)$targetStrand = strand(transcriptGr)
+  mcols(queryTargets)$targetStart = start(txSubsetGr)
+  mcols(queryTargets)$targetEnd = end(txSubsetGr)
+  mcols(queryTargets)$targetStrand = strand(txSubsetGr)
+  mcols(queryTargets)$txWidth = width(txSubsetGr)
+  mcols(queryTargets)$gene_id = unlist(mcols(txSubsetGr)$gene_id)
   mcols(queryTargets)$featureCovFrac <- as.numeric(
-    sprintf(fmt = "%.3f", width(pintersect(x = queryTargets, y = transcriptGr)) / width(transcriptGr))
+    sprintf(fmt = "%.3f", width(pintersect(x = queryTargets, y = txSubsetGr)) / width(txSubsetGr))
   )
 
   ## calculate summit distance and change relativeSummitPos based on target gene
   ## summitDist > (targetEnd - targetStart) : peak overlap at end and summit is after end
   ## summitDist < 0 : peak overlap at start and summit before start
   utrTargetsDf <- as.data.frame(queryTargets) %>%
+    dplyr::group_by(name, gene_id) %>%
+    dplyr::arrange(desc(width), .by_group = TRUE) %>%
+    dplyr::slice(1L) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(-gene_id, -txWidth) %>%
     dplyr::mutate(
       summitDist = dplyr::case_when(
         targetStrand == "+" ~ peakSummit - targetStart,
@@ -352,7 +358,7 @@ UTR_annotate <- function(queryGr, subjectGrl, utrType, txdb){
     )
 
   utrTargetsGr <- makeGRangesFromDataFrame(df = utrTargetsDf, keep.extra.columns = TRUE)
-  return(utrTargetsGr)
+  return(sort(utrTargetsGr))
 }
 
 
@@ -380,7 +386,7 @@ UTR_annotate <- function(queryGr, subjectGrl, utrType, txdb){
 #' @examples NA
 region_overlap_annotate <- function(queryGr, subjectGr, includeFractionCut = 0.7, name = "CDS"){
 
-  name <- match.arg(arg = name, choices = c("gene", "CDS", "region"))
+  name <- match.arg(arg = name, choices = c("gene", "tx", "CDS", "region"))
   stopifnot(is(object = queryGr, class2 = "GRanges"))
   stopifnot(is(object = subjectGr, class2 = "GRanges"))
 
@@ -484,6 +490,21 @@ set_peakTarget_to_pseudo <- function(target){
 
 #' Annotate upstream peaks on transcripts
 #'
+#' This function annotates the peaks with nearest downstream target. See Details.
+#'
+#' There will be cases when a peak is inside a gene and it is upstream of other gene
+#' Use of \code{upstreamOverlappingFraction} (default: 0.2)
+#'  #                                                                         #
+#'	#        target1                     target2                              #
+#'	#      =====<=======<===       =====<=======<========<=======             #
+#'	#                                ---            ----                      #
+#'	#                              peak1           peak2                      #
+#'	#                      |<------>|                                         #
+#'	#                      |<------------------------->|                      #
+#'	#                                                                         #
+#' in above cases, peak1 can be annotated as Upstream of target1. However not peak2
+#' because target2 has bigger fraction in-between [target1, peak2] range
+#'
 #' @param peaksGr GRanges object for peak data
 #' @param featuresGr A transcript GRanges object
 #' @param txdb Optional TxDB object. A UTR less region is created using TxDB and used
@@ -491,8 +512,8 @@ set_peakTarget_to_pseudo <- function(target){
 #' overlap of 0.2 with geneA is allowed in a case when peak overlaps with a geneA and
 #' is upstream of geneB. This is useful for the peaks which are near TES of a geneA.
 #' If TxDB object is not provided, featuresGr is used. Default: featuresGr is used.
-#' @param txTypes Types of transcripts to include from annotation. Should be a
-#' character vector. This options is used only if TxDB object is provided. Default: NULL
+#' @param excludeType tx types to exclude from TxDB
+#' @param upstreamOverlappingFraction Default: 0.2
 #' @param promoterLength Promoter region length. Upstream peaks within \code{promoterLength}
 #' distance of feature start are annotated as \code{promoter} region peaks.
 #' @param ... Other arguments for \code{nearest_upstream_bidirectional()} function
@@ -502,11 +523,18 @@ set_peakTarget_to_pseudo <- function(target){
 #' @export
 #'
 #' @examples NA
-upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL,
+upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NULL,
+                              upstreamOverlappingFraction = 0.2,
                               promoterLength, ...){
 
   stopifnot(is(object = peaksGr, class2 = "GRanges"))
   stopifnot(is(object = featuresGr, class2 = "GRanges"))
+
+  ## precede(ignore.strand = FALSE) is sufficient to find a peak that preceds a subject
+  ## but for bidirectional peaks, precede() will return only nearest feature which is
+  ## preceded by peak. However, both the features (+ and - strand) should be returned
+  ## Hence, ignore.strand = TRUE is used with both precede() and follow() to extract
+  ## features upstream and downstream of the peak
 
   ## select immediate downstream feature to the peak
   peakDownFeatures <- GenomicRanges::precede(x = peaksGr, subject = featuresGr,
@@ -561,21 +589,15 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL,
   names(peakTargetGapsGr) <- upstreamHits$id
 
   ## build a subject GRanges for tx - (5UTR + 3UTR)
-  ## Such custom regions are used because genes have 3' UTR. A peak in UTR region of
-  ## a gene can be upstream of another gene
+  ## Such custom regions are used because genes have very long 3' UTR.
+  ## A peak in UTR region of a gene can be upstream of another gene
   txMinusUtrs <- featuresGr
   if(!is.null(txdb)){
     stopifnot(is(object = txdb, class2 = "TxDb"))
 
-    fiveUtrGr <- unlist(range(GenomicFeatures::fiveUTRsByTranscript(txdb)))
-    threeUtrGr <- unlist(range(GenomicFeatures::threeUTRsByTranscript(txdb)))
-
-    if(is.null(txTypes)){
-      transcriptsGr <- GenomicFeatures::transcripts(txdb, columns = c("tx_id", "tx_name", "tx_type"))
-    } else{
-      transcriptsGr <- GenomicFeatures::transcripts(txdb, columns = c("tx_id", "tx_name", "tx_type"),
-                                                    filter = list(tx_type = txTypes))
-    }
+    fiveUtrGr <- unlist(range(get_txdb_fiveUtr_grl(txdb = txdb)))
+    threeUtrGr <- unlist(range(get_txdb_threeUtr_grl(txdb = txdb)))
+    transcriptsGr <- get_txdb_transcripts_gr(txdb = txdb, excludeType = excludeType)
 
     txMinusFiveUtr <- GenomicRanges::setdiff(x = transcriptsGr,
                                              y = fiveUtrGr,
@@ -613,20 +635,11 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL,
   isFeatureInBetweenDf$ovlpFeatureWd <- width(txMinusUtrs[isFeatureInBetweenDf$firstOverlapFeature])
   isFeatureInBetweenDf$fractionOvlp <- isFeatureInBetweenDf$intersectWd / isFeatureInBetweenDf$ovlpFeatureWd
 
-  ##    target1                     target2
-  ##  =====<=======<===       =====>=======>========>=======
-  ##                           ---                   ---
-  ##                          peak1                 peak2
-  ##                  |<----->|
-  ##                  |<---------------------------->|
-  ##
-  ## there will be cases when a peak is inside a gene and it is upstream of other gene
-  ## in above cases, peak1 can be annotated as Upstream of target1. However not peak2
-  ## because target2 has bigger fraction in-between [target1, peak2] range
+  ## upstreamOverlappingFraction based filtering
+  ## 0.2 is still very big for the large genomes such as human, mouse as genes are very long
   upstreamHitsFiltered <- dplyr::left_join(x = upstreamHits, y = isFeatureInBetweenDf, by = "id") %>%
     tidyr::replace_na(list(intersectWd = 0, ovlpFeatureWd = 0, fractionOvlp = 0)) %>%
-    dplyr::filter(fractionOvlp <= 0.2)
-  ##0.2 is still very big for the large genomes such as human, mouse as genes are very long
+    dplyr::filter(fractionOvlp <= upstreamOverlappingFraction)
 
   ## build upstream peaks data and filter unnecessary peaks where there is/are genes between peak and target
   upstreamPeaks <- peaksGr[upstreamHitsFiltered$from]
@@ -660,12 +673,12 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, txTypes = NULL,
   ## find pseudo_upstream targets
   bidirectionalPairs <- dplyr::group_by(upstreamPeaksDf, name) %>%
     dplyr::arrange(desc(peakDist), .by_group = T) %>%
-    dplyr::mutate(n = n()) %>%
+    # dplyr::mutate(n = n()) %>%
     dplyr::do(nearest_upstream_bidirectional(bdirTargets = .)) %>%
     dplyr::ungroup() %>%
+    # dplyr::select(-n) %>%
     dplyr::arrange(seqnames, start) %>%
-    as.data.frame() %>%
-    dplyr::select(-n)
+    as.data.frame()
 
   upstreamPeaksAn <- makeGRangesFromDataFrame(bidirectionalPairs, keep.extra.columns = T)
 

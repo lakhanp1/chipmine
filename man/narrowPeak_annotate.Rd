@@ -62,7 +62,8 @@ The less optimum target type is prefixed with \emph{pseudo}. Please refer to the
 \details{
 Some important observations to do before annotating ChIPseq data:
 \enumerate{
-\item Whether the signal is like TF/polII i.e. factor binds in gene or not.
+\item Whether the signal is like TF/polII i.e. factor binds across whole gene or not.
+Also see if binding is throughout the genome like CTCF factor.
 See \code{bindingInGene, promoterLength} arguments for the details.
 \item For the genes which are within peak region, what is the gene size (are
 genes shorter in length than normal) and how far is the next downstream gene.

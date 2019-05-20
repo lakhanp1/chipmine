@@ -76,9 +76,9 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matri
       ),
       narrowpeakFile = dplyr::case_when(
         IP_tag != "polII" & isTRUE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, "_withCtrl_peaks.narrowPeak", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.narrowPeak", sep = ""),
         IP_tag != "polII" & isFALSE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, "_withoutCtrl_peaks.narrowPeak", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.narrowPeak", sep = ""),
         TRUE ~ "NA"
       ),
       narrowpeakAnno = dplyr::case_when(
@@ -90,9 +90,9 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matri
       ),
       broadpeakFile = dplyr::case_when(
         IP_tag != "polII" & isTRUE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, "_withCtrl_peaks.broadPeak", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.broadPeak", sep = ""),
         IP_tag != "polII" & isFALSE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, "_withoutCtrl_peaks.broadPeak", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.broadPeak", sep = ""),
         TRUE ~ "NA"
       ),
       broadpeakAnno = dplyr::case_when(
