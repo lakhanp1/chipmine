@@ -29,7 +29,7 @@ get_txdb_transcripts_gr <- function(txdb, excludeType = NULL, tx = NULL){
 
     ## extract transcript GRanges
     transcriptsGr <- GenomicFeatures::transcripts(x = txdb,
-                                                  columns = c("tx_id", "tx_name", "tx_type"),
+                                                  columns = c("tx_id", "tx_name", "tx_type", "gene_id"),
                                                   filter = txFilter)
 
     assign(x = "transcriptsGr", value = transcriptsGr, envir = txdbEnv)
@@ -102,11 +102,4 @@ get_txdb_introns_gr <- function(txdb){
 
 
 ##################################################################################
-
-
-
-
-
-
-
 
