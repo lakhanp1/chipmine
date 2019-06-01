@@ -47,6 +47,18 @@ Use of \code{upstreamOverlappingFraction} (default: 0.2)
 #                                                                         #
 in above cases, peak1 can be annotated as Upstream of target1. However not peak2
 because target2 has bigger fraction in-between [target1, peak2] range
+
+Target gene inside gene case:
+ #                                                                         #
+#              target1          target2 (longer)                          #
+#      =====<=======<=======<=======<========<=======                     #
+ #               ==<==                                                     #
+#                                ---            ----                      #
+#                              peak1           peak2                      #
+#                    |<-------->|                                         #
+#                                                                         #
+In above case, peak1 is inside targe2 and upstream of target1. These targets are
+selected in \code{select_optimal_targets()} if peak lies within promoter range.
 }
 \examples{
 NA

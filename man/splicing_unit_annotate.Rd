@@ -2,7 +2,7 @@
 % Please edit documentation in R/peak_annotation.R
 \name{splicing_unit_annotate}
 \alias{splicing_unit_annotate}
-\title{Annotate peaks with exons or intron overlap}
+\title{Annotate peaks with 5UTR/exon/intron/3UTR overlap}
 \usage{
 splicing_unit_annotate(peaksGr, featuresGr, featureType, txdb)
 }
@@ -11,7 +11,7 @@ splicing_unit_annotate(peaksGr, featuresGr, featureType, txdb)
 
 \item{featuresGr}{A transcript GRanges object}
 
-\item{featureType}{Feature type. One of \code{c("exon", "intron")}}
+\item{featureType}{Feature type. One of \code{c("5UTR", "exon", "intron", "3UTR")}}
 
 \item{txdb}{TxDB object. Transcript information for the exon/intron overlapping with peak
 is extracted from TxDB object and used to calculate other features. In case a peak
@@ -19,11 +19,11 @@ overlap with exons/introns from multiple transcripts of same gene, longest trans
 selected.}
 }
 \value{
-A modified peak GRanges object with additional columns: \code{ tx_id,
+A modified peak GRanges object with additional columns: \code{tx_id,
 peakType, featureCovFrac, peakDist, summitDist}
 }
 \description{
-Annotate peaks with exons or intron overlap
+Annotate peaks with 5UTR/exon/intron/3UTR overlap
 }
 \examples{
 NA

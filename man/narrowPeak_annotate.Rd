@@ -51,7 +51,7 @@ types} (listed in decreasing order of preference):
 \item \strong{featureInPeak:} \emph{"include_tx", "include_CDS"}
 \item \strong{nearStart:} \emph{"5UTR", "CDS_start", "tx_start"}
 \item \strong{nearEnd:} \emph{"3UTR", "tx_end", "CDS_end"}
-\item \strong{peakInFeature:} \emph{"inside_tx", "inside_CDS"}
+\item \strong{peakInFeature:} \emph{"exon", "intron", "inside_tx", "inside_CDS"}
 \item \strong{upstreamTss:} \emph{"promoter", "upstream"}
 }
 Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
