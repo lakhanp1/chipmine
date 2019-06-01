@@ -74,7 +74,8 @@ combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFor
     hits <- dplyr::left_join(x = hits, y = dt, by = setNames(peakIdCol, peakIdCol)) %>%
       dplyr::select("peakRegionName", !!peakIdCol, !! overlapPeakCol, dplyr::everything()) %>%
       dplyr::group_by(peakRegionName) %>%
-      dplyr::arrange_at(.vars = vars(starts_with("peakEnrichment")), .funs = list(~desc(.)), .by_group = TRUE) %>%
+      dplyr::arrange_at(.vars = vars(starts_with("peakEnrichment.")),
+                        .funs = list(~dplyr::desc(.)), .by_group = TRUE) %>%
       dplyr::slice(1L) %>%
       dplyr::ungroup()
 
