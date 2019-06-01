@@ -39,6 +39,9 @@
 #' used as summit as broadPeak file does not report summit
 #' @param fileFormat Format of the peak file. One of "narrowPeak" (Default) or "broadPeak".
 #' @param txdb TxDB object which will be used for annotation
+#' @param txIds A vector of transcript IDs to be used specifically in the annotation
+#' process instead of full transcript set. These should be internal tx_ids from TxDB
+#' object. Default: NULL
 #' @param includeFractionCut Number between [0, 1]. If a peak covers more than this
 #' fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7
 #' @param bindingInGene Logical: whether the ChIPseq TF binds in gene body. This is
@@ -57,13 +60,22 @@
 #' @export
 #'
 #' @examples NA
-narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, includeFractionCut = 0.7,
-                                bindingInGene = FALSE, promoterLength = 500,
-                                insideSkewToEndCut = 0.7, reportPseudo = TRUE,
+narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
+                                txdb, txIds = NULL,
                                 excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
+                                includeFractionCut = 0.7, bindingInGene = FALSE,
+                                promoterLength = 500, insideSkewToEndCut = 0.7,
+                                reportPseudo = TRUE,
                                 output = NULL){
 
   stopifnot(is(object = txdb, class2 = "TxDb"))
+
+  if(! all(txIds %in% keys(txdb, keytype = "TXID"))){
+    stop("unknown TXIDs in txIds: ",
+         paste(c(head(txIds[which(!txIds %in% keys(txdb, keytype = "TXID"))]), "..."),
+               collapse = " ")
+         )
+  }
 
   ## started working for peak_annotation on larger genomes
   fileFormat <- match.arg(arg = fileFormat, choices = c("narrowPeak", "broadPeak"))
@@ -72,7 +84,8 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
   ## create once and use multiple times
   # txdbEnv <- new.env(parent = emptyenv())
 
-  transcriptsGr <- get_txdb_transcripts_gr(txdb = txdb, excludeType = excludeType)
+  transcriptsGr <- get_txdb_transcripts_gr(txdb = txdb, excludeType = excludeType,
+                                           tx = txIds)
   txToGene <- get(x = "txToGene", envir = txdbEnv)
 
   ## calculate peak related features
@@ -98,22 +111,22 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak", txdb, inclu
 
 
   ## 5' UTR annotation
-  fiveUtrGr <- get_txdb_fiveUtr_gr(txdb = txdb)
+  fiveUtrGr <- get_txdb_fiveUtr_gr(txdb = txdb, tx = txIds)
   fiveUtrTargets <- splicing_unit_annotate(peaksGr = peaks, featuresGr = fiveUtrGr,
                                            featureType = "5UTR", txdb = txdb)
 
   ## 3' UTR region annotations
-  threeUtrGr <- get_txdb_threeUtr_gr(txdb = txdb)
+  threeUtrGr <- get_txdb_threeUtr_gr(txdb = txdb, tx = txIds)
   threeUtrTargets <- splicing_unit_annotate(peaksGr = peaks, featuresGr = threeUtrGr,
                                             featureType = "3UTR", txdb = txdb)
 
   ## exons annotations
-  exonsGr <- get_txdb_exons_gr(txdb = txdb)
+  exonsGr <- get_txdb_exons_gr(txdb = txdb, tx = txIds)
   exonTargets <- splicing_unit_annotate(peaksGr = peaks, featuresGr = exonsGr,
                                         featureType = "exon", txdb = txdb)
 
   ## introns annotations
-  intronsGr <- get_txdb_introns_gr(txdb)
+  intronsGr <- get_txdb_introns_gr(txdb = txdb, tx = txIds)
   intronTargets <- splicing_unit_annotate(peaksGr = peaks, featuresGr = intronsGr,
                                           featureType = "intron", txdb = txdb)
 

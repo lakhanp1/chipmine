@@ -5,10 +5,10 @@
 \title{Annotate narrowPeak using TxDB}
 \usage{
 narrowPeak_annotate(peakFile, fileFormat = "narrowPeak", txdb,
-  includeFractionCut = 0.7, bindingInGene = FALSE,
+  txIds = NULL, excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA",
+  "ncRNA"), includeFractionCut = 0.7, bindingInGene = FALSE,
   promoterLength = 500, insideSkewToEndCut = 0.7,
-  reportPseudo = TRUE, excludeType = c("tRNA", "rRNA", "snRNA",
-  "snoRNA", "ncRNA"), output = NULL)
+  reportPseudo = TRUE, output = NULL)
 }
 \arguments{
 \item{peakFile}{A narroPeak or broadPeak file. If a broadPeak file, peak center is
@@ -17,6 +17,13 @@ used as summit as broadPeak file does not report summit}
 \item{fileFormat}{Format of the peak file. One of "narrowPeak" (Default) or "broadPeak".}
 
 \item{txdb}{TxDB object which will be used for annotation}
+
+\item{txIds}{A vector of transcript IDs to be used specifically in the annotation
+process instead of full transcript set. These should be internal tx_ids from TxDB
+object. Default: NULL}
+
+\item{excludeType}{Types of transcripts to exclude from annotation. Should be a
+character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}}
 
 \item{includeFractionCut}{Number between [0, 1]. If a peak covers more than this
 fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7}
@@ -32,9 +39,6 @@ it is closer to the end of the feature. Default: 0.7}
 
 \item{reportPseudo}{Logical. Whether to report peak targets which are marked as
 pseudo. Default: TRUE}
-
-\item{excludeType}{Types of transcripts to exclude from annotation. Should be a
-character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}}
 
 \item{output}{Optionally store the annotation output to a file}
 }
