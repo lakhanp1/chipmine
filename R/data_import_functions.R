@@ -127,13 +127,15 @@ get_polII_signal = function(file, title, clusterData){
 #' \code{c("peakChr", "peakStart", "peakEnd", "peakId", "peakScore", "peakStrand",
 #' "peakEnrichment", "peakPval", "peakQval", "peakSummit")}.
 #' Default: \code{c("peakId", "peakEnrichment", "peakPval")}
+#' @param rename Logical: whether to add sampleId prefix to column name. Default: TRUE
 #'
 #' @return A dataframe with columns specified
 #' @export
 #'
 #' @examples NA
 import_peaks_as_df <- function(file, sampleId, peakFormat = "narrowPeak",
-                               peakCols = c("peakId", "peakEnrichment", "peakPval")){
+                               peakCols = c("peakId", "peakEnrichment", "peakPval"),
+                               rename = TRUE){
 
   peakFormat <- match.arg(arg = peakFormat, choices = c("narrowPeak", "broadPeak", "bed"))
 
@@ -160,9 +162,11 @@ import_peaks_as_df <- function(file, sampleId, peakFormat = "narrowPeak",
   renameCols <- peakCols
   names(renameCols) <- paste(peakCols, sampleId, sep = ".")
 
-  peaksDf <- dplyr::select(peaksDf, peakCols) %>%
-    dplyr::rename(!!! renameCols)
+  peaksDf <- dplyr::select(peaksDf, peakCols)
 
+  if(rename){
+    peaksDf <- dplyr::rename(peaksDf, !!! renameCols)
+  }
 
   return(peaksDf)
 }
