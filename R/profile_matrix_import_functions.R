@@ -154,7 +154,7 @@ import_profile_from_file = function(file, source = "normalizedmatrix", signalNam
 
   if(!is.vector(selectGenes)) stop("selectGenes should be a character vector of gene IDs")
 
-  geneDf <- data.frame(gene = selectGenes, stringsAsFactors = F)
+  geneDf <- data.frame(geneId = selectGenes, stringsAsFactors = F)
 
 
   extraCols <- character()
@@ -210,8 +210,8 @@ import_profile_from_file = function(file, source = "normalizedmatrix", signalNam
     }
 
 
-  profileDf <- dplyr::left_join(x = geneDf, y = df, by = c("gene" = "geneId")) %>%
-    tibble::column_to_rownames(var = "gene")
+  profileDf <- dplyr::left_join(x = geneDf, y = df, by = c("geneId" = "geneId")) %>%
+    tibble::column_to_rownames(var = "geneId")
 
 
   profileMat <- data.matrix(profileDf)
@@ -271,7 +271,7 @@ import_profile_from_file = function(file, source = "normalizedmatrix", signalNam
   if(isTRUE(returnDf)){
     ## return the dataframe
     base::colnames(profileDf) <- paste(signalName, colnames(profileDf), sep = "_")
-    profileDf <- tibble::rownames_to_column(profileDf, var = "gene")
+    profileDf <- tibble::rownames_to_column(profileDf, var = "geneId")
     return(profileDf)
   } else {
     # returns: profile matrix of class "normalizedMatrix"

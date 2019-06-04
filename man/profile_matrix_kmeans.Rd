@@ -26,7 +26,7 @@ profile_matrix_kmeans(mat, km, clustFile, name, kmIter = 100,
 A list with two elements:
 \itemize{
 \item km: kmeans clustering object returned by stats::kmeans
-\item geneClusters: a dataframe with columns: gene, cluster
+\item geneClusters: a dataframe with columns: geneId, cluster
 }
 }
 \description{

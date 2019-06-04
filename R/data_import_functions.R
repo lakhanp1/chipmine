@@ -5,9 +5,9 @@
 #' Add gene information
 #'
 #' @param file TAB delimited file with gene information columns. Genes are listed under
-#' column 'gene'
+#' column 'geneId'
 #' @param clusterDf a dataframe to which the gene information is to be added. It should
-#' have a column 'gene'
+#' have a column 'geneId'
 #'
 #' @return A dataframe with various gene information columns added
 #' @export
@@ -17,7 +17,7 @@ add_gene_info = function(file, clusterDf){
   geneData = data.table::fread(input = file, header = T, drop = c(2,3),  stringsAsFactors = F, sep = "\t", data.table = F)
 
   clusterDf = clusterDf %>%
-    dplyr::left_join(y = geneData, by = c("gene" = "gene"))
+    dplyr::left_join(y = geneData, by = c("geneId" = "geneId"))
 
   return(clusterDf)
 }
@@ -32,7 +32,7 @@ add_gene_info = function(file, clusterDf){
 ## get the polII expression values for list of samples
 #' PolII signal list from multiple samples
 #'
-#' @param genesDf dataframe with gene column
+#' @param genesDf dataframe with geneId column
 #' @param exptInfo dataframe with experiment information for polII samples
 #' @param log2 Logical. Whether to conver polII signal to log2. Default: FALSE
 #'
@@ -55,7 +55,7 @@ get_polII_expressions = function(genesDf, exptInfo, log2 = FALSE){
       if(log2){
         df[[exptInfo$sampleId[i]]] <- log2(pmax(df[[exptInfo$sampleId[i]]], 1))
       }
-      genesDf = dplyr::left_join(x = genesDf, y = df, by = c("gene" = "gene"))
+      genesDf = dplyr::left_join(x = genesDf, y = df, by = c("geneId" = "geneId"))
 
     }
   }
@@ -78,7 +78,7 @@ get_polII_expressions = function(genesDf, exptInfo, log2 = FALSE){
 #' @param file polII binding signal file
 #' @param title Title of the polII sample
 #' @param clusterData A dataframe to which polII binding signal column should be added.
-#' This dataframe should have 'gene' column
+#' This dataframe should have 'geneId' column
 #'
 #' @return A list with three elements:
 #' \itemize{
@@ -93,10 +93,10 @@ get_polII_signal = function(file, title, clusterData){
 
   polII_df = data.table::fread(input = file, header = T, stringsAsFactors = F, sep = "\t", data.table = F)
 
-  clusterData = clusterData %>% dplyr::left_join(y = polII_df, by = c("gene" = "gene"))
+  clusterData = clusterData %>% dplyr::left_join(y = polII_df, by = c("geneId" = "geneId"))
 
   polII_mat = as.matrix(clusterData[[title]])
-  rownames(polII_mat) = clusterData$gene
+  rownames(polII_mat) = clusterData$geneId
 
   polII_log2_mat = log2(polII_mat + 1)
 

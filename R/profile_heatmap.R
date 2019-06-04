@@ -15,7 +15,7 @@
 #' clusterStorePath must be provided which has the cluster data. Default: FALSE
 #' @param numClust number of clusters to generate using k-means clustering. Default: 7
 #' @param geneGroups Either a dataframe or a file path with cluster information or NULL.
-#' Two columns must be present in this dataframe: \code{gene, cluster}. In case it is NULL, heatmap
+#' Two columns must be present in this dataframe: \code{geneId, cluster}. In case it is NULL, heatmap
 #' rows are not split into different groups.
 #' @param showAnnotation Logical: to show or hide top annotation. Default: TRUE
 #' @param clusterColor Color assignment object for cluster colors. If nothing provided, colors
@@ -85,7 +85,7 @@ profile_heatmap <- function(profileMat,
   ## hirerchical clustering
   # dend = hclust(dist(profileMat), method = "ward.D")
   # clusterCut = cutree(dend, numClust)
-  # clusterData = data.frame(gene = names(clusterCut), cluster = clusterCut, stringsAsFactors = F, row.names = names(clusterCut))
+  # clusterData = data.frame(geneId = names(clusterCut), cluster = clusterCut, stringsAsFactors = F, row.names = names(clusterCut))
 
   clusterData <- NULL
   lgd <- NULL
@@ -126,8 +126,8 @@ profile_heatmap <- function(profileMat,
 
   if( !is.null(clusterData) ){
 
-    clusterData <- dplyr::select(clusterData, gene, cluster) %>%
-      tibble::column_to_rownames(var = "gene") %>%
+    clusterData <- dplyr::select(clusterData, geneId, cluster) %>%
+      tibble::column_to_rownames(var = "geneId") %>%
       as.data.frame()
 
     if(!is.factor(clusterData$cluster)){
@@ -275,7 +275,7 @@ profile_heatmap <- function(profileMat,
 
   ## reconvert the factor to character
   clusterData$cluster <- as.character(clusterData$cluster)
-  clusterData$gene <- rownames(clusterData)
+  clusterData$geneId <- rownames(clusterData)
 
   returnList <- list(
     "heatmap" = ht,

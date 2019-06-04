@@ -46,7 +46,7 @@
 #' fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7
 #' @param bindingInGene Logical: whether the ChIPseq TF binds in gene body. This is
 #' useful for polII ChIPseq data. Default: FALSE
-#' @param promoterLength Promoter length in number of nucleotides. Default: 500
+#' @param promoterLength Promoter length in number of nucleotides.
 #' @param insideSkewToEndCut A floating point number in range [0, 1]. If a peak is
 #' present inside feature/gene and the relative summit position is > insideSkewToEndCut,
 #' it is closer to the end of the feature. Default: 0.7
@@ -64,7 +64,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
                                 txdb, txIds = NULL,
                                 excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
                                 includeFractionCut = 0.7, bindingInGene = FALSE,
-                                promoterLength = 500, insideSkewToEndCut = 0.7,
+                                promoterLength, insideSkewToEndCut = 0.7,
                                 reportPseudo = TRUE,
                                 output = NULL){
 
@@ -235,7 +235,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 
     ## optionally filter peak targets which are marked as pseudo
     if(!reportPseudo){
-      peakTargetsGr <- peakTargetsGr[grepl(pattern = "pseudo_", x = mcols(peakTargetsGr)$peakType)]
+      peakTargetsGr <- peakTargetsGr[!grepl(pattern = "pseudo_", x = mcols(peakTargetsGr)$peakType)]
     }
 
   } else{
@@ -395,7 +395,7 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
 #' @export
 #'
 #' @examples NA
-region_annotate <- function(peaksGr, featuresGr, includeFractionCut = 0.7, name = "CDS"){
+region_annotate <- function(peaksGr, featuresGr, includeFractionCut = 0.7, name = "tx"){
 
   name <- match.arg(arg = name, choices = c("gene", "tx", "CDS", "region"))
   stopifnot(is(object = peaksGr, class2 = "GRanges"))

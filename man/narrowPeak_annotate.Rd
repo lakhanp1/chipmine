@@ -7,8 +7,8 @@
 narrowPeak_annotate(peakFile, fileFormat = "narrowPeak", txdb,
   txIds = NULL, excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA",
   "ncRNA"), includeFractionCut = 0.7, bindingInGene = FALSE,
-  promoterLength = 500, insideSkewToEndCut = 0.7,
-  reportPseudo = TRUE, output = NULL)
+  promoterLength, insideSkewToEndCut = 0.7, reportPseudo = TRUE,
+  output = NULL)
 }
 \arguments{
 \item{peakFile}{A narroPeak or broadPeak file. If a broadPeak file, peak center is
@@ -31,7 +31,7 @@ fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 
 \item{bindingInGene}{Logical: whether the ChIPseq TF binds in gene body. This is
 useful for polII ChIPseq data. Default: FALSE}
 
-\item{promoterLength}{Promoter length in number of nucleotides. Default: 500}
+\item{promoterLength}{Promoter length in number of nucleotides.}
 
 \item{insideSkewToEndCut}{A floating point number in range [0, 1]. If a peak is
 present inside feature/gene and the relative summit position is > insideSkewToEndCut,

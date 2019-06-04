@@ -45,11 +45,11 @@ get_TF_binding_data <- function(genesDf, exptInfo, allColumns = FALSE){
 
 
       if(!allColumns){
-        df <- df %>% dplyr::select(gene, !!!colNames)
+        df <- df %>% dplyr::select(geneId, !!!colNames)
       }
 
 
-      genesDf <- left_join(x = genesDf, y = df, by = c("gene" = "gene"))
+      genesDf <- left_join(x = genesDf, y = df, by = c("geneId" = "geneId"))
 
 
     }

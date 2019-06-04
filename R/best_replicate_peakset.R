@@ -50,7 +50,7 @@ best_replicate_peakset <- function(sampleInfo, cdsFile, ...){
     peakFile = sampleInfo$narrowpeakFile[ bestRepIndex ],
     bwFile = sampleInfo$bwFile[ bestRepIndex ],
     ...) %>%
-    dplyr::select(gene, starts_with("hasPeak"), starts_with("peakId"), starts_with("peakPosition"),
+    dplyr::select(geneId, starts_with("hasPeak"), starts_with("peakId"), starts_with("peakPosition"),
                   starts_with("peakType"), starts_with("peakDist"), starts_with("peakPval"),
                   starts_with("peakEnrichment"), starts_with("relativeSummitPos"), starts_with("bidirectional"))
 
@@ -61,7 +61,7 @@ best_replicate_peakset <- function(sampleInfo, cdsFile, ...){
   ## generate confident peak and target gene list data
   confidentPeaks <- dplyr::left_join(x = commonPeaks, y = bestRepTargets,
                                      by = structure(bestRepPeakIdCol, names = bestRepPeakIdCol)) %>%
-    dplyr::select(gene, starts_with("hasPeak."), everything()) %>%
+    dplyr::select(geneId, starts_with("hasPeak."), everything()) %>%
     dplyr::filter_at(.vars = vars(starts_with("hasPeak.")), .vars_predicate = all_vars(. == TRUE))
 
   return(confidentPeaks)

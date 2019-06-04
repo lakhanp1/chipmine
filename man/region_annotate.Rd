@@ -5,7 +5,7 @@
 \title{Map peaks to given GRanges regions}
 \usage{
 region_annotate(peaksGr, featuresGr, includeFractionCut = 0.7,
-  name = "CDS")
+  name = "tx")
 }
 \arguments{
 \item{peaksGr}{GRanges object generated from narrowPeak or broadPeak file}

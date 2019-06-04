@@ -38,20 +38,20 @@ peak_target_matrix <- function(sampleInfo, position = "TSS"){
     peakPositionCol <- paste("peakPosition", sampleInfo$sampleId[i], sep = ".")
 
     df <- suppressMessages(readr::read_tsv(file = sampleInfo$peakTargetFile[i])) %>%
-      dplyr::select(gene, !!!selectCols)
+      dplyr::select(geneId, !!!selectCols)
 
-    joinBy <- c("gene" = "gene")
+    joinBy <- c("geneId" = "geneId")
 
     if(position == "best"){
       ## choose one from TSS and TES based on log10Pvalue
-      df <- dplyr::group_by(df, gene) %>%
+      df <- dplyr::group_by(df, geneId) %>%
         dplyr::arrange_at(.vars = vars(starts_with("peakPval")), .by_group = TRUE) %>%
         dplyr::slice(1L) %>%
         dplyr::ungroup()
 
     } else if(position == "both"){
-      ## use gene + peakPosition columns for full_join
-      joinBy <- structure(c("gene", peakPositionCol), names = c("gene", "peakPosition"))
+      ## use geneId + peakPosition columns for full_join
+      joinBy <- structure(c("geneId", peakPositionCol), names = c("geneId", "peakPosition"))
 
     } else{
       ## only TSS/TES
