@@ -215,7 +215,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
     ## for testing select_optimal_targets()
     tempTargetGrl <- GenomicRanges::split(x = bestPeakGeneTargetsGr, f = mcols(bestPeakGeneTargetsGr)$name)
     # table(elementNROWS(tempTargetGrl))
-    singleHitPeaks <- unlist(tempTargetGrl[which(elementNROWS(tempTargetGrl) == 1)])
+    singleHitPeaks <- unlist(tempTargetGrl[which(elementNROWS(tempTargetGrl) == 1)], use.names = F)
     multipleHitPeaks <- tempTargetGrl[which(elementNROWS(tempTargetGrl) != 1)]
 
     ## for each peak, find optimum target/s
@@ -225,13 +225,14 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
       bindingInGene = bindingInGene,
       insideSkewToEndCut = insideSkewToEndCut)
 
-
     peakTargetsGr <- c(singleHitPeaks, multipleHitPeaks, ignore.mcols=FALSE)
 
     ## add the unannotated peaks
-    peakTargetsGr <- c(peakTargetsGr,
-                       peaks[which(!peaks$name %in% peakTargetsGr$name)],
-                       ignore.mcols=FALSE)
+    unannotatedPeaks <- peaks[which(!peaks$name %in% peakTargetsGr$name)]
+    mcols(unannotatedPeaks)$peakType <- "intergenic"
+    mcols(unannotatedPeaks)$peakCategory <- "intergenic"
+
+    peakTargetsGr <- c(peakTargetsGr, unannotatedPeaks, ignore.mcols=FALSE)
 
     ## optionally filter peak targets which are marked as pseudo
     if(!reportPseudo){
@@ -257,12 +258,14 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 
 
   peakTargetsGr <- sort(peakTargetsGr)
+  names(x = peakTargetsGr) <- NULL
 
-  ## rename columns: "peakId", "peakEnrichment", "peakPval", "peakQval"
+  ## rename columns: "peakId", "peakEnrichment", "peakPval", "peakQval", "txName"
   mcols(peakTargetsGr)$peakId <- mcols(peakTargetsGr)$name
   mcols(peakTargetsGr)$peakEnrichment <- mcols(peakTargetsGr)$signalValue
   mcols(peakTargetsGr)$peakPval <- mcols(peakTargetsGr)$pValue
   mcols(peakTargetsGr)$peakQval <- mcols(peakTargetsGr)$qValue
+  mcols(peakTargetsGr)$txId <- mcols(peakTargetsGr)$txName
 
   ## remove unnecessary columns
   mcols(peakTargetsGr)$name <- NULL
@@ -378,10 +381,10 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
 
 #' Map peaks to given GRanges regions
 #'
-#' This function annotates the peaks onto a regions into e.g. \code{CDS_start, CDS_end, include_CDS,
-#' inside_CDS} categories.
+#' This function annotates the peaks onto a regions into e.g. \code{tx_start, tx_end,
+#' include_tx, inside_tx} categories.
 #' In addition, relativeSummitPos value is updated w.r.t. region for the peaks which are
-#' annotated as e.g. \code{inside_CDS}
+#' annotated as e.g. \code{inside_tx}
 #'
 #' @param peaksGr GRanges object generated from narrowPeak or broadPeak file
 #' @param featuresGr GRanges object for regions on which peaks needs to be mapped. E.g:
@@ -390,7 +393,7 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
 #' than this proportion of CDS, it is annotated as \code{inside_CDS}. Default: 0.7
 #' @param name Feature type to be used as suffix in peak type annotation. Eg. CDS, gene etc.
 #'
-#' @return A modified peak GRanges object with additional columns: \code{ tx_id,
+#' @return A modified peak GRanges object with additional columns: \code{tx_id,
 #' peakType, featureCovFrac, peakDist, summitDist}
 #' @export
 #'

@@ -19,14 +19,14 @@ than this proportion of CDS, it is annotated as \code{inside_CDS}. Default: 0.7}
 \item{name}{Feature type to be used as suffix in peak type annotation. Eg. CDS, gene etc.}
 }
 \value{
-A modified peak GRanges object with additional columns: \code{ tx_id,
+A modified peak GRanges object with additional columns: \code{tx_id,
 peakType, featureCovFrac, peakDist, summitDist}
 }
 \description{
-This function annotates the peaks onto a regions into e.g. \code{CDS_start, CDS_end, include_CDS,
-inside_CDS} categories.
+This function annotates the peaks onto a regions into e.g. \code{tx_start, tx_end,
+include_tx, inside_tx} categories.
 In addition, relativeSummitPos value is updated w.r.t. region for the peaks which are
-annotated as e.g. \code{inside_CDS}
+annotated as e.g. \code{inside_tx}
 }
 \examples{
 NA
