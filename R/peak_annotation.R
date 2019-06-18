@@ -105,9 +105,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
   mcols(peaks)$peakEnd <- end(peaks)
   mcols(peaks)$peakSummit <- GenomicRanges::start(peaks) + mcols(peaks)$peak
 
-  mcols(peaks)$relativeSummitPos <- as.numeric(
-    sprintf("%.3f", (mcols(peaks)$peakSummit - start(peaks)) / width(peaks))
-  )
+  mcols(peaks)$relativeSummitPos <- round((mcols(peaks)$peakSummit - start(peaks)) / width(peaks), 3)
 
 
   ## 5' UTR annotation
@@ -340,9 +338,9 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
   mcols(peakTargets)$targetStrand = strand(txSubsetGr)
   mcols(peakTargets)$txWidth = width(txSubsetGr)
   mcols(peakTargets)$gene_id = unlist(mcols(txSubsetGr)$gene_id)
-  mcols(peakTargets)$featureCovFrac <- as.numeric(
-    sprintf(fmt = "%.3f", width(pintersect(x = peakTargets, y = txSubsetGr)) / width(txSubsetGr))
-  )
+  mcols(peakTargets)$featureCovFrac <- round(
+	width(pintersect(x = peakTargets, y = txSubsetGr)) / width(txSubsetGr), 3
+	)
 
   ## calculate summit distance and change relativeSummitPos based on target gene
   ## summitDist > (targetEnd - targetStart) : peak overlap at end and summit is after end
@@ -363,7 +361,7 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
       relativeSummitPos = dplyr::case_when(
         summitDist > (targetEnd - targetStart) ~ 1,
         summitDist < 0 ~ 0,
-        summitDist > 0 ~ as.numeric(sprintf("%.3f", (peakSummit - targetStart) / (targetEnd - targetStart))),
+        summitDist > 0 ~ round((peakSummit - targetStart) / (targetEnd - targetStart), 3),
         TRUE ~ relativeSummitPos
       )
     ) %>%
@@ -430,8 +428,9 @@ region_annotate <- function(peaksGr, featuresGr, includeFractionCut = 0.7, name 
   mcols(queryTargets)$targetStart = start(featuresGr[ovlpHits@to])
   mcols(queryTargets)$targetEnd = end(featuresGr[ovlpHits@to])
   mcols(queryTargets)$targetStrand = strand(featuresGr[ovlpHits@to])
-  mcols(queryTargets)$featureCovFrac <- as.numeric(
-    sprintf(fmt = "%.3f", width(pintersect(x = queryTargets, y = featuresGr[ovlpHits@to])) / width(featuresGr[ovlpHits@to])))
+  mcols(queryTargets)$featureCovFrac <- round(
+  width(pintersect(x = queryTargets, y = featuresGr[ovlpHits@to])) / width(featuresGr[ovlpHits@to]), 3
+  )
 
   ## assign appropriate target location
   ## if the peak is inside_CDS, update the relativeSummitPos w.r.t. CDS
@@ -464,7 +463,7 @@ region_annotate <- function(peaksGr, featuresGr, includeFractionCut = 0.7, name 
       ),
       relativeSummitPos = dplyr::if_else(
         condition = peakType == insideFeature,
-        true = as.numeric(sprintf("%.3f", (peakSummit - targetStart) / (targetEnd - targetStart))),
+        true = round((peakSummit - targetStart) / (targetEnd - targetStart), 3),
         false = relativeSummitPos
       )
     ) %>%
