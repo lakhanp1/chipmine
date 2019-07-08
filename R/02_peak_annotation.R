@@ -231,8 +231,11 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 
     ## add the unannotated peaks
     unannotatedPeaks <- peaks[which(!peaks$name %in% peakTargetsGr$name)]
-    mcols(unannotatedPeaks)$peakType <- "intergenic"
-    mcols(unannotatedPeaks)$peakCategory <- "intergenic"
+    if(length(unannotatedPeaks) > 0){
+      mcols(unannotatedPeaks)$peakType <- "intergenic"
+      mcols(unannotatedPeaks)$peakCategory <- "intergenic"
+    }
+
 
     peakTargetsGr <- c(peakTargetsGr, unannotatedPeaks, ignore.mcols=FALSE)
 
