@@ -41,7 +41,7 @@
 #' @param txdb TxDB object which will be used for annotation
 #' @param txIds A vector of transcript IDs to be used specifically in the annotation
 #' process instead of full transcript set. These should be internal tx_ids from TxDB
-#' object. Default: NULL
+#' object. This is useful feature to exclude tRNA, rRNA transcripts. Default: NULL
 #' @param includeFractionCut Number between [0, 1]. If a peak covers more than this
 #' fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7
 #' @param bindingInGene Logical: whether the ChIPseq TF binds in gene body. This is
@@ -109,22 +109,22 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 
 
   ## 5' UTR annotation
-  fiveUtrGr <- get_txdb_fiveUtr_gr(txdb = txdb, tx = txIds)
+  fiveUtrGr <- get_txdb_fiveUtr_gr(txdb = txdb, tx = transcriptsGr$tx_id)
   fiveUtrTargets <- splicing_unit_annotate(peaksGr = peaks, featuresGr = fiveUtrGr,
                                            featureType = "5UTR", txdb = txdb)
 
   ## 3' UTR region annotations
-  threeUtrGr <- get_txdb_threeUtr_gr(txdb = txdb, tx = txIds)
+  threeUtrGr <- get_txdb_threeUtr_gr(txdb = txdb, tx = transcriptsGr$tx_id)
   threeUtrTargets <- splicing_unit_annotate(peaksGr = peaks, featuresGr = threeUtrGr,
                                             featureType = "3UTR", txdb = txdb)
 
   ## exons annotations
-  exonsGr <- get_txdb_exons_gr(txdb = txdb, tx = txIds)
+  exonsGr <- get_txdb_exons_gr(txdb = txdb, tx = transcriptsGr$tx_id)
   exonTargets <- splicing_unit_annotate(peaksGr = peaks, featuresGr = exonsGr,
                                         featureType = "exon", txdb = txdb)
 
   ## introns annotations
-  intronsGr <- get_txdb_introns_gr(txdb = txdb, tx = txIds)
+  intronsGr <- get_txdb_introns_gr(txdb = txdb, tx = transcriptsGr$tx_id)
   intronTargets <- splicing_unit_annotate(peaksGr = peaks, featuresGr = intronsGr,
                                           featureType = "intron", txdb = txdb)
 
@@ -210,7 +210,6 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
     #   as.data.frame()
     #######################
 
-    ## for testing select_optimal_targets()
     tempTargetGrl <- GenomicRanges::split(x = bestPeakGeneTargetsGr, f = mcols(bestPeakGeneTargetsGr)$name)
     # table(elementNROWS(tempTargetGrl))
     singleHitPeaks <- unlist(tempTargetGrl[which(elementNROWS(tempTargetGrl) == 1)], use.names = F)
@@ -505,30 +504,33 @@ set_peakTarget_to_pseudo <- function(target){
 #'
 #' This function annotates the peaks with nearest downstream target. See Details.
 #'
-#' There will be cases when a peak is inside a gene and it is upstream of other gene
-#' Use of \code{upstreamOverlappingFraction} (default: 0.2)
-#'  #                                                                         #
-#'	#        target1                     target2                              #
-#'	#      =====<=======<===       =====<=======<========<=======             #
-#'	#                                ---            ----                      #
-#'	#                              peak1           peak2                      #
-#'	#                      |<------>|                                         #
-#'	#                      |<------------------------->|                      #
-#'	#                                                                         #
+#' There will be cases when a peak is inside a gene and it is upstream of other gene.
+#' \cr \strong{Use of \code{upstreamOverlappingFraction} (default: 0.2): }
+#' \preformatted{
+#' #                                                                         #
+#' #        target1                     target2                              #
+#' #      =====<=======<===       =====<=======<========<=======             #
+#' #                                ---            ----                      #
+#' #                              peak1           peak2                      #
+#' #                      |<------>|                                         #
+#' #                      |<------------------------->|                      #
+#' #                                                                         #
 #' in above cases, peak1 can be annotated as Upstream of target1. However not peak2
 #' because target2 has bigger fraction in-between [target1, peak2] range
 #'
 #' Target gene inside gene case:
-#'  #                                                                         #
-#'	#              target1          target2 (longer)                          #
-#'	#      =====<=======<=======<=======<========<=======                     #
-#'  #               ==<==                                                     #
-#'	#                                ---            ----                      #
-#'	#                              peak1           peak2                      #
-#'	#                    |<-------->|                                         #
-#'	#                                                                         #
+#' #                                                                         #
+#' #              target1          target2 (longer)                          #
+#' #      =====<=======<=======<=======<========<=======                     #
+#' #               ==<==                                                     #
+#' #                                ---            ----                      #
+#' #                              peak1           peak2                      #
+#' #                    |<-------->|                                         #
+#' #                                                                         #
+#' }
 #' In above case, peak1 is inside targe2 and upstream of target1. These targets are
 #' selected in \code{select_optimal_targets()} if peak lies within promoter range.
+#'
 #'
 #' @param peaksGr GRanges object for peak data
 #' @param featuresGr A transcript GRanges object
@@ -538,7 +540,7 @@ set_peakTarget_to_pseudo <- function(target){
 #' is upstream of geneB. This is useful for the peaks which are near TES of a geneA.
 #' If TxDB object is not provided, featuresGr is used. Default: featuresGr is used.
 #' @param excludeType tx types to exclude from TxDB
-#' @param upstreamOverlappingFraction Default: 0.2
+#' @param upstreamOverlappingFraction See details. Default: 0.2
 #' @param promoterLength Promoter region length. Upstream peaks within \code{promoterLength}
 #' distance of feature start are annotated as \code{promoter} region peaks.
 #' @param ... Other arguments for \code{nearest_upstream_bidirectional()} function
@@ -622,7 +624,6 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
 
     fiveUtrGr <- get_txdb_fiveUtr_gr(txdb = txdb)
     threeUtrGr <- get_txdb_threeUtr_gr(txdb = txdb)
-    transcriptsGr <- get_txdb_transcripts_gr(txdb = txdb, excludeType = excludeType)
 
     txMinusUtrs <- GenomicRanges::setdiff(x = txMinusUtrs,
                                           y = threeUtrGr,
@@ -756,8 +757,9 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
 #' True target for bidirectional peak
 #'
 #' This function uses following logic to select or reject target from bidirectional peak.
+#' \cr \strong{Use of \code{minTSS_gapForPseudo} (Default: 500)* and \code{skewFraction}
+#' (Default: 0.2):}
 #' \preformatted{
-#' use of minTSS_gapForPseudo (500)* and skewFraction (0.2)
 #' #                      *                                                   #
 #' #                     |<---more than 500bp--->|                            #
 #' #       target1                    |                    target2            #
@@ -865,7 +867,7 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
 #' Assign best target/s for each peak
 #'
 #' This function checks the different targets assigned for a peak and returns the
-#' optimum target gene/s
+#' optimum target gene/s.
 #'
 #' \strong{Use of \code{insideSkewToEndCut} (0.7)* and \code{promoterLength} (500)**: }
 #' \preformatted{
@@ -920,6 +922,7 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   peakDistDf <- masterIndexDf
   peakPosDf <- masterIndexDf
 
+  ## create dataframes with columns for each peak category
   for (ctg in c("featureInPeak", "nearStart", "nearEnd", "peakInFeature", "upstreamTss")) {
     groupedDf <- dplyr::filter(subData, peakCategory == ctg) %>%
       dplyr::select(name, rowIdx, target, peakDist, relativeSummitPos) %>%
@@ -943,6 +946,7 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
     peakPosDf <- dplyr::left_join(x = peakPosDf, y = posDf, by = "name")
   }
 
+  ## Future development: use priority list of peak category to select peak targets
   markPseudoIdx <- c()
 
   ## nearStart peak

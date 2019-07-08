@@ -20,7 +20,7 @@ used as summit as broadPeak file does not report summit}
 
 \item{txIds}{A vector of transcript IDs to be used specifically in the annotation
 process instead of full transcript set. These should be internal tx_ids from TxDB
-object. Default: NULL}
+object. This is useful feature to exclude tRNA, rRNA transcripts. Default: NULL}
 
 \item{excludeType}{Types of transcripts to exclude from annotation. Should be a
 character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}}

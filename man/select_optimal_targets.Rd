@@ -27,7 +27,7 @@ some targets which were not optimum.
 }
 \description{
 This function checks the different targets assigned for a peak and returns the
-optimum target gene/s
+optimum target gene/s.
 }
 \details{
 \strong{Use of \code{insideSkewToEndCut} (0.7)* and \code{promoterLength} (500)**: }

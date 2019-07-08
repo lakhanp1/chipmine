@@ -25,8 +25,9 @@ A vector of row index for pseudo targets.
 }
 \description{
 This function uses following logic to select or reject target from bidirectional peak.
+\cr \strong{Use of \code{minTSS_gapForPseudo} (Default: 500)* and \code{skewFraction}
+(Default: 0.2):}
 \preformatted{
-use of minTSS_gapForPseudo (500)* and skewFraction (0.2)
 #                      *                                                   #
 #                     |<---more than 500bp--->|                            #
 #       target1                    |                    target2            #

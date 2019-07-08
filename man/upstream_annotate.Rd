@@ -20,7 +20,7 @@ If TxDB object is not provided, featuresGr is used. Default: featuresGr is used.
 
 \item{excludeType}{tx types to exclude from TxDB}
 
-\item{upstreamOverlappingFraction}{Default: 0.2}
+\item{upstreamOverlappingFraction}{See details. Default: 0.2}
 
 \item{promoterLength}{Promoter region length. Upstream peaks within \code{promoterLength}
 distance of feature start are annotated as \code{promoter} region peaks.}
@@ -35,9 +35,10 @@ peakType, featureCovFrac, peakDist, summitDist}
 This function annotates the peaks with nearest downstream target. See Details.
 }
 \details{
-There will be cases when a peak is inside a gene and it is upstream of other gene
-Use of \code{upstreamOverlappingFraction} (default: 0.2)
- #                                                                         #
+There will be cases when a peak is inside a gene and it is upstream of other gene.
+\cr \strong{Use of \code{upstreamOverlappingFraction} (default: 0.2): }
+\preformatted{
+#                                                                         #
 #        target1                     target2                              #
 #      =====<=======<===       =====<=======<========<=======             #
 #                                ---            ----                      #
@@ -49,14 +50,15 @@ in above cases, peak1 can be annotated as Upstream of target1. However not peak2
 because target2 has bigger fraction in-between [target1, peak2] range
 
 Target gene inside gene case:
- #                                                                         #
+#                                                                         #
 #              target1          target2 (longer)                          #
 #      =====<=======<=======<=======<========<=======                     #
- #               ==<==                                                     #
+#               ==<==                                                     #
 #                                ---            ----                      #
 #                              peak1           peak2                      #
 #                    |<-------->|                                         #
 #                                                                         #
+}
 In above case, peak1 is inside targe2 and upstream of target1. These targets are
 selected in \code{select_optimal_targets()} if peak lies within promoter range.
 }
