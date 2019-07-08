@@ -275,6 +275,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
   mcols(peakTargetsGr)$targetEnd <- NULL
   mcols(peakTargetsGr)$targetStrand <- NULL
   mcols(peakTargetsGr)$tx_id <- NULL
+  mcols(peakTargetsGr)$txName <- NULL
   mcols(peakTargetsGr)$txType <- NULL
   mcols(peakTargetsGr)$preference <- NULL
   names(peakTargetsGr) <- NULL
