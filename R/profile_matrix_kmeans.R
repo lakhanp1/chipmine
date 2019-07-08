@@ -17,7 +17,7 @@
 #' @return A list with two elements:
 #' \itemize{
 #' \item km: kmeans clustering object returned by stats::kmeans
-#' \item geneClusters: a dataframe with columns: gene, cluster
+#' \item geneClusters: a dataframe with columns: geneId, cluster
 #' }
 #' @export
 #'
@@ -27,7 +27,7 @@ profile_matrix_kmeans = function(mat, km, clustFile, name, kmIter = 100, kmStart
   ##
   cat("Running k-means clustering for sample", name, "\nNumber of clusters:", km, "\n")
 
-  clusterData = data.frame(gene = rownames(mat), stringsAsFactors = F, row.names = rownames(mat))
+  clusterData = data.frame(geneId = rownames(mat), stringsAsFactors = F, row.names = rownames(mat))
 
   ## perform k-means clustering
   if(km > 1){
@@ -46,7 +46,7 @@ profile_matrix_kmeans = function(mat, km, clustFile, name, kmIter = 100, kmStart
 
     }
 
-    kmClust = data.frame(gene = names(km$cluster), kmClusters = km$cluster, stringsAsFactors = F)
+    kmClust = data.frame(geneId = names(km$cluster), kmClusters = km$cluster, stringsAsFactors = F)
 
     ## find the max of each cluster center to decide the cluster order
     mx = apply(km$centers, MARGIN = 1, max)
@@ -57,8 +57,8 @@ profile_matrix_kmeans = function(mat, km, clustFile, name, kmIter = 100, kmStart
     kmClust$cluster = clustRank[kmClust$kmClusters]
 
     # clusterData[names(km$cluster), "cluster"] = km$cluster
-    clusterData = dplyr::left_join(x = clusterData, y = kmClust, by = c("gene" = "gene")) %>%
-      dplyr::select(gene, cluster)
+    clusterData = dplyr::left_join(x = clusterData, y = kmClust, by = c("geneId" = "geneId")) %>%
+      dplyr::select(geneId, cluster)
 
 
   } else {

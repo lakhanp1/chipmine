@@ -4,11 +4,16 @@
 \alias{nearest_upstream_bidirectional}
 \title{True target for bidirectional peak}
 \usage{
-nearest_upstream_bidirectional(bdirTargets, skewFraction = 0.2,
-  minTSS_gapForPseudo = 500)
+nearest_upstream_bidirectional(targetDf, t1Idx, t2Idx,
+  skewFraction = 0.2, minTSS_gapForPseudo = 500)
 }
 \arguments{
-\item{bdirTargets}{A dataframe with two rows for bidirectional targets}
+\item{targetDf}{A dataframe which has bidirectional targets for each peak.}
+
+\item{t1Idx}{target1 index vector}
+
+\item{t2Idx}{target2 index vector. IMP: \code{length(t1Idx)} should be equal to
+\code{length(t2Idx)}}
 
 \item{skewFraction}{Minimum fraction of peak region allowed on the side of false target
 from the midpoint of two target genes. Default: 0.2}
@@ -16,12 +21,13 @@ from the midpoint of two target genes. Default: 0.2}
 \item{minTSS_gapForPseudo}{Valid distance between two target genes TSS to mark one as psuedo}
 }
 \value{
-Same dataframe in which peakType for one of the target is marked as pseudo
+A vector of row index for pseudo targets.
 }
 \description{
 This function uses following logic to select or reject target from bidirectional peak.
+\cr \strong{Use of \code{minTSS_gapForPseudo} (Default: 500)* and \code{skewFraction}
+(Default: 0.2):}
 \preformatted{
-use of minTSS_gapForPseudo (500)* and skewFraction (0.2)
 #                      *                                                   #
 #                     |<---more than 500bp--->|                            #
 #       target1                    |                    target2            #
@@ -38,5 +44,5 @@ peak is assigned to both the targets
 }
 }
 \examples{
-NULL
+NA
 }

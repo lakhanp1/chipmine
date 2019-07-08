@@ -5,10 +5,10 @@
 \title{Annotate narrowPeak using TxDB}
 \usage{
 narrowPeak_annotate(peakFile, fileFormat = "narrowPeak", txdb,
-  includeFractionCut = 0.7, bindingInGene = FALSE,
-  promoterLength = 500, insideSkewToEndCut = 0.7,
-  reportPseudo = TRUE, excludeType = c("tRNA", "rRNA", "snRNA",
-  "snoRNA", "ncRNA"), output = NULL)
+  txIds = NULL, excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA",
+  "ncRNA"), includeFractionCut = 0.7, bindingInGene = FALSE,
+  promoterLength, insideSkewToEndCut = 0.7, reportPseudo = TRUE,
+  output = NULL)
 }
 \arguments{
 \item{peakFile}{A narroPeak or broadPeak file. If a broadPeak file, peak center is
@@ -18,13 +18,20 @@ used as summit as broadPeak file does not report summit}
 
 \item{txdb}{TxDB object which will be used for annotation}
 
+\item{txIds}{A vector of transcript IDs to be used specifically in the annotation
+process instead of full transcript set. These should be internal tx_ids from TxDB
+object. This is useful feature to exclude tRNA, rRNA transcripts. Default: NULL}
+
+\item{excludeType}{Types of transcripts to exclude from annotation. Should be a
+character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}}
+
 \item{includeFractionCut}{Number between [0, 1]. If a peak covers more than this
 fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7}
 
 \item{bindingInGene}{Logical: whether the ChIPseq TF binds in gene body. This is
 useful for polII ChIPseq data. Default: FALSE}
 
-\item{promoterLength}{Promoter length in number of nucleotides. Default: 500}
+\item{promoterLength}{Promoter length in number of nucleotides.}
 
 \item{insideSkewToEndCut}{A floating point number in range [0, 1]. If a peak is
 present inside feature/gene and the relative summit position is > insideSkewToEndCut,
@@ -32,9 +39,6 @@ it is closer to the end of the feature. Default: 0.7}
 
 \item{reportPseudo}{Logical. Whether to report peak targets which are marked as
 pseudo. Default: TRUE}
-
-\item{excludeType}{Types of transcripts to exclude from annotation. Should be a
-character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}}
 
 \item{output}{Optionally store the annotation output to a file}
 }
@@ -51,7 +55,7 @@ types} (listed in decreasing order of preference):
 \item \strong{featureInPeak:} \emph{"include_tx", "include_CDS"}
 \item \strong{nearStart:} \emph{"5UTR", "CDS_start", "tx_start"}
 \item \strong{nearEnd:} \emph{"3UTR", "tx_end", "CDS_end"}
-\item \strong{peakInFeature:} \emph{"inside_tx", "inside_CDS"}
+\item \strong{peakInFeature:} \emph{"exon", "intron", "inside_tx", "inside_CDS"}
 \item \strong{upstreamTss:} \emph{"promoter", "upstream"}
 }
 Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
@@ -62,7 +66,8 @@ The less optimum target type is prefixed with \emph{pseudo}. Please refer to the
 \details{
 Some important observations to do before annotating ChIPseq data:
 \enumerate{
-\item Whether the signal is like TF/polII i.e. factor binds in gene or not.
+\item Whether the signal is like TF/polII i.e. factor binds across whole gene or not.
+Also see if binding is throughout the genome like CTCF factor.
 See \code{bindingInGene, promoterLength} arguments for the details.
 \item For the genes which are within peak region, what is the gene size (are
 genes shorter in length than normal) and how far is the next downstream gene.

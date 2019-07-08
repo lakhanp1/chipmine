@@ -5,7 +5,7 @@
 \title{Read peak file as dataframe with selected columns}
 \usage{
 import_peaks_as_df(file, sampleId, peakFormat = "narrowPeak",
-  peakCols = c("peakId", "peakEnrichment", "peakPval"))
+  peakCols = c("peakId", "peakEnrichment", "peakPval"), rename = TRUE)
 }
 \arguments{
 \item{file}{Peak file}
@@ -18,6 +18,8 @@ import_peaks_as_df(file, sampleId, peakFormat = "narrowPeak",
 \code{c("peakChr", "peakStart", "peakEnd", "peakId", "peakScore", "peakStrand",
 "peakEnrichment", "peakPval", "peakQval", "peakSummit")}.
 Default: \code{c("peakId", "peakEnrichment", "peakPval")}}
+
+\item{rename}{Logical: whether to add sampleId prefix to column name. Default: TRUE}
 }
 \value{
 A dataframe with columns specified

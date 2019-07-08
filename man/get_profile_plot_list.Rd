@@ -15,7 +15,7 @@ get_profile_plot_list(exptInfo, cluster = NULL, clusterColor = NULL,
 path etc}
 
 \item{cluster}{Dataframe with cluster information. Two columns must be present
-in this dataframe: 'cluster', 'gene'. Default: NULL}
+in this dataframe: 'cluster', 'geneId'. Default: NULL}
 
 \item{clusterColor}{cluster annotation color information. Default: NULL}
 

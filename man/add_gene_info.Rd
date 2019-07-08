@@ -8,10 +8,10 @@ add_gene_info(file, clusterDf)
 }
 \arguments{
 \item{file}{TAB delimited file with gene information columns. Genes are listed under
-column 'gene'}
+column 'geneId'}
 
 \item{clusterDf}{a dataframe to which the gene information is to be added. It should
-have a column 'gene'}
+have a column 'geneId'}
 }
 \value{
 A dataframe with various gene information columns added

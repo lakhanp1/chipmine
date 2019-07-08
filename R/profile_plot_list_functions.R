@@ -11,7 +11,7 @@
 #' @param exptInfo experiment info as data frame with information like sampleID, type, path etc
 #' @param genesToPlot A vector of gene IDs which are to be plotted
 #' @param clusters Dataframe with cluster information. Two columns must be present in this
-#' dataframe: 'cluster', 'gene'. Default: NULL
+#' dataframe: 'cluster', 'geneId'. Default: NULL
 #' @param drawClusterAn Logical: Whether to add row annotation heatmap to heatmap list. Default: TRUE
 #' @param clusterColor cluster annotation color information. Default: NULL
 #' @param clustOrd A character vector of cluster order in the plot. If not provided,
@@ -183,7 +183,7 @@ multi_profile_plots <- function(exptInfo,
 #' @param exptInfo experiment info as data frame with information like sampleID, type,
 #'  path etc
 #' @param cluster Dataframe with cluster information. Two columns must be present
-#'  in this dataframe: 'cluster', 'gene'. Default: NULL
+#'  in this dataframe: 'cluster', 'geneId'. Default: NULL
 #' @param clusterColor cluster annotation color information. Default: NULL
 #' @param clustOrd A character vector of cluster order in the plot. If not provided,
 #' clusters are arranged as per character sort order
@@ -319,11 +319,11 @@ get_expression_heatmap_list <- function(expDf,
   polII_expIds <- paste("is_expressed.", polII_ids, sep = "")
 
   ## select the gene of interst for plotting
-  geneSet <- data.frame(gene = unique(genes), stringsAsFactors = F) %>%
-    dplyr::left_join(y = expDf, by = c("gene" = "gene"))
+  geneSet <- data.frame(geneId = unique(genes), stringsAsFactors = F) %>%
+    dplyr::left_join(y = expDf, by = c("geneId" = "geneId"))
 
   ## clustering polII expression data
-  rownames(geneSet) <- geneSet$gene
+  rownames(geneSet) <- geneSet$geneId
   polII_mat <- as.matrix(geneSet[polII_ids])
 
   polII_log2_mat <- log2(polII_mat + 1)

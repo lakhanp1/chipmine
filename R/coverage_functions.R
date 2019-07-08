@@ -37,11 +37,13 @@ region_coverage <- function(regions, format = "narrowPeak", bwFile, name = "cove
 
   ## get coverage for each chromosome
   for (chr in seqinfo(regionGr)@seqnames) {
+    chrIdx <- seqnames(regionGr) == chr
+
     chrScore <- sum(IRanges::Views(
       subject = bwGr[[chr]],
-      ranges(regionGr[seqnames(regionGr) == chr]))) / width(regionGr[seqnames(regionGr) == chr])
+      ranges(regionGr[chrIdx]))) / width(regionGr[chrIdx])
 
-    mcols(regionGr[seqnames(regionGr) == chr])[[ name ]] <- as.numeric(sprintf("%.3f", chrScore))
+    mcols(regionGr[chrIdx])[[ name ]] <- round(chrScore, 3)
 
   }
 

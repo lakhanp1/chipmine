@@ -60,11 +60,11 @@ merged_profile_matrix_cluster <- function(name, exptInfo, genes, clusterStorePat
                                        returnDf = T)
 
     ## merge profile matrices
-    matDf <- dplyr::left_join(x = matDf, y = matDf2, by = c("gene" = "gene"))
+    matDf <- dplyr::left_join(x = matDf, y = matDf2, by = c("geneId" = "geneId"))
 
   }
 
-  matDf <- tibble::column_to_rownames(df = matDf, var = "gene")
+  matDf <- tibble::column_to_rownames(df = matDf, var = "geneId")
 
   profileMat <- data.matrix(matDf)
 

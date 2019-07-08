@@ -12,7 +12,7 @@ get_polII_signal(file, title, clusterData)
 \item{title}{Title of the polII sample}
 
 \item{clusterData}{A dataframe to which polII binding signal column should be added.
-This dataframe should have 'gene' column}
+This dataframe should have 'geneId' column}
 }
 \value{
 A list with three elements:
