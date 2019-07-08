@@ -5,8 +5,7 @@
 \title{Create sample information dataframe}
 \usage{
 get_sample_information(exptInfoFile, samples = NULL, dataPath,
-  matrixSource = "normalizedmatrix", profileType = "profile",
-  macs2Control = TRUE)
+  matrixSource = "normalizedmatrix", profileType = "profile")
 }
 \arguments{
 \item{exptInfoFile}{A tabular file with details for each sample. "sampleId" and "IP_tag" columns are must}
@@ -20,8 +19,6 @@ get_sample_information(exptInfoFile, samples = NULL, dataPath,
 "TES_3kb_3kb_normalized". Default: normalizedmatrix}
 
 \item{profileType}{Type of profile. This will be added as suffix to the profile name}
-
-\item{macs2Control}{Whether control was used for macs2 peak calling. Default: TRUE}
 }
 \value{
 Data frame with details for each sample
