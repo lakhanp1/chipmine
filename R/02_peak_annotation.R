@@ -92,7 +92,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
   peaks <- rtracklayer::import(con = peakFile, format = fileFormat)
 
   if(length(peaks) == 0){
-    warning("no peak found in peak file")
+    warning("no peak found in peak file ", basename(peakFile))
     return(NULL)
   }
 
@@ -215,12 +215,17 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
     singleHitPeaks <- unlist(tempTargetGrl[which(elementNROWS(tempTargetGrl) == 1)], use.names = F)
     multipleHitPeaks <- tempTargetGrl[which(elementNROWS(tempTargetGrl) != 1)]
 
-    ## for each peak, find optimum target/s
-    multipleHitPeaks <- select_optimal_targets(
-      targetGr = sort(unlist(multipleHitPeaks, use.names = F)),
-      promoterLength = promoterLength,
-      bindingInGene = bindingInGene,
-      insideSkewToEndCut = insideSkewToEndCut)
+    if(length(multipleHitPeaks) > 0){
+      ## for each peak, find optimum target/s
+      multipleHitPeaks <- select_optimal_targets(
+        targetGr = sort(unlist(multipleHitPeaks, use.names = F)),
+        promoterLength = promoterLength,
+        bindingInGene = bindingInGene,
+        insideSkewToEndCut = insideSkewToEndCut)
+    } else{
+      multipleHitPeaks <- NULL
+    }
+
 
     peakTargetsGr <- c(singleHitPeaks, multipleHitPeaks, ignore.mcols=FALSE)
 
@@ -716,30 +721,34 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
     stop("More than two upstream targets targets found for peaks")
   }
 
-  dualTargetPeaksDf <- sort(unlist(dualTargetPeaks, use.names = FALSE)) %>%
-    as.data.frame(row.names = NULL, stringsAsFactors = FALSE) %>%
-    dplyr::mutate(rowIdx = 1:n(),
-                  target = TRUE)
+  dualTargetFiltered <- NULL
 
-  ## row index table for bidirectional peak
-  pairTable <- dualTargetPeaksDf %>%
-    dplyr::group_by(name) %>%
-    dplyr::mutate(group = 1:n()) %>%
-    dplyr::ungroup() %>%
-    dplyr::mutate(group = paste("t", group, sep = "")) %>%
-    dplyr::select(name, group, rowIdx) %>%
-    tidyr::spread(key = group, value = rowIdx)
+  if(length(dualTargetPeaks) > 0){
 
-  pseudoUpIdx <- nearest_upstream_bidirectional(targetDf = dualTargetPeaksDf,
-                                                t1Idx = pairTable$t1,
-                                                t2Idx = pairTable$t2)
+    dualTargetPeaksDf <- sort(unlist(dualTargetPeaks, use.names = FALSE)) %>%
+      as.data.frame(row.names = NULL, stringsAsFactors = FALSE) %>%
+      dplyr::mutate(rowIdx = 1:n(),
+                    target = TRUE)
 
-  ## remove the targets which are too far based on nearest_upstream_bidirectional()
-  dualTargetFiltered <- dualTargetPeaksDf[-pseudoUpIdx,] %>%
-    dplyr::select(-rowIdx, -target) %>%
-    GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = TRUE)
+    ## row index table for bidirectional peak
+    pairTable <- dualTargetPeaksDf %>%
+      dplyr::group_by(name) %>%
+      dplyr::mutate(group = 1:n()) %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(group = paste("t", group, sep = "")) %>%
+      dplyr::select(name, group, rowIdx) %>%
+      tidyr::spread(key = group, value = rowIdx)
 
-  ######
+    pseudoUpIdx <- nearest_upstream_bidirectional(targetDf = dualTargetPeaksDf,
+                                                  t1Idx = pairTable$t1,
+                                                  t2Idx = pairTable$t2)
+
+    ## remove the targets which are too far based on nearest_upstream_bidirectional()
+    dualTargetFiltered <- dualTargetPeaksDf[-pseudoUpIdx,] %>%
+      dplyr::select(-rowIdx, -target) %>%
+      GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = TRUE)
+
+  }
 
 
   upstreamPeaksAn <- sort(c(unlist(singalTargetPeaks, use.names = FALSE),

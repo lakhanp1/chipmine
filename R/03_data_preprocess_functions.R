@@ -176,8 +176,8 @@ gene_level_peak_annotation <- function(
       !! tfCols$hasPeak := ifelse(test = is.na(!! as.name(tfCols$hasPeak)),
                                   yes =  FALSE, no = !!as.name(tfCols$hasPeak) ),
     ) %>%
-    dplyr::select(geneId, !! tfCols$hasPeak, !! tfCols$peakPosition, tfCols$peakType, tfCols$peakId,
-                  tfCols$peakCategory, tfCols$preference, everything()) %>%
+    dplyr::select(!!colnames(genesDf), tfCols$hasPeak, tfCols$peakPosition, tfCols$peakType,
+                  tfCols$peakId, tfCols$peakCategory, tfCols$preference, everything()) %>%
     dplyr::filter_at(.vars = vars(starts_with("hasPeak.")), .vars_predicate = all_vars(. == TRUE))
 
   ## select one best peak for each gene based on preference
@@ -185,8 +185,7 @@ gene_level_peak_annotation <- function(
     dplyr::arrange(!!as.name(tfCols$preference), abs(!!as.name(tfCols$peakDist)),
                    desc(!!as.name(tfCols$peakEnrichment)), .by_group = TRUE) %>%
     dplyr::slice(1L) %>%
-    dplyr::ungroup() %>%
-    dplyr::arrange(chr, start)
+    dplyr::ungroup()
 
   ## optionally save the data
   if(!is.null(outFile)){
