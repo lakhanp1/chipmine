@@ -4,8 +4,8 @@
 \alias{upstream_annotate}
 \title{Annotate upstream peaks on transcripts}
 \usage{
-upstream_annotate(peaksGr, featuresGr, txdb = NULL, txTypes = NULL,
-  promoterLength, ...)
+upstream_annotate(peaksGr, featuresGr, txdb = NULL, excludeType = NULL,
+  upstreamOverlappingFraction = 0.2, promoterLength, ...)
 }
 \arguments{
 \item{peaksGr}{GRanges object for peak data}
@@ -18,8 +18,9 @@ overlap of 0.2 with geneA is allowed in a case when peak overlaps with a geneA a
 is upstream of geneB. This is useful for the peaks which are near TES of a geneA.
 If TxDB object is not provided, featuresGr is used. Default: featuresGr is used.}
 
-\item{txTypes}{Types of transcripts to include from annotation. Should be a
-character vector. This options is used only if TxDB object is provided. Default: NULL}
+\item{excludeType}{tx types to exclude from TxDB}
+
+\item{upstreamOverlappingFraction}{See details. Default: 0.2}
 
 \item{promoterLength}{Promoter region length. Upstream peaks within \code{promoterLength}
 distance of feature start are annotated as \code{promoter} region peaks.}
@@ -31,7 +32,35 @@ A modified peak GRanges object with additional columns: \code{ tx_id,
 peakType, featureCovFrac, peakDist, summitDist}
 }
 \description{
-Annotate upstream peaks on transcripts
+This function annotates the peaks with nearest downstream target. See Details.
+}
+\details{
+There will be cases when a peak is inside a gene and it is upstream of other gene.
+\cr \strong{Use of \code{upstreamOverlappingFraction} (default: 0.2): }
+\preformatted{
+#                                                                         #
+#        target1                     target2                              #
+#      =====<=======<===       =====<=======<========<=======             #
+#                                ---            ----                      #
+#                              peak1           peak2                      #
+#                      |<------>|                                         #
+#                      |<------------------------->|                      #
+#                                                                         #
+in above cases, peak1 can be annotated as Upstream of target1. However not peak2
+because target2 has bigger fraction in-between [target1, peak2] range
+
+Target gene inside gene case:
+#                                                                         #
+#              target1          target2 (longer)                          #
+#      =====<=======<=======<=======<========<=======                     #
+#               ==<==                                                     #
+#                                ---            ----                      #
+#                              peak1           peak2                      #
+#                    |<-------->|                                         #
+#                                                                         #
+}
+In above case, peak1 is inside targe2 and upstream of target1. These targets are
+selected in \code{select_optimal_targets()} if peak lies within promoter range.
 }
 \examples{
 NA

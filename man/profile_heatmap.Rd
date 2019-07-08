@@ -25,7 +25,7 @@ clusterStorePath must be provided which has the cluster data. Default: FALSE}
 \item{numClust}{number of clusters to generate using k-means clustering. Default: 7}
 
 \item{geneGroups}{Either a dataframe or a file path with cluster information or NULL.
-Two columns must be present in this dataframe: \code{gene, cluster}. In case it is NULL, heatmap
+Two columns must be present in this dataframe: \code{geneId, cluster}. In case it is NULL, heatmap
 rows are not split into different groups.}
 
 \item{showAnnotation}{Logical: to show or hide top annotation. Default: TRUE}

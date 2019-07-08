@@ -18,7 +18,7 @@ multi_profile_plots(exptInfo, genesToPlot, clusters = NULL,
 \item{genesToPlot}{A vector of gene IDs which are to be plotted}
 
 \item{clusters}{Dataframe with cluster information. Two columns must be present in this
-dataframe: 'cluster', 'gene'. Default: NULL}
+dataframe: 'cluster', 'geneId'. Default: NULL}
 
 \item{drawClusterAn}{Logical: Whether to add row annotation heatmap to heatmap list. Default: TRUE}
 

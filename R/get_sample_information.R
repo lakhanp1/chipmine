@@ -10,15 +10,15 @@
 #' "TES_3kb_3kb_normalized". Default: normalizedmatrix
 #' @param samples A vector of Sample IDs which are to be processed. Default: All samples are used
 #' @param profileType Type of profile. This will be added as suffix to the profile name
-#' @param macs2Control Whether control was used for macs2 peak calling. Default: TRUE
 #'
 #' @return Data frame with details for each sample
 #' @export
 #'
 #' @examples NA
 get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matrixSource = "normalizedmatrix",
-                                   profileType = "profile", macs2Control = TRUE){
+                                   profileType = "profile"){
 
+  tfChipTags <- c("HA", "FLAG", "HIS", "MYC", "TAP")
   ## read the experiment sample details and select only those which are to be plotted
   exptData <- suppressMessages(readr::read_tsv(file = exptInfoFile))
 
@@ -29,12 +29,17 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matri
 
   exptData$sampleId <- factor(exptData$sampleId, levels = unique(exptData$sampleId))
 
-  if(is.null(exptData$sampleName)){
+
+  if( !any("sampleName" %in% colnames(exptData)) ){
     exptData$sampleName <- exptData$sampleId
   }
 
   exptData <- exptData[order(exptData$sampleId), ] %>%
     dplyr::mutate_if(is.factor, as.character) %>%
+    dplyr::mutate(
+      hasControl = if_else(condition = is.na(control), true = FALSE, false = TRUE, missing = FALSE)
+    ) %>%
+    ## generic data
     dplyr::mutate(
       profileName = paste(sampleId, profileType, sep = "_"),
       bwFile = paste(dataPath, "/", sampleId, "/", sampleId, "_normalized.bw", sep = ""),
@@ -54,16 +59,6 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matri
         matrixSource == "TES_3kb_3kb_normalized" ~
           paste(dataPath, "/", sampleId, "/", sampleId, "_normalizedMatrix_3kbTES3kb.tab.gz", sep = "")
       ),
-      polIIExpFile = dplyr::if_else(
-        IP_tag == "polII",
-        paste(dataPath, "/", sampleId, "/", sampleId, "_normalizedExpression.tab", sep = ""),
-        "NA"
-      ),
-      polIIExpMat = dplyr::if_else(
-        IP_tag == "polII",
-        paste(dataPath, "/", sampleId, "/", sampleId, "_polii_expr.tab.rel.mat", sep = ""),
-        "NA"
-      ),
       clusterFile = dplyr::if_else(
         IP_tag == "polII",
         "NA",
@@ -73,45 +68,85 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matri
         IP_tag == "polII",
         "NA",
         paste(dataPath, "/", sampleId, "/", sampleId, "_allGenes_clusters.tab", sep = "")
+      )
+    ) %>%
+    ## polII ChIPseq related data
+    dplyr::mutate(
+      polIIExpFile = dplyr::if_else(
+        IP_tag == "polII",
+        paste(dataPath, "/", sampleId, "/", sampleId, "_normalizedExpression.tab", sep = ""),
+        "NA"
+      ),
+      polIIExpMat = dplyr::if_else(
+        IP_tag == "polII",
+        paste(dataPath, "/", sampleId, "/", sampleId, "_polii_expr.tab.rel.mat", sep = ""),
+        "NA"
+      )
+    ) %>%
+    ## TF ChIP related data
+    dplyr::mutate(
+      peakFile = dplyr::case_when(
+        IP_tag %in% !!tfChipTags & hasControl & peakType == "narrow" ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.narrowPeak", sep = ""),
+        IP_tag %in% !!tfChipTags & !hasControl & peakType == "narrow" ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.narrowPeak", sep = ""),
+        IP_tag %in% !!tfChipTags & hasControl & peakType == "broad" ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.broadPeak", sep = ""),
+        IP_tag %in% !!tfChipTags & !hasControl & peakType == "broad" ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.broadPeak", sep = "")
+      ),
+      peakAnno = dplyr::case_when(
+        IP_tag %in% !!tfChipTags & hasControl & peakType == "narrow" ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.narrowPeak.annotation.tab", sep = ""),
+        IP_tag %in% !!tfChipTags & !hasControl & peakType == "narrow" ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.narrowPeak.annotation.tab", sep = ""),
+        IP_tag %in% !!tfChipTags & hasControl & peakType == "broad" ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.broadPeak.annotation.tab", sep = ""),
+        IP_tag %in% !!tfChipTags & !hasControl & peakType == "broad" ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.broadPeak.annotation.tab", sep = "")
       ),
       narrowpeakFile = dplyr::case_when(
-        IP_tag != "polII" & isTRUE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, "_withCtrl_peaks.narrowPeak", sep = ""),
-        IP_tag != "polII" & isFALSE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, "_withoutCtrl_peaks.narrowPeak", sep = ""),
+        IP_tag %in% !!tfChipTags & hasControl ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.narrowPeak", sep = ""),
+        IP_tag %in% !!tfChipTags & !hasControl ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.narrowPeak", sep = ""),
         TRUE ~ "NA"
       ),
       narrowpeakAnno = dplyr::case_when(
-        IP_tag != "polII" & isTRUE(macs2Control) ~
+        IP_tag %in% !!tfChipTags & hasControl ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.narrowPeak.annotation.tab", sep = ""),
-        IP_tag != "polII" & isFALSE(macs2Control) ~
+        IP_tag %in% !!tfChipTags & !hasControl ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.narrowPeak.annotation.tab", sep = ""),
         TRUE ~ "NA"
       ),
       broadpeakFile = dplyr::case_when(
-        IP_tag != "polII" & isTRUE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, "_withCtrl_peaks.broadPeak", sep = ""),
-        IP_tag != "polII" & isFALSE(macs2Control) ~
-          paste(dataPath, "/", sampleId, "/", sampleId, "_withoutCtrl_peaks.broadPeak", sep = ""),
+        IP_tag %in% !!tfChipTags & hasControl ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.broadPeak", sep = ""),
+        IP_tag %in% !!tfChipTags & !hasControl ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.broadPeak", sep = ""),
         TRUE ~ "NA"
       ),
       broadpeakAnno = dplyr::case_when(
-        IP_tag != "polII" & isTRUE(macs2Control) ~
+        IP_tag %in% !!tfChipTags & hasControl ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.broadPeak.annotation.tab", sep = ""),
-        IP_tag != "polII" & isFALSE(macs2Control) ~
+        IP_tag %in% !!tfChipTags & !hasControl ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.broadPeak.annotation.tab", sep = ""),
         TRUE ~ "NA"
       ),
       peakTargetFile = dplyr::case_when(
-        IP_tag != "polII" & isTRUE(macs2Control) ~
+        IP_tag %in% !!tfChipTags & hasControl ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.targets.tab", sep = ""),
-        IP_tag != "polII" & isFALSE(macs2Control) ~
+        IP_tag %in% !!tfChipTags & !hasControl ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.targets.tab", sep = ""),
         TRUE ~ "NA"
       )
     ) %>%
-    dplyr::mutate_at(c("polIIExpFile", "polIIExpMat", "clusterFile", "peakTargetFile", "mergedDataFile", "narrowpeakFile", "narrowpeakAnno", "broadpeakFile", "broadpeakAnno"),
-                     .funs = dplyr::funs(dplyr::na_if(., "NA")))
+    dplyr::mutate_at(
+      .vars = c("polIIExpFile", "polIIExpMat", "clusterFile", "peakTargetFile", "mergedDataFile",
+                "narrowpeakFile", "narrowpeakAnno", "broadpeakFile", "broadpeakAnno"),
+      .funs = dplyr::funs(dplyr::na_if(., "NA"))
+    ) %>%
+    dplyr::select(-hasControl)
 
 
   return(exptData)

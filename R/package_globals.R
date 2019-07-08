@@ -15,8 +15,8 @@ assign(x = "clusterColorSet", value = clusterColorSet, envir = chipmineEnv)
 
 ##################################################################################
 
-## peakAnnotationEnv
-peakAnnotationEnv <- new.env(parent = emptyenv())
+## txdbEnv
+txdbEnv <- new.env(parent = emptyenv())
 
 
 

@@ -19,11 +19,11 @@ gene_length_heatmap_annotation = function(bedFile, genes, axis_param = default_a
 
   ## read the bed file
   geneSet = data.table::fread(file = bedFile, header = F,
-                              col.names = c("chr", "start", "end", "name", "score", "strand")) %>%
+                              col.names = c("chr", "start", "end", "geneId", "score", "strand")) %>%
     dplyr::mutate(length = end - start) %>%
-    dplyr::select(name, length)
+    dplyr::select(geneId, length)
 
-  allGl = structure(geneSet$length, names = geneSet$name)
+  allGl = structure(geneSet$length, names = geneSet$geneId)
 
   lenLim = round(quantile(allGl, 0.95))
   ## set max gene length for genes with length > 95% quantile = 95% quantile
@@ -33,7 +33,7 @@ gene_length_heatmap_annotation = function(bedFile, genes, axis_param = default_a
 
   # ## doing left join on the genes dataframe as gene order needs to be maintained
   # df = data.frame(gene = genes, stringsAsFactors = F) %>%
-  #   dplyr::left_join(y = geneSet, by = c("gene" = "name"))
+  #   dplyr::left_join(y = geneSet, by = c("geneId" = "geneId"))
 
   an = rowAnnotation(
     name = "gene_length",

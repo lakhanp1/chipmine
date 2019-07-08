@@ -7,7 +7,7 @@
 get_polII_expressions(genesDf, exptInfo, log2 = FALSE)
 }
 \arguments{
-\item{genesDf}{dataframe with gene column}
+\item{genesDf}{dataframe with geneId column}
 
 \item{exptInfo}{dataframe with experiment information for polII samples}
 
