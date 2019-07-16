@@ -45,19 +45,19 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matri
       bwFile = paste(dataPath, "/", sampleId, "/", sampleId, "_normalized.bw", sep = ""),
       matFile = dplyr::case_when(
         matrixSource == "deeptools" ~
-          paste(dataPath, "/", sampleId, "/", sampleId, "_normalized_profile.tab.gz", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".normalized_profile.tab.gz", sep = ""),
         matrixSource == "normalizedmatrix" ~
-          paste(dataPath, "/", sampleId, "/", sampleId, "_normalizedMatrix.tab.gz", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".normalizedMatrix.tab.gz", sep = ""),
         matrixSource == "normalizedmatrix_5kb" ~
-          paste(dataPath, "/", sampleId, "/", sampleId, "_normalizedMatrix_5kb.tab.gz", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".normalizedMatrix_5kb.tab.gz", sep = ""),
         matrixSource == "TSS_4kb_2kb_normalized" ~
-          paste(dataPath, "/", sampleId, "/", sampleId, "_normalizedMatrix_4kbTSS2kb.tab.gz", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".normalizedMatrix_4kbTSS2kb.tab.gz", sep = ""),
         matrixSource == "TES_2kb_4kb_normalized" ~
-          paste(dataPath, "/", sampleId, "/", sampleId, "_normalizedMatrix_2kbTES4kb.tab.gz", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".normalizedMatrix_2kbTES4kb.tab.gz", sep = ""),
         matrixSource == "TSS_3kb_3kb_normalized" ~
-          paste(dataPath, "/", sampleId, "/", sampleId, "_normalizedMatrix_3kbTSS3kb.tab.gz", sep = ""),
+          paste(dataPath, "/", sampleId, "/", sampleId, ".normalizedMatrix_3kbTSS3kb.tab.gz", sep = ""),
         matrixSource == "TES_3kb_3kb_normalized" ~
-          paste(dataPath, "/", sampleId, "/", sampleId, "_normalizedMatrix_3kbTES3kb.tab.gz", sep = "")
+          paste(dataPath, "/", sampleId, "/", sampleId, ".normalizedMatrix_3kbTES3kb.tab.gz", sep = "")
       ),
       clusterFile = dplyr::if_else(
         IP_tag == "polII",
@@ -67,7 +67,7 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matri
       mergedDataFile = dplyr::if_else(
         IP_tag == "polII",
         "NA",
-        paste(dataPath, "/", sampleId, "/", sampleId, "_allGenes_clusters.tab", sep = "")
+        paste(dataPath, "/", sampleId, "/", sampleId, ".allGenes_clusters.tab", sep = "")
       )
     ) %>%
     ## polII ChIPseq related data
