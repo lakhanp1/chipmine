@@ -28,8 +28,8 @@ plot_MA_gg = function(df, s1, s2, title = NA, colorCol, pseudoCount = 0.1, ylim 
 
   df2 <- df %>%
     dplyr::mutate(
-      M = log2(!!as.name(s1) + pseudoCount) - log2(!!as.name(s2) + pseudoCount),
-      A = (log2(!!as.name(s1) + pseudoCount) + log2(!!as.name(s2) + pseudoCount)) / 2
+      M = log2(!!sym(s1) + pseudoCount) - log2(!!sym(s2) + pseudoCount),
+      A = (log2(!!sym(s1) + pseudoCount) + log2(!!sym(s2) + pseudoCount)) / 2
     ) %>%
     {
       if(!is.null(ylim)){
@@ -58,7 +58,7 @@ plot_MA_gg = function(df, s1, s2, title = NA, colorCol, pseudoCount = 0.1, ylim 
   }
 
   maPlot <- ggplot() +
-    geom_point(data = df2, mapping = aes(x = A, y = M, color = !!as.name(colorCol))) +
+    geom_point(data = df2, mapping = aes(x = A, y = M, color = !!sym(colorCol))) +
     geom_hline(yintercept = 0) +
     geom_hline(yintercept = 1, linetype = 2, alpha = 0.5) +
     geom_hline(yintercept = -1, linetype = 2, alpha = 0.5) +
@@ -96,8 +96,8 @@ plot_scatter <- function(df, s1, s2, title = "Scatter plot", colorCol, transform
 
   df2 <- df %>%
     dplyr::mutate(
-      s1 = !!as.name(s1) + pseudoCount,
-      s2 = !!as.name(s2) + pseudoCount
+      s1 = !!sym(s1) + pseudoCount,
+      s2 = !!sym(s2) + pseudoCount
     )
 
 
@@ -116,7 +116,7 @@ plot_scatter <- function(df, s1, s2, title = "Scatter plot", colorCol, transform
 
 
   sp <- ggplot() +
-    geom_point(data = df2, mapping = aes(x = s2, y = s1, color = !!as.name(colorCol))) +
+    geom_point(data = df2, mapping = aes(x = s2, y = s1, color = !!sym(colorCol))) +
     ggtitle(title) +
     scale_x_continuous(name = paste(transformation, "(",s2, ")", sep = ""),
                        trans = transformation) +

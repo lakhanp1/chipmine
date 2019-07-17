@@ -26,7 +26,7 @@ get_fold_change <- function(df, nmt, dmt, newCol = "lfc",
 
   df <- dplyr::mutate(
     df,
-    !! newCol := log2(pmax(!!as.name(nmt), pseudoCount)) - log2(pmax(!!as.name(dmt), pseudoCount)))
+    !! newCol := log2(pmax(!!sym(nmt), pseudoCount)) - log2(pmax(!!sym(dmt), pseudoCount)))
 
   ## set LFC values within range (-lfcLimit < LFC < +lfcLimit) to zero
   df[[newCol]][
@@ -43,8 +43,8 @@ get_fold_change <- function(df, nmt, dmt, newCol = "lfc",
     df <- dplyr::mutate(
       df,
       !! newCol := if_else(
-        condition = !! as.name(isExpressedCols[[dmt]]) == TRUE | !! as.name(isExpressedCols[[nmt]]) == TRUE,
-        true = !! as.name(newCol),
+        condition = !! sym(isExpressedCols[[dmt]]) == TRUE | !! sym(isExpressedCols[[nmt]]) == TRUE,
+        true = !! sym(newCol),
         false = 0))
   }
 

@@ -113,7 +113,7 @@ profile_heatmap <- function(profileMat,
     } else if(file.exists(geneGroups)) {
       ## read clustering information from cluster file
       # cat("Reading k-means clustering information sample", signalName, "\nNumber of clusters:", numClust, "\n")
-      clusterData <- readr::read_tsv(file = geneGroups)
+      clusterData <- suppressMessages(readr::read_tsv(file = geneGroups))
     }
 
   } else if( is.null(geneGroups) ){

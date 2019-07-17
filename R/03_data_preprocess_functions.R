@@ -22,7 +22,7 @@ preProcess_polII_expression <- function(expMat, sampleId, expFraction, polIIExpF
 
   topFraction <- round(nrow(polIIDf) * expFraction / 100)
 
-  expressedDf <- polIIDf %>% dplyr::top_n(topFraction, !! as.name(sampleId))
+  expressedDf <- polIIDf %>% dplyr::top_n(topFraction, !! sym(sampleId))
 
   isExpCol <- paste("is_expressed.", sampleId, sep = "")
   expressedDf[isExpCol] <- TRUE
@@ -31,7 +31,7 @@ preProcess_polII_expression <- function(expMat, sampleId, expFraction, polIIExpF
 
 
   finalDf <- dplyr::left_join(x = polIIDf, y = expressedDf, by = c("geneId" = "geneId")) %>%
-    dplyr::mutate(!!isExpCol := ifelse(is.na(!! as.name(isExpCol)), FALSE, !! as.name(isExpCol)))
+    dplyr::mutate(!!isExpCol := ifelse(is.na(!! sym(isExpCol)), FALSE, !! sym(isExpCol)))
 
   write.table(x = finalDf, file = polIIExpFile, sep = "\t", col.names = T, quote = F, row.names = F)
 
@@ -150,7 +150,7 @@ gene_level_peak_annotation <- function(
     dplyr::left_join(y = peakPreference, by = tfCols$peakCategory)
 
   if(removePseudo){
-    peakAnnDf <- dplyr::filter(peakAnnDf, !grepl(pattern = "pseudo_", x = !!as.name(tfCols$peakType)))
+    peakAnnDf <- dplyr::filter(peakAnnDf, !grepl(pattern = "pseudo_", x = !!sym(tfCols$peakType)))
   }
 
   ## get TSS targets
@@ -173,17 +173,17 @@ gene_level_peak_annotation <- function(
 
   finalDf <- dplyr::left_join(x = genesDf, y = filteredPeaks, by ="geneId")  %>%
     dplyr::mutate(
-      !! tfCols$hasPeak := ifelse(test = is.na(!! as.name(tfCols$hasPeak)),
-                                  yes =  FALSE, no = !!as.name(tfCols$hasPeak) ),
+      !! tfCols$hasPeak := ifelse(test = is.na(!! sym(tfCols$hasPeak)),
+                                  yes =  FALSE, no = !!sym(tfCols$hasPeak) ),
     ) %>%
     dplyr::select(!!colnames(genesDf), tfCols$hasPeak, tfCols$peakPosition, tfCols$peakType,
                   tfCols$peakId, tfCols$peakCategory, tfCols$preference, everything()) %>%
     dplyr::filter_at(.vars = vars(starts_with("hasPeak.")), .vars_predicate = all_vars(. == TRUE))
 
   ## select one best peak for each gene based on preference
-  finalDf <- dplyr::group_by(finalDf, geneId, !! as.name(tfCols$peakPosition)) %>%
-    dplyr::arrange(!!as.name(tfCols$preference), abs(!!as.name(tfCols$peakDist)),
-                   desc(!!as.name(tfCols$peakEnrichment)), .by_group = TRUE) %>%
+  finalDf <- dplyr::group_by(finalDf, geneId, !! sym(tfCols$peakPosition)) %>%
+    dplyr::arrange(!!sym(tfCols$preference), abs(!!sym(tfCols$peakDist)),
+                   desc(!!sym(tfCols$peakEnrichment)), .by_group = TRUE) %>%
     dplyr::slice(1L) %>%
     dplyr::ungroup()
 
@@ -283,9 +283,9 @@ peak_targets_at_TSS <- function(sampleId, peakAnotation){
 
   ## select the peaks which are in gene body and select the strongest peak
   insidePeaks <- dplyr::filter(
-    peakAnotation, !! as.name(unname(tfCols$peakCategory)) == "peakInFeature") %>%
+    peakAnotation, !! sym(unname(tfCols$peakCategory)) == "peakInFeature") %>%
     dplyr::group_by(geneId) %>%
-    dplyr::arrange(desc(!! as.name(tfCols$peakEnrichment)), .by_group = TRUE) %>%
+    dplyr::arrange(desc(!! sym(tfCols$peakEnrichment)), .by_group = TRUE) %>%
     dplyr::slice(1L) %>%
     dplyr::ungroup()
 
@@ -293,7 +293,7 @@ peak_targets_at_TSS <- function(sampleId, peakAnotation){
   ## are not annotated with any gene
   nonInsidePeaks <- dplyr::filter(
     .data = peakAnotation,
-    !! as.name(unname(tfCols$peakCategory)) %in% c("featureInPeak", "nearStart", "upstreamTss")
+    !! sym(unname(tfCols$peakCategory)) %in% c("featureInPeak", "nearStart", "upstreamTss")
   )
 
   ## prepare TSS peakset and add hasPeak column
@@ -323,9 +323,9 @@ peak_targets_at_TES <- function(sampleId, peakAnotation){
                    simplify = F, USE.NAMES = T)
 
   tesPeakset <- dplyr::filter(
-    peakAnotation, !! as.name(unname(tfCols$peakCategory)) == "nearEnd") %>%
+    peakAnotation, !! sym(unname(tfCols$peakCategory)) == "nearEnd") %>%
     dplyr::group_by(geneId) %>%
-    dplyr::arrange(desc(!! as.name(tfCols$peakEnrichment)), .by_group = TRUE) %>%
+    dplyr::arrange(desc(!! sym(tfCols$peakEnrichment)), .by_group = TRUE) %>%
     dplyr::slice(1L) %>%
     dplyr::ungroup() %>%
     dplyr::mutate(!! tfCols$hasPeak := TRUE)
