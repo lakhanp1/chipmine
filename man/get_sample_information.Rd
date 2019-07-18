@@ -5,7 +5,7 @@
 \title{Create sample information dataframe}
 \usage{
 get_sample_information(exptInfoFile, samples = NULL, dataPath,
-  matrixSource = "normalizedmatrix", profileType = "profile")
+  profileMatrixSuffix = "normalizedmatrix", profileType = "profile")
 }
 \arguments{
 \item{exptInfoFile}{A tabular file with details for each sample. "sampleId" and "IP_tag" columns are must}
@@ -14,9 +14,13 @@ get_sample_information(exptInfoFile, samples = NULL, dataPath,
 
 \item{dataPath}{Path where the data is stored}
 
-\item{matrixSource}{Source of profile matrix. One of "deeptools", "miao", "normalizedmatrix",
-"normalizedmatrix_5kb", "TSS_4kb_2kb_normalized", "TES_2kb_4kb_normalized", "TSS_3kb_3kb_normalized",
-"TES_3kb_3kb_normalized". Default: normalizedmatrix}
+\item{profileMatrixSuffix}{A character string to be used in the file name of profile
+matrix file. Generating profile matrix takes long time and hence it is efficient to save
+the profile matrix. If profile matrix is saved, this suffix is used to design the name of
+profile matrix file. This will generate a file name "sample_ID.normalizedMatrix.tab.gz".
+Different intutuve suffixes can be used to store profile matrix like
+\emph{TSS_4kb_2kb_normalized, TSS_3kb_3kb_normalized, normalizedmatrix_5kb}, etc.
+Default: \emph{normalizedmatrix}.}
 
 \item{profileType}{Type of profile. This will be added as suffix to the profile name}
 }
@@ -24,7 +28,21 @@ get_sample_information(exptInfoFile, samples = NULL, dataPath,
 Data frame with details for each sample
 }
 \description{
-Create sample information dataframe
+This is a utility function to prepare the sample information dataframe for sample
+of interest using experiment information file. Experiment information file should
+have columns: \code{sampleId, IP_tag, control, peakType}. \cr\cr
+\strong{Possible values for compulsory columns and how they are handled:}
+\itemize{
+\item \strong{IP_tag:} One of \code{c("HA", "FLAG", "HIS", "MYC", "TAP", "TF", "polII")}.
+This column value is used to determine whether the ChIPseq data is for polII ChIPseq
+or transcription factor ChIPseq. If polII ChIPseq, \code{polIIExpFile, polIIExpMat}
+columns are populated with appropriate file names for polII data.
+\item \strong{peakType:} One of \code{c("narrow", "broad")}. This column value is used
+to decide the macs2 peak output file name (i.e. narrowPeak or broadPeak).
+\item \strong{control:} This column value is used to decide the suffix of macs2 output
+files. If the value is blank or ".", \emph{withoutCtrl} is used in macs2 peak realated
+file names and \emph{withCtrl} otherwise.
+}
 }
 \examples{
 NA

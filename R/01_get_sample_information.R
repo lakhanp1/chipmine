@@ -3,11 +3,31 @@
 ## generate experiment data
 #' Create sample information dataframe
 #'
+#' This is a utility function to prepare the sample information dataframe for sample
+#' of interest using experiment information file. Experiment information file should
+#' have columns: \code{sampleId, IP_tag, control, peakType}. \cr\cr
+#' \strong{Possible values for compulsory columns and how they are handled:}
+#' \itemize{
+#' \item \strong{IP_tag:} One of \code{c("HA", "FLAG", "HIS", "MYC", "TAP", "TF", "polII")}.
+#' This column value is used to determine whether the ChIPseq data is for polII ChIPseq
+#' or transcription factor ChIPseq. If polII ChIPseq, \code{polIIExpFile, polIIExpMat}
+#' columns are populated with appropriate file names for polII data.
+#' \item \strong{peakType:} One of \code{c("narrow", "broad")}. This column value is used
+#' to decide the macs2 peak output file name (i.e. narrowPeak or broadPeak).
+#' \item \strong{control:} This column value is used to decide the suffix of macs2 output
+#' files. If the value is blank or ".", \emph{withoutCtrl} is used in macs2 peak realated
+#' file names and \emph{withCtrl} otherwise.
+#' }
+#'
 #' @param exptInfoFile A tabular file with details for each sample. "sampleId" and "IP_tag" columns are must
 #' @param dataPath Path where the data is stored
-#' @param matrixSource Source of profile matrix. One of "deeptools", "miao", "normalizedmatrix",
-#' "normalizedmatrix_5kb", "TSS_4kb_2kb_normalized", "TES_2kb_4kb_normalized", "TSS_3kb_3kb_normalized",
-#' "TES_3kb_3kb_normalized". Default: normalizedmatrix
+#' @param profileMatrixSuffix A character string to be used in the file name of profile
+#' matrix file. Generating profile matrix takes long time and hence it is efficient to save
+#' the profile matrix. If profile matrix is saved, this suffix is used to design the name of
+#' profile matrix file. This will generate a file name "sample_ID.normalizedMatrix.tab.gz".
+#' Different intutuve suffixes can be used to store profile matrix like
+#' \emph{TSS_4kb_2kb_normalized, TSS_3kb_3kb_normalized, normalizedmatrix_5kb}, etc.
+#' Default: \emph{normalizedmatrix}.
 #' @param samples A vector of Sample IDs which are to be processed. Default: All samples are used
 #' @param profileType Type of profile. This will be added as suffix to the profile name
 #'
@@ -15,10 +35,11 @@
 #' @export
 #'
 #' @examples NA
-get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matrixSource = "normalizedmatrix",
+get_sample_information <- function(exptInfoFile, samples = NULL, dataPath,
+                                   profileMatrixSuffix = "normalizedmatrix",
                                    profileType = "profile"){
 
-  tfChipTags <- c("HA", "FLAG", "HIS", "MYC", "TAP")
+  tfChipTags <- c("HA", "FLAG", "HIS", "MYC", "TAP", "TF")
   ## read the experiment sample details and select only those which are to be plotted
   exptData <- suppressMessages(readr::read_tsv(file = exptInfoFile))
 
@@ -34,38 +55,29 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matri
     exptData$sampleName <- exptData$sampleId
   }
 
+  if( !any("control" %in% colnames(exptData)) ){
+    exptData$control <- "."
+  }
+
   exptData <- exptData[order(exptData$sampleId), ] %>%
     dplyr::mutate_if(is.factor, as.character) %>%
     dplyr::mutate(
-      hasControl = if_else(condition = is.na(control), true = FALSE, false = TRUE, missing = FALSE)
+      hasControl = if_else(condition = is.na(control) | control == ".",
+                           true = FALSE, false = TRUE, missing = FALSE)
     ) %>%
     ## generic data
     dplyr::mutate(
       profileName = paste(sampleId, profileType, sep = "_"),
       bwFile = paste(dataPath, "/", sampleId, "/", sampleId, "_normalized.bw", sep = ""),
-      matFile = dplyr::case_when(
-        matrixSource == "deeptools" ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".normalized_profile.tab.gz", sep = ""),
-        matrixSource == "normalizedmatrix" ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".normalizedMatrix.tab.gz", sep = ""),
-        matrixSource == "normalizedmatrix_5kb" ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".normalizedMatrix_5kb.tab.gz", sep = ""),
-        matrixSource == "TSS_4kb_2kb_normalized" ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".normalizedMatrix_4kbTSS2kb.tab.gz", sep = ""),
-        matrixSource == "TES_2kb_4kb_normalized" ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".normalizedMatrix_2kbTES4kb.tab.gz", sep = ""),
-        matrixSource == "TSS_3kb_3kb_normalized" ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".normalizedMatrix_3kbTSS3kb.tab.gz", sep = ""),
-        matrixSource == "TES_3kb_3kb_normalized" ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".normalizedMatrix_3kbTES3kb.tab.gz", sep = "")
-      ),
+      matFile = paste(dataPath, "/", sampleId, "/", sampleId, ".",
+                      profileMatrixSuffix,".tab.gz", sep = ""),
       clusterFile = dplyr::if_else(
-        IP_tag == "polII",
+        tolower(IP_tag) == "polii",
         "NA",
         paste(dataPath, "/", sampleId, "/", sampleId, ".kmeans.clusters.txt", sep = "")
       ),
       mergedDataFile = dplyr::if_else(
-        IP_tag == "polII",
+        tolower(IP_tag) == "polii",
         "NA",
         paste(dataPath, "/", sampleId, "/", sampleId, ".allGenes_clusters.tab", sep = "")
       )
@@ -73,12 +85,12 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matri
     ## polII ChIPseq related data
     dplyr::mutate(
       polIIExpFile = dplyr::if_else(
-        IP_tag == "polII",
+        tolower(IP_tag) == "polii",
         paste(dataPath, "/", sampleId, "/", sampleId, "_normalizedExpression.tab", sep = ""),
         "NA"
       ),
       polIIExpMat = dplyr::if_else(
-        IP_tag == "polII",
+        tolower(IP_tag) == "polii",
         paste(dataPath, "/", sampleId, "/", sampleId, "_polii_expr.tab.rel.mat", sep = ""),
         "NA"
       )
@@ -104,34 +116,6 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath, matri
           paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.broadPeak.annotation.tab", sep = ""),
         IP_tag %in% !!tfChipTags & !hasControl & peakType == "broad" ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.broadPeak.annotation.tab", sep = "")
-      ),
-      narrowpeakFile = dplyr::case_when(
-        IP_tag %in% !!tfChipTags & hasControl ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.narrowPeak", sep = ""),
-        IP_tag %in% !!tfChipTags & !hasControl ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.narrowPeak", sep = ""),
-        TRUE ~ "NA"
-      ),
-      narrowpeakAnno = dplyr::case_when(
-        IP_tag %in% !!tfChipTags & hasControl ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.narrowPeak.annotation.tab", sep = ""),
-        IP_tag %in% !!tfChipTags & !hasControl ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.narrowPeak.annotation.tab", sep = ""),
-        TRUE ~ "NA"
-      ),
-      broadpeakFile = dplyr::case_when(
-        IP_tag %in% !!tfChipTags & hasControl ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.broadPeak", sep = ""),
-        IP_tag %in% !!tfChipTags & !hasControl ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.broadPeak", sep = ""),
-        TRUE ~ "NA"
-      ),
-      broadpeakAnno = dplyr::case_when(
-        IP_tag %in% !!tfChipTags & hasControl ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.broadPeak.annotation.tab", sep = ""),
-        IP_tag %in% !!tfChipTags & !hasControl ~
-          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.broadPeak.annotation.tab", sep = ""),
-        TRUE ~ "NA"
       ),
       peakTargetFile = dplyr::case_when(
         IP_tag %in% !!tfChipTags & hasControl ~
