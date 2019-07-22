@@ -127,7 +127,7 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath,
     ) %>%
     dplyr::mutate_at(
       .vars = c("polIIExpFile", "polIIExpMat", "clusterFile", "peakTargetFile", "mergedDataFile",
-                "narrowpeakFile", "narrowpeakAnno", "broadpeakFile", "broadpeakAnno"),
+                "peakFile", "peakAnno"),
       .funs = dplyr::funs(dplyr::na_if(., "NA"))
     ) %>%
     dplyr::select(-hasControl)
