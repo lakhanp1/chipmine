@@ -1,6 +1,5 @@
 
 ##################################################################################
-## get the TF peak data for each gene
 #' Get the TF peak annotation data
 #'
 #' This function extract the columns from SAMPLE_ID_peaks.annotated.tab file for
