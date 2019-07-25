@@ -48,11 +48,20 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath,
                                  y = exptData, by = "sampleId")
   }
 
+  if (nrow(exptData) == 0) {
+      return(NULL)
+  }
+
   exptData$sampleId <- factor(exptData$sampleId, levels = unique(exptData$sampleId))
 
 
   if( !any("sampleName" %in% colnames(exptData)) ){
     exptData$sampleName <- exptData$sampleId
+  }
+
+  if( !any("peakType" %in% colnames(exptData)) ){
+    warning("peakType column not found in sample information. Using \"narrow\" for all samples")
+    exptData$peakType <- "narrow"
   }
 
   if( !any("control" %in% colnames(exptData)) ){
@@ -128,7 +137,7 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath,
     dplyr::mutate_at(
       .vars = c("polIIExpFile", "polIIExpMat", "clusterFile", "peakTargetFile", "mergedDataFile",
                 "peakFile", "peakAnno"),
-      .funs = dplyr::funs(dplyr::na_if(., "NA"))
+      .funs = list(~ dplyr::na_if(., "NA"))
     ) %>%
     dplyr::select(-hasControl)
 
