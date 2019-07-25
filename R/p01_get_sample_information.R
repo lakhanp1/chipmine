@@ -95,7 +95,7 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath,
     dplyr::mutate(
       polIIExpFile = dplyr::if_else(
         tolower(IP_tag) == "polii",
-        paste(dataPath, "/", sampleId, "/", sampleId, "_normalizedExpression.tab", sep = ""),
+        paste(dataPath, "/", sampleId, "/", sampleId, ".normalizedExpression.tab", sep = ""),
         "NA"
       ),
       polIIExpMat = dplyr::if_else(

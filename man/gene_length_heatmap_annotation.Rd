@@ -5,7 +5,7 @@
 \title{Gene length annotation as points}
 \usage{
 gene_length_heatmap_annotation(bedFile, genes,
-  axis_param = default_axis_param("row"))
+  axis_param = default_axis_param("row"), pointSize = unit(1, "mm"))
 }
 \arguments{
 \item{bedFile}{a bed file with 6 columns. feature name will be used to select the genes}
@@ -16,6 +16,8 @@ heatmap.}
 
 \item{axis_param}{\code{axis_param} argument of \code{ComplexHeatmap::anno_points()}
 function.}
+
+\item{pointSize}{Point size as \code{unit} object. Default: 1mm}
 }
 \value{
 An anno_points heatmap annotation object

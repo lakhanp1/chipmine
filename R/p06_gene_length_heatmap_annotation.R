@@ -10,12 +10,14 @@
 #' heatmap.
 #' @param axis_param \code{axis_param} argument of \code{ComplexHeatmap::anno_points()}
 #' function.
+#' @param pointSize Point size as \code{unit} object. Default: 1mm
 #'
 #' @return An anno_points heatmap annotation object
 #' @export
 #'
 #' @examples NA
-gene_length_heatmap_annotation = function(bedFile, genes, axis_param = default_axis_param("row")){
+gene_length_heatmap_annotation = function(bedFile, genes, axis_param = default_axis_param("row"),
+                                          pointSize = unit(1, "mm")){
 
   ## read the bed file
   geneSet = data.table::fread(file = bedFile, header = F,
@@ -39,7 +41,7 @@ gene_length_heatmap_annotation = function(bedFile, genes, axis_param = default_a
     name = "gene_length",
     gene_length = row_anno_points(
       x = selectGl,
-      size = unit(1, "mm"),
+      size = pointSize,
       axis_param = axis_param,
       gp = gpar(col = "#00000040")
     ),
