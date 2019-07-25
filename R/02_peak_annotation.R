@@ -42,6 +42,8 @@
 #' @param txIds A vector of transcript IDs to be used specifically in the annotation
 #' process instead of full transcript set. These should be internal tx_ids from TxDB
 #' object. This is useful feature to exclude tRNA, rRNA transcripts. Default: NULL
+#' @param blacklistRegions A BED file with ChIPseq blacklist regions. Peaks overlapping
+#' with these regions are not used for annotation.
 #' @param includeFractionCut Number between [0, 1]. If a peak covers more than this
 #' fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7
 #' @param bindingInGene Logical: whether the ChIPseq TF binds in gene body. This is
@@ -62,6 +64,7 @@
 #' @examples NA
 narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
                                 txdb, txIds = NULL,
+                                blacklistRegions = NULL,
                                 excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
                                 includeFractionCut = 0.7, bindingInGene = FALSE,
                                 promoterLength, insideSkewToEndCut = 0.7,

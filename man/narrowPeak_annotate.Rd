@@ -5,10 +5,10 @@
 \title{Annotate narrowPeak using TxDB}
 \usage{
 narrowPeak_annotate(peakFile, fileFormat = "narrowPeak", txdb,
-  txIds = NULL, excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA",
-  "ncRNA"), includeFractionCut = 0.7, bindingInGene = FALSE,
-  promoterLength, insideSkewToEndCut = 0.7, reportPseudo = TRUE,
-  output = NULL)
+  txIds = NULL, blacklistRegions = NULL, excludeType = c("tRNA",
+  "rRNA", "snRNA", "snoRNA", "ncRNA"), includeFractionCut = 0.7,
+  bindingInGene = FALSE, promoterLength, insideSkewToEndCut = 0.7,
+  reportPseudo = TRUE, output = NULL)
 }
 \arguments{
 \item{peakFile}{A narroPeak or broadPeak file. If a broadPeak file, peak center is
@@ -21,6 +21,9 @@ used as summit as broadPeak file does not report summit}
 \item{txIds}{A vector of transcript IDs to be used specifically in the annotation
 process instead of full transcript set. These should be internal tx_ids from TxDB
 object. This is useful feature to exclude tRNA, rRNA transcripts. Default: NULL}
+
+\item{blacklistRegions}{A BED file with ChIPseq blacklist regions. Peaks overlapping
+with these regions are not used for annotation.}
 
 \item{excludeType}{Types of transcripts to exclude from annotation. Should be a
 character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}}
