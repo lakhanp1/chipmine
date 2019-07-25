@@ -212,6 +212,8 @@ gene_level_peak_annotation <- function(
 #' \code{c("peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
 #' "peakSummit", "peakDist", "summitDist", "bidirectional", "featureCovFrac", "relativeSummitPos",
 #' "peakRegion", "peakCoverage")}. Default: all columns are returned
+#' @param renameColumn Logical indicating whether to add sampleId suffix to column name. If
+#' TRUE, each column name is suffixed with sampleId. Default: TRUE
 #'
 #' @return A peak annotation as dataframe
 #' @export
@@ -219,7 +221,7 @@ gene_level_peak_annotation <- function(
 #' @examples NA
 import_peak_annotation <- function(sampleId, peakAnnoFile,
                                    fcCutoff = 1, pvalCutoff = 1,
-                                   columns = NULL){
+                                   columns = NULL, renameColumn = TRUE){
 
 
   ## "peakChr", "peakStart", "peakEnd", "peakSummit", "relativeSummitPos", "peakType", "peakDist",
@@ -254,7 +256,9 @@ import_peak_annotation <- function(sampleId, peakAnnoFile,
     renameCols <- renameCols[renameCols %in% columns]
   }
 
-  peakAnt <- dplyr::rename(peakAnt, !!! renameCols)
+  if(renameColumn){
+    peakAnt <- dplyr::rename(peakAnt, !!! renameCols)
+  }
 
   return(peakAnt)
 }

@@ -5,7 +5,7 @@
 \title{Import peak annotation data}
 \usage{
 import_peak_annotation(sampleId, peakAnnoFile, fcCutoff = 1,
-  pvalCutoff = 1, columns = NULL)
+  pvalCutoff = 1, columns = NULL, renameColumn = TRUE)
 }
 \arguments{
 \item{sampleId}{sample ID}
@@ -20,6 +20,9 @@ import_peak_annotation(sampleId, peakAnnoFile, fcCutoff = 1,
 \code{c("peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
 "peakSummit", "peakDist", "summitDist", "bidirectional", "featureCovFrac", "relativeSummitPos",
 "peakRegion", "peakCoverage")}. Default: all columns are returned}
+
+\item{renameColumn}{Logical indicating whether to add sampleId suffix to column name. If
+TRUE, each column name is suffixed with sampleId. Default: TRUE}
 }
 \value{
 A peak annotation as dataframe
