@@ -24,7 +24,7 @@ combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFor
                                          peakCols = c("peakId", "peakEnrichment", "peakPval"),
                                          genome = NULL, summitSeqLen = 200){
 
-  peakList <- GenomicRanges::GRangesList(lapply(X = sampleInfo$narrowpeakFile,
+  peakList <- GenomicRanges::GRangesList(lapply(X = sampleInfo$peakFile,
                                                 FUN = rtracklayer::import, format = peakFormat))
 
   names(peakList) <- sampleInfo$sampleId
@@ -62,8 +62,9 @@ combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFor
     hits$queryHits <- NULL
     hits$subjectHits <- NULL
 
-    dt <- import_peaks_as_df(file = sampleInfo$narrowpeakFile[i],
+    dt <- import_peaks_as_df(file = sampleInfo$peakFile[i],
                              sampleId = sampleName,
+                             peakFormat = peakFormat,
                              peakCols = peakCols) %>%
       dplyr::distinct()
 
@@ -85,7 +86,7 @@ combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFor
 
     if(! is.null(genome)){
       ## get the sequence around summit
-      summitSeq <- get_narrowpeak_summit_seq(npFile = sampleInfo$narrowpeakFile[i],
+      summitSeq <- get_narrowpeak_summit_seq(npFile = sampleInfo$peakFile[i],
                                              id = sampleName,
                                              genome = genome,
                                              length = summitSeqLen)
