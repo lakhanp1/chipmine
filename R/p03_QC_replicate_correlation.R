@@ -11,7 +11,15 @@
 #' @param compare One of \emph{pvalue} or \emph{enrichment}
 #' @param title Comparison title
 #'
-#' @return
+#' @return A list with following ggplot2 elements:
+#' \itemize{
+#' \item \strong{table:} peak overlap summary table for replicates as a \code{ggtable} object
+#' \item \strong{distribution:} Beeswarm plots showing comparative distribution between
+#' replicates for a metric of choice
+#' \item \strong{valueScatter:} X-Y scatter plot using values a metric of choice
+#' \item \strong{rankScatter:} X-Y scatter plot using \code{rank(values)} a metric of choice
+#' }
+#'
 #' @export
 #'
 #' @examples NA
@@ -103,7 +111,7 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title){
 
   plotData <- dplyr::bind_rows(r1PeaksDf, r2PeaksDf)
 
-  pointColor <- structure(c("grey", "red"), names = c("common", "unique"))
+  pointColor <- structure(c("green", "red"), names = c("common", "unique"))
   pointAlpha <- structure(c(0.25, 1), names = c("common", "unique"))
 
 
@@ -232,9 +240,6 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title){
   #   theme_scatter
 
   #######################################
-
-  # gg_scatter <- ggpubr::ggarrange(gg_scatter_val, gg_scatter_rank,
-  #                                 nrow = 1, legend = "none")
 
   return(list(
     table = gg_stable,
