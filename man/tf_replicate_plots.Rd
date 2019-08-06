@@ -4,7 +4,8 @@
 \alias{tf_replicate_plots}
 \title{TF ChIPseq replicate correlation plots}
 \usage{
-tf_replicate_plots(sampleInfo, compare = "pvalue", title)
+tf_replicate_plots(sampleInfo, compare = "pvalue", title,
+  yintercept = -Inf)
 }
 \arguments{
 \item{sampleInfo}{sample information dataframe}
@@ -12,6 +13,8 @@ tf_replicate_plots(sampleInfo, compare = "pvalue", title)
 \item{compare}{One of \emph{pvalue} or \emph{enrichment}}
 
 \item{title}{Comparison title}
+
+\item{yintercept}{yintercept for horizontal line on beeswarm plot}
 }
 \value{
 A list with following ggplot2 elements:

@@ -10,6 +10,7 @@
 #' @param sampleInfo sample information dataframe
 #' @param compare One of \emph{pvalue} or \emph{enrichment}
 #' @param title Comparison title
+#' @param yintercept yintercept for horizontal line on beeswarm plot
 #'
 #' @return A list with following ggplot2 elements:
 #' \itemize{
@@ -23,7 +24,7 @@
 #' @export
 #'
 #' @examples NA
-tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title){
+tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title, yintercept = -Inf){
 
   compare <- match.arg(tolower(compare), choices = c("pvalue", "enrichment", "qvalue"))
 
@@ -39,7 +40,7 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title){
     pvalue = list(narrowPeak = "qValue",
                   chipmine = "peakQval",
                   plotLabel = "-log10(q-value)",
-                  color = "#a2b67c"),
+                  color = "#a2b67c")
   )
 
   if(nrow(sampleInfo) != 2){
@@ -72,8 +73,8 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title){
   r1Peaks <- rtracklayer::import(con = rep1Data$peakFile, format = peakFormat)
   r2Peaks <- rtracklayer::import(con = rep2Data$peakFile, format = peakFormat)
 
-  mcols(r1Peaks)$overlap <- factor("unique", levels = c("common", "unique"))
-  mcols(r2Peaks)$overlap <- factor("unique", levels = c("common", "unique"))
+  mcols(r1Peaks)$overlap <- factor("unique", levels = c("common", "unique"), ordered = TRUE)
+  mcols(r2Peaks)$overlap <- factor("unique", levels = c("common", "unique"), ordered = TRUE)
 
   peakOvlp <- findOverlaps(r1Peaks, r2Peaks)
 
@@ -119,6 +120,7 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title){
   gg_dot <- ggplot(
     data = plotData,
     mapping = aes(x = sampleId, y = !!sym(compareConfig[[compare]]$narrowPeak)) ) +
+    geom_hline(yintercept = yintercept, color = "black", linetype = "dashed") +
     ggbeeswarm::geom_quasirandom(mapping = aes(color = overlap, alpha = overlap)) +
     geom_boxplot(width=0.1, fill = NA, outlier.colour = NA, color = alpha("green", 1)) +
     scale_color_manual(name = "Replicate overlap",
@@ -128,7 +130,6 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title){
          y = compareConfig[[compare]]$plotLabel) +
     guides(alpha = FALSE,
            color = guide_legend(override.aes = list(size = 4))) +
-    # facet_wrap(facets = ~ sampleId, ncol = 2, scales = "free_x") +
     theme_bw() +
     theme(
       axis.title.x = element_blank(),
@@ -137,8 +138,6 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title){
       axis.text.x = element_text(size = 8),
       panel.grid = element_blank(),
       title = element_text(hjust = 0.5, size = 14),
-      # strip.text = element_text(size = 8, hjust = 0),
-      # strip.background = element_rect(fill = compareConfig[[compare]]$color),
       legend.position = "bottom"
     )
 
@@ -169,15 +168,14 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title){
 
   commonPeaks$density <- col2rgb(densColor)[1,] + 1L
 
-  ## value scatter plot
-  gg_scatter_val <- ggplot(data = commonPeaks,
-                           mapping = aes(x = !!sym(rep1Col),
-                                         y = !!sym(rep2Col),
-                                         color = density)
+  ## value XY scatter plot
+  gg_scatter_val <- ggplot(
+    data = commonPeaks,
+    mapping = aes(x = !!sym(rep1Col), y = !!sym(rep2Col), color = density)
   ) +
     geom_point() +
     geom_smooth(method=lm, se = FALSE, formula = y ~ x) +
-    ggpubr::stat_cor(method = "pearson", size = 10) +
+    ggpubr::stat_cor(method = "spearman", size = 10) +
     scale_color_gradientn(
       name = "Density",
       colours = RColorBrewer::brewer.pal(7, "RdYlBu")) +
@@ -186,11 +184,10 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title){
     theme_bw() +
     theme_scatter
 
-  ## rank(-value) scatter plot
-  gg_scatter_rank <- ggplot(data = commonPeaks,
-                            mapping = aes(x = rank(- !!sym(rep1Col)),
-                                          y = rank(- !!sym(rep2Col)),
-                                          color = density)
+  ## rank(-value) XY scatter plot
+  gg_scatter_rank <- ggplot(
+    data = commonPeaks,
+    mapping = aes(x = rank(- !!sym(rep1Col)), y = rank(- !!sym(rep2Col)), color = density)
   ) +
     geom_point() +
     scale_color_gradientn(
