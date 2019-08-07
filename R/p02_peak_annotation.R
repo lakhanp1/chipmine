@@ -592,11 +592,10 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
   peakDownHits <- data.frame(
     from = 1:length(peaksGr), peakId = mcols(peaksGr)$name,
     to = peakDownFeatures,
+    expectedFeatureStrand = "+",
     featureStrand = as.vector(strand(featuresGr))[peakDownFeatures],
     txName = featuresGr$tx_name[peakDownFeatures],
-    stringsAsFactors = FALSE) %>%
-    dplyr::filter(featureStrand == "+")
-
+    stringsAsFactors = FALSE)
 
   ## select immediate upstream feature to the peak
   peakUpFeatures <- GenomicRanges::follow(x = peaksGr, subject = featuresGr,
@@ -607,22 +606,76 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
   peakUpHits <- data.frame(
     from = 1:length(peaksGr), peakId = mcols(peaksGr)$name,
     to = peakUpFeatures,
+    expectedFeatureStrand = "-",
     featureStrand = as.vector(strand(featuresGr))[peakUpFeatures],
     txName = featuresGr$tx_name[peakUpFeatures],
+    stringsAsFactors = FALSE)
+
+
+  targetsAroundPeak <- dplyr::bind_rows(peakDownHits, peakUpHits) %>%
+    dplyr::filter(!is.na(to))
+
+  ## remove false downstream targets
+  upstreamHits <- dplyr::filter(targetsAroundPeak, expectedFeatureStrand == featureStrand)
+
+  ####################
+  ## if only one gene is found i.e. either upstream of peak or downstream of peak,
+  ## additionally select one immediate downstream gene in opposite direction.
+  ## In following case, gene0 is found by follow() method which is upstream of peak1
+  ## and is possible target. Gene2 can also be a possible target but precede() will
+  ## select gene1 (ignore.strand = TRUE) and it will be filtered ultimately.
+  ## So we select on gene in opposite direction with ignore.strand = TRUE. This way
+  ## we will have two targets on each side of peak. if its case like gene1 and gene3,
+  ## gene3 will be filtered using peak-gap overlap filter code below
+  ##                           ====<=======<======<====== gene1
+  ##                             ====>=====>======>======= gene2
+  ##  ====<======<=                                    ====>======> gene3
+  ##                   -----
+  ##     gene0            peak1
+  ##
+
+  ## find if any other target overlap with false downstream target (gene1) which can
+  ## be possible true downstream target
+  falseTargets <- dplyr::filter(targetsAroundPeak, expectedFeatureStrand != featureStrand)
+  falseTargetsGr <- featuresGr[falseTargets$to]
+  mcols(falseTargetsGr)$from  <- falseTargets$from
+  mcols(falseTargetsGr)$to <- falseTargets$to
+  mcols(falseTargetsGr)$peakId <- falseTargets$peakId
+  mcols(falseTargetsGr)$expectedFeatureStrand <- falseTargets$expectedFeatureStrand
+
+  falseTargetOverlaps <- GenomicRanges::findOverlaps(query = falseTargetsGr,
+                                                     subject = featuresGr,
+                                                     ignore.strand = TRUE)
+
+  otherUpstream <- data.frame(
+    from = mcols(falseTargetsGr)$from[falseTargetOverlaps@from],
+    peakId =  mcols(falseTargetsGr)$peakId[falseTargetOverlaps@from],
+    to = falseTargetOverlaps@to,
+    expectedFeatureStrand = mcols(falseTargetsGr)$expectedFeatureStrand[falseTargetOverlaps@from],
+    featureStrand = as.vector(strand(featuresGr))[falseTargetOverlaps@to],
+    txName = featuresGr$tx_name[falseTargetOverlaps@to],
     stringsAsFactors = FALSE) %>%
-    dplyr::filter(featureStrand == "-")
+    dplyr::filter(expectedFeatureStrand == featureStrand)
 
-  ## this has to be on dataframe and not vectors above because the dataframes
-  ## are filtering for strand
-  if(nrow(peakUpHits) == 0 && nrow(peakDownHits) == 0){
-    return(NULL)
-  }
+  ## some of above otherUpstream target can overlap with peak. remove such targets
+  ## as it is handled by splicing_unit_annotate() for 5' UTR overlap
+  notOvlpWithPeak <- distance(x = peaksGr[otherUpstream$from], y = featuresGr[otherUpstream$to],
+           ignore.strand = TRUE) != 0
 
-  ## merge the putative upstream hits
-  upstreamHits <- dplyr::bind_rows(peakDownHits, peakUpHits) %>%
+  otherUpstream <- otherUpstream[notOvlpWithPeak, ]
+
+  ####################
+
+
+  ## combine putative upstream hits
+  upstreamHits <- dplyr::bind_rows(upstreamHits, otherUpstream) %>%
     dplyr::arrange(from) %>%
     dplyr::mutate(id = row_number())
 
+  ## return null if nothing found
+  if(nrow(upstreamHits) == 0){
+    return(NULL)
+  }
 
   ## find the number of genes between peak and its target.
   ## only those targets are true where there is no other feature inbetween
