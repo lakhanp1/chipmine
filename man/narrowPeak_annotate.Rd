@@ -8,7 +8,7 @@ narrowPeak_annotate(peakFile, fileFormat = "narrowPeak", txdb,
   txIds = NULL, blacklistRegions = NULL, excludeType = c("tRNA",
   "rRNA", "snRNA", "snoRNA", "ncRNA"), includeFractionCut = 0.7,
   bindingInGene = FALSE, promoterLength, insideSkewToEndCut = 0.7,
-  reportPseudo = TRUE, output = NULL)
+  removePseudo = FALSE, output = NULL)
 }
 \arguments{
 \item{peakFile}{A narroPeak or broadPeak file. If a broadPeak file, peak center is
@@ -40,8 +40,8 @@ useful for polII ChIPseq data. Default: FALSE}
 present inside feature/gene and the relative summit position is > insideSkewToEndCut,
 it is closer to the end of the feature. Default: 0.7}
 
-\item{reportPseudo}{Logical. Whether to report peak targets which are marked as
-pseudo. Default: TRUE}
+\item{removePseudo}{Logical: whether to remove peak targets which are marked as pseudo.
+Default: FALSE}
 
 \item{output}{Optionally store the annotation output to a file}
 }
