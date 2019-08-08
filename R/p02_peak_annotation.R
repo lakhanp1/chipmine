@@ -820,7 +820,8 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
 
     pseudoUpIdx <- nearest_upstream_bidirectional(targetDf = dualTargetPeaksDf,
                                                   t1Idx = pairTable$t1,
-                                                  t2Idx = pairTable$t2)
+                                                  t2Idx = pairTable$t2,
+                                                  promoterLength = promoterLength)
 
     ## remove the targets which are too far based on nearest_upstream_bidirectional()
     dualTargetFiltered <- dualTargetPeaksDf[-pseudoUpIdx,] %>%
@@ -871,12 +872,13 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
 #' @param skewFraction Minimum fraction of peak region allowed on the side of false target
 #' from the midpoint of two target genes. Default: 0.2
 #' @param minTSS_gapForPseudo Valid distance between two target genes TSS to mark one as psuedo
+#' @param promoterLength Promoter length
 #'
 #' @return A vector of row index for pseudo targets.
 #' @export
 #'
 #' @examples NA
-nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
+nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLength,
                                            skewFraction = 0.2, minTSS_gapForPseudo = 500){
 
   targetPairDf <- tibble::tibble(t1Idx = t1Idx, t2Idx = t2Idx,
@@ -900,8 +902,8 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
   sameDirTargets <- which(targetA$targetStrand == targetB$targetStrand)
   targetPairDf$dir[sameDirTargets] <- "same"
 
-  targetPairDf$t1Select[sameDirTargets] <- targetA$preference[sameDirTargets] < targetB$preference[sameDirTargets]
-  targetPairDf$t2Select[sameDirTargets] <- targetA$preference[sameDirTargets] > targetB$preference[sameDirTargets]
+  # targetPairDf$t1Select[sameDirTargets] <- targetA$preference[sameDirTargets] < targetB$preference[sameDirTargets]
+  # targetPairDf$t2Select[sameDirTargets] <- targetA$preference[sameDirTargets] > targetB$preference[sameDirTargets]
 
 
   targetAGr <- dplyr::select(targetA, seqnames, targetStart, targetEnd, targetStrand, name, rowIdx) %>%
@@ -932,11 +934,13 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
     targetPairDf,
     t1Select = dplyr::case_when(
       gapWidth <= minTSS_gapForPseudo ~ t1Select,
+      abs(t1PeakDist) < promoterLength ~ TRUE,
       dir == "opposite" & (abs(t1PeakDist) + peakFraction) > (gapWidth/2) ~ FALSE,
       TRUE ~ t1Select
     ),
     t2Select = dplyr::case_when(
       gapWidth <= minTSS_gapForPseudo ~ t2Select,
+      abs(t2PeakDist) < promoterLength ~ TRUE,
       dir == "opposite" & (abs(t2PeakDist) + peakFraction) > (gapWidth/2) ~ FALSE,
       TRUE ~ t2Select
     )

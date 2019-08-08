@@ -4,7 +4,7 @@
 \alias{nearest_upstream_bidirectional}
 \title{True target for bidirectional peak}
 \usage{
-nearest_upstream_bidirectional(targetDf, t1Idx, t2Idx,
+nearest_upstream_bidirectional(targetDf, t1Idx, t2Idx, promoterLength,
   skewFraction = 0.2, minTSS_gapForPseudo = 500)
 }
 \arguments{
@@ -14,6 +14,8 @@ nearest_upstream_bidirectional(targetDf, t1Idx, t2Idx,
 
 \item{t2Idx}{target2 index vector. IMP: \code{length(t1Idx)} should be equal to
 \code{length(t2Idx)}}
+
+\item{promoterLength}{Promoter length}
 
 \item{skewFraction}{Minimum fraction of peak region allowed on the side of false target
 from the midpoint of two target genes. Default: 0.2}
