@@ -267,6 +267,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
     mcols(peakTargetsGr)$geneId <- NA
     mcols(peakTargetsGr)$txName <- NA
     mcols(peakTargetsGr)$peakPosition <- NA
+    mcols(peakTargetsGr)$relativePeakPos <- NA
     mcols(peakTargetsGr)$peakCategory <- NA
     mcols(peakTargetsGr)$bidirectional <- NA
 
@@ -323,7 +324,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 #' selected.
 #'
 #' @return A modified peak GRanges object with additional columns: \code{tx_id,
-#' peakType, targetOverlap, peakOverlap, peakDist, summitDist}
+#' peakType, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
 #' @export
 #'
 #' @examples NA
@@ -365,7 +366,7 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
     width(pintersect(x = peakTargets, y = txSubsetGr)) / width(peakTargets), 3
   )
 
-  ## calculate summit distance and change relativeSummitPos based on target gene
+  ## calculate relativePeakPos using peak summit position
   ## summitDist > (targetEnd - targetStart) : peak overlap at end and summit is after end
   ## summitDist < 0 : peak overlap at start and summit before start
   targetsDf <- as.data.frame(peakTargets) %>%
@@ -381,13 +382,11 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
       )
     ) %>%
     dplyr::mutate(
-      relativeSummitPos = dplyr::case_when(
-        summitDist > (targetEnd - targetStart) & targetStrand == "+" ~ 1,
-        summitDist > (targetEnd - targetStart) & targetStrand == "-" ~ 0,
-        summitDist < 0 & targetStrand == "+" ~ 0,
-        summitDist < 0 & targetStrand == "-" ~ 1,
-        summitDist > 0 ~ round((peakSummit - targetStart) / (targetEnd - targetStart), 3),
-        TRUE ~ relativeSummitPos
+      relativePeakPos = dplyr::case_when(
+        summitDist >= (targetEnd - targetStart) ~ 1,
+        summitDist <= 0 ~ 0,
+        summitDist > 0 ~ round((summitDist) / (targetEnd - targetStart), 3),
+        TRUE ~ 0
       )
     ) %>%
     dplyr::mutate(
@@ -417,7 +416,7 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
 #' @param name Feature type to be used as suffix in peak type annotation. Eg. CDS, gene etc.
 #'
 #' @return A modified peak GRanges object with additional columns: \code{tx_id,
-#' peakType, targetOverlap, peakOverlap, peakDist, summitDist}
+#' peakType, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
 #' @export
 #'
 #' @examples NA
@@ -460,16 +459,15 @@ region_annotate <- function(peaksGr, featuresGr, includeFractionCut = 0.7, name 
     width(pintersect(x = queryTargets, y = featuresGr[ovlpHits@to])) / width(queryTargets), 3
   )
 
-  ## assign appropriate target location
-  ## if the peak is inside_CDS, update the relativeSummitPos w.r.t. CDS
+  ## assign appropriate relativePeakPos using peak summit (shown as *)
   ##
-  ##     |>=====>=====>======>======>======>|            |<=====<=====<======<======<======<|
-  ##   -------                                                                           --------
-  ##                                    -------       -------
-  ##                 -------                                          --------
-  ##  -------------------------------------------     -------------------------------------------
+  ##     |>=====>=====>======>======>======>|           |<=====<=====<======<======<======<|
+  ##   -*----- 0                                                                     0 -----*--
+  ##                                    -----*- 1     ----*--0.97
+  ##                 ---*---0.45                                    ----*--- 0.55
+  ##  -------------------------------------------    -------------------------------------------
   ##
-  ## calculate summit distance and change relativeSummitPos based on target gene
+  ## calculate relativePeakPos using peak summit position
   ## summitDist > (targetEnd - targetStart) : peak overlap at end and summit is after end
   ## summitDist < 0 : peak overlap at start and summit before start
   targetsDf <- as.data.frame(queryTargets) %>%
@@ -491,13 +489,11 @@ region_annotate <- function(peaksGr, featuresGr, includeFractionCut = 0.7, name 
       )
     ) %>%
     dplyr::mutate(
-      relativeSummitPos = dplyr::case_when(
-        summitDist > (targetEnd - targetStart) & targetStrand == "+" ~ 1,
-        summitDist > (targetEnd - targetStart) & targetStrand == "-" ~ 0,
-        summitDist < 0 & targetStrand == "+" ~ 0,
-        summitDist < 0 & targetStrand == "-" ~ 1,
-        summitDist > 0 ~ round((peakSummit - targetStart) / (targetEnd - targetStart), 3),
-        TRUE ~ relativeSummitPos
+      relativePeakPos = dplyr::case_when(
+        summitDist >= (targetEnd - targetStart) ~ 1,
+        summitDist <= 0 ~ 0,
+        summitDist > 0 ~ round((summitDist) / (targetEnd - targetStart), 3),
+        TRUE ~ 0
       )
     ) %>%
     dplyr::mutate(
@@ -580,7 +576,7 @@ set_peakTarget_to_pseudo <- function(target){
 #' @param ... Other arguments for \code{nearest_upstream_bidirectional()} function
 #'
 #' @return A modified peak GRanges object with additional columns: \code{ tx_id,
-#' peakType, targetOverlap, peakOverlap, peakDist, summitDist}
+#' peakType, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
 #' @export
 #'
 #' @examples NA
@@ -786,6 +782,7 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
       )
     ) %>%
     dplyr::mutate(
+      relativePeakPos = 0,
       relativeSummitPos = dplyr::if_else(
         condition = targetStrand == "-", true = 1 - relativeSummitPos, false = relativeSummitPos),
       peakType = if_else(abs(peakDist) < promoterLength, "promoter", peakType)
@@ -998,16 +995,16 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
 select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
                                    insideSkewToEndCut){
 
-  ## important to sort the targets based on peakDist and relativeSummitPos
+  ## important to sort the targets based on peakDist and relativePeakPos
   ## rowIdx will be used later to extract correct targets
   targetDf <- as.data.frame(targetGr) %>%
-    dplyr::arrange(seqnames, start, preference, peakDist, relativeSummitPos) %>%
+    dplyr::arrange(seqnames, start, preference, peakDist, relativePeakPos) %>%
     dplyr::mutate(rowIdx = 1:n(),
                   target = TRUE)
 
   subData <- targetDf %>%
     dplyr::select(seqnames, start, end, name, peakCategory, peakDist, summitDist,
-                  relativeSummitPos, targetOverlap, peakOverlap, rowIdx, target)
+                  relativePeakPos, targetOverlap, peakOverlap, rowIdx, target)
 
   masterIndexDf <- tibble::tibble(name = unique(subData$name))
   peakFound <- masterIndexDf
@@ -1022,7 +1019,7 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   for (ctg in c("featureInPeak", "nearStart", "nearEnd", "peakInFeature", "upstreamTss")) {
     groupedDf <- dplyr::filter(subData, peakCategory == ctg) %>%
       dplyr::select(name, rowIdx, target, peakDist, summitDist,
-                    relativeSummitPos, targetOverlap, peakOverlap) %>%
+                    relativePeakPos, targetOverlap, peakOverlap) %>%
       dplyr::group_by(name) %>%
       dplyr::arrange(rowIdx, .by_group = T)
 
@@ -1043,7 +1040,7 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
     summitDistDf <- dplyr::left_join(x = summitDistDf, y = summitDf, by = "name")
 
     ## create peak position df for each peak category
-    posDf <- dplyr::summarise(groupedDf, !!ctg := list(relativeSummitPos))
+    posDf <- dplyr::summarise(groupedDf, !!ctg := list(relativePeakPos))
     summitPosDf <- dplyr::left_join(x = summitPosDf, y = posDf, by = "name")
 
     ## create target overlap df for each cateogry
