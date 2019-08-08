@@ -998,18 +998,23 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
                   target = TRUE)
 
   subData <- targetDf %>%
-    dplyr::select(seqnames, start, end, name, peakCategory, peakDist,
-                  relativeSummitPos, rowIdx, target)
+    dplyr::select(seqnames, start, end, name, peakCategory, peakDist, summitDist,
+                  relativeSummitPos, targetOverlap, peakOverlap, rowIdx, target)
 
   masterIndexDf <- tibble::tibble(name = unique(subData$name))
   peakFound <- masterIndexDf
   peakDistDf <- masterIndexDf
-  peakPosDf <- masterIndexDf
+  summitDistDf <- masterIndexDf
+  summitPosDf <- masterIndexDf
+  targetOvlpDf <- masterIndexDf
+  peakOvlpDf <- masterIndexDf
 
   ## create dataframes with columns for each peak category
+  ## each row is a peak and elements are stores as list of values of interest
   for (ctg in c("featureInPeak", "nearStart", "nearEnd", "peakInFeature", "upstreamTss")) {
     groupedDf <- dplyr::filter(subData, peakCategory == ctg) %>%
-      dplyr::select(name, rowIdx, target, peakDist, relativeSummitPos) %>%
+      dplyr::select(name, rowIdx, target, peakDist, summitDist,
+                    relativeSummitPos, targetOverlap, peakOverlap) %>%
       dplyr::group_by(name) %>%
       dplyr::arrange(rowIdx, .by_group = T)
 
@@ -1025,9 +1030,21 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
     distDf <- dplyr::summarise(groupedDf, !!ctg := list(peakDist))
     peakDistDf <- dplyr::left_join(x = peakDistDf, y = distDf, by = "name")
 
+    ## create summit distance df for each peak category
+    summitDf <- dplyr::summarise(groupedDf, !!ctg := list(summitDist))
+    summitDistDf <- dplyr::left_join(x = summitDistDf, y = summitDf, by = "name")
+
     ## create peak position df for each peak category
     posDf <- dplyr::summarise(groupedDf, !!ctg := list(relativeSummitPos))
-    peakPosDf <- dplyr::left_join(x = peakPosDf, y = posDf, by = "name")
+    summitPosDf <- dplyr::left_join(x = summitPosDf, y = posDf, by = "name")
+
+    ## create target overlap df for each cateogry
+    targetCov <- dplyr::summarise(groupedDf, !!ctg := list(targetOverlap))
+    targetOvlpDf <- dplyr::left_join(x = targetOvlpDf, y = targetCov, by = "name")
+
+    ## create peak overlap df for each category
+    peakCov <- dplyr::summarise(groupedDf, !!ctg := list(peakOverlap))
+    peakOvlpDf <- dplyr::left_join(x = peakOvlpDf, y = peakCov, by = "name")
   }
 
   ## Future development: use priority list of peak category to select peak targets
@@ -1039,17 +1056,19 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   ruleA1 <- which(peakFound$nearStart & peakFound$upstreamTss)
   # targetDf[unlist(masterIndexDf$nearStart[ruleA1]), ]
 
-  ruleA1_far <- ruleA1[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleA1],
-                                      .f = function(x){abs(x[1]) > promoterLength})]
+  ruleA1_farUp <- ruleA1[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleA1],
+                                        .f = function(x){abs(x[1]) > promoterLength})]
 
   ## ACTION: set the upstreamTss to NULL if it is far than promoterLength
-  masterIndexDf$upstreamTss[ruleA1_far] <- purrr::map(.x = masterIndexDf$upstreamTss[ruleA1_far],
-                                                      .f = ~ NULL)
-  peakFound$upstreamTss[ruleA1_far] <- FALSE
+  masterIndexDf$upstreamTss[ruleA1_farUp] <- purrr::map(
+    .x = masterIndexDf$upstreamTss[ruleA1_farUp],
+    .f = ~ NULL)
 
-  ## ACTION: mark other upstreamTss within promoterLength as pseudo
-  ruleA1_pro <- setdiff(x = ruleA1, ruleA1_far)
-  markPseudoIdx <- append(markPseudoIdx, unlist(masterIndexDf$upstreamTss[ruleA1_pro]))
+  peakFound$upstreamTss[ruleA1_farUp] <- FALSE
+
+  # ## ACTION: mark other upstreamTss within promoterLength as pseudo
+  # ruleA1_pro <- setdiff(x = ruleA1, ruleA1_farUp)
+  # markPseudoIdx <- append(markPseudoIdx, unlist(masterIndexDf$upstreamTss[ruleA1_pro]))
 
 
   ###########
@@ -1092,13 +1111,15 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   ruleB2 <- which(peakFound$featureInPeak & peakFound$upstreamTss)
   # targetDf[unlist(masterIndexDf$featureInPeak[ruleB2]), ]
 
-  ruleB2_far <- ruleB2[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleB2],
-                                      .f = function(x){abs(x[1]) > promoterLength})]
+  ruleB2_farUp <- ruleB2[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleB2],
+                                        .f = function(x){abs(x[1]) > promoterLength})]
 
   ## ACTION: set the upstreamTss to NULL if it is far than promoterLength
-  masterIndexDf$upstreamTss[ruleB2_far] <- purrr::map(.x = masterIndexDf$upstreamTss[ruleB2_far],
-                                                      .f = ~ NULL)
-  peakFound$upstreamTss[ruleB2_far] <- FALSE
+  masterIndexDf$upstreamTss[ruleB2_farUp] <- purrr::map(
+    .x = masterIndexDf$upstreamTss[ruleB2_farUp],
+    .f = ~ NULL)
+
+  peakFound$upstreamTss[ruleB2_farUp] <- FALSE
   ## set bidirectional = 2
 
   ## ACTION: for the TF which has known binding over gene body (E.g. polII ChIP or histone marks)
@@ -1134,16 +1155,35 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   ruleC1 <- which(peakFound$upstreamTss & peakFound$nearEnd)
   # targetDf[unlist(masterIndexDf$upstreamTss[ruleC1]), ]
 
-  ruleC1_far <- ruleC1[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC1],
-                                      .f = function(x){abs(x[1]) > promoterLength})]
+  ## peaks which also have upstreamTss but its far than promoterLength
+  ruleC1_farUp <- ruleC1[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC1],
+                                              .f = function(x){abs(x[1]) > promoterLength})]
 
-  ## ACTION: set the upstreamTss to NULL if it is far than promoterLength
-  masterIndexDf$upstreamTss[ruleC1_far] <- purrr::map(.x = masterIndexDf$upstreamTss[ruleC1_far],
-                                                      .f = ~ NULL)
-  peakFound$upstreamTss[ruleC1_far] <- FALSE
+  ## among these ruleC1_farUp peaks, check: nearEnd has peak summit after target end OR
+  ## the peak overlap with nearEnd target is very small. i.e. find nearEnd targets where peaks
+  ## are at very end of the target. upstreamTss targets should be TRUE for these
+  ruleC1_veryEnd <- purrr::map2_lgl(.x = summitPosDf$nearEnd[ruleC1_farUp],
+                                    .y = peakOvlpDf$nearEnd[ruleC1_farUp],
+                                    .f = function(x, y){x[1] == 1 || y[1] < 0.1})
 
-  ## ACTION: ELSE just set the nearEnd peak to pseudo: not doing it for now
-  ruleC1_pro <- setdiff(x = ruleC1, ruleC1_far)
+  ## #********************************************************************************##
+  ## using 0.1 as cutoff for peakOverlap. later can be converted to function argument ##
+  ## #********************************************************************************##
+
+  ## skip such ruleC1_veryEnd from setting to NULL
+  ruleC1_farUp <- ruleC1_farUp[! ruleC1_veryEnd]
+
+  ## ACTION: set upstreamTss = NULL if: upstreamTss is far & nearEnd is not at very end
+  masterIndexDf$upstreamTss[ruleC1_farUp] <- purrr::map(
+    .x = masterIndexDf$upstreamTss[ruleC1_farUp],
+    .f = ~ NULL)
+
+  peakFound$upstreamTss[ruleC1_farUp] <- FALSE
+
+  ## ACTION: set the nearEnd peaks to pseudo because:
+  ## it is upstreamTss within promoter range or it is at very end for nearEnd
+  ruleC1_pro <- setdiff(x = ruleC1, ruleC1_farUp)
+  markPseudoIdx <- append(markPseudoIdx, unlist(masterIndexDf$nearEnd[ruleC1_pro]))
 
 
   ###########
@@ -1152,19 +1192,21 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   # targetDf[unlist(masterIndexDf$upstreamTss[ruleC2]), ]
 
   ## ACTION: set the upstreamTss to NULL if it is far than promoterLength
-  ruleC2_far <- ruleC2[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC2],
-                                      .f = function(x){abs(x[1]) > promoterLength})]
+  ruleC2_farUp <- ruleC2[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC2],
+                                              .f = function(x){abs(x[1]) > promoterLength})]
 
-  masterIndexDf$upstreamTss[ruleC2_far] <- purrr::map(.x = masterIndexDf$upstreamTss[ruleC2_far],
-                                                      .f = ~ NULL)
-  peakFound$upstreamTss[ruleC2_far] <- FALSE
+  masterIndexDf$upstreamTss[ruleC2_farUp] <- purrr::map(
+    .x = masterIndexDf$upstreamTss[ruleC2_farUp],
+    .f = ~ NULL)
+
+  peakFound$upstreamTss[ruleC2_farUp] <- FALSE
 
   ## upstreamTss peaks which are within promoter region
-  ruleC2_pro <- setdiff(x = ruleC2, ruleC2_far)
+  ruleC2_pro <- setdiff(x = ruleC2, ruleC2_farUp)
 
   ## ACTION: if peakInFeature peak lies near start: set upstreamTss to pseudo
   ruleC2_pro_ovStart <- ruleC2_pro[purrr::map_lgl(
-    .x = peakPosDf$peakInFeature[ruleC2_pro],
+    .x = summitPosDf$peakInFeature[ruleC2_pro],
     .f = function(x){all(x < (1 - insideSkewToEndCut))})]
 
   markPseudoIdx <- append(markPseudoIdx, unlist(masterIndexDf$upstreamTss[ruleC2_pro_ovStart]))
@@ -1183,6 +1225,8 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   ## 8) two upstreamTss peaks: remove pseudo_upstream if peakDist > promoterLength
   ## ACTION: already taken care of in upstream_annotate()
 
+
+  ## mark selected targets to pseudo
   targetDf$peakType[markPseudoIdx] <- paste("pseudo_", targetDf$peakType[markPseudoIdx], sep = "")
 
   ## get the true targets
