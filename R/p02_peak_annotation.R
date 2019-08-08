@@ -378,8 +378,10 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
     ) %>%
     dplyr::mutate(
       relativeSummitPos = dplyr::case_when(
-        summitDist > (targetEnd - targetStart) ~ 1,
-        summitDist < 0 ~ 0,
+        summitDist > (targetEnd - targetStart) & targetStrand == "+" ~ 1,
+        summitDist > (targetEnd - targetStart) & targetStrand == "-" ~ 0,
+        summitDist < 0 & targetStrand == "+" ~ 0,
+        summitDist < 0 & targetStrand == "-" ~ 1,
         summitDist > 0 ~ round((peakSummit - targetStart) / (targetEnd - targetStart), 3),
         TRUE ~ relativeSummitPos
       )
@@ -461,11 +463,13 @@ region_annotate <- function(peaksGr, featuresGr, includeFractionCut = 0.7, name 
   ##  -------------------------------------------     -------------------------------------------
   ##
   ## calculate summit distance and change relativeSummitPos based on target gene
+  ## summitDist > (targetEnd - targetStart) : peak overlap at end and summit is after end
+  ## summitDist < 0 : peak overlap at start and summit before start
   targetsDf <- as.data.frame(queryTargets) %>%
     dplyr::mutate(
       peakType = dplyr::case_when(
         peakStart <= targetStart & peakEnd >= targetEnd ~ includeFeature,
-        featureCovFrac >= includeFractionCut ~ includeFeature,
+        targetOverlap >= includeFractionCut ~ includeFeature,
         targetStrand == "+" & peakStart <= targetStart & peakEnd < targetEnd ~ overlapStart,
         targetStrand == "+" & targetStart < peakStart & targetEnd <= peakEnd ~ overlapEnd,
         targetStrand == "-" & peakStart <= targetStart & peakEnd < targetEnd ~ overlapEnd,
@@ -475,15 +479,18 @@ region_annotate <- function(peaksGr, featuresGr, includeFractionCut = 0.7, name 
     ) %>%
     dplyr::mutate(
       summitDist = dplyr::case_when(
-        peakType != overlapEnd & targetStrand == "+" ~ peakSummit - targetStart,
-        peakType != overlapEnd & targetStrand == "-" ~ targetEnd - peakSummit,
-        peakType == overlapEnd & targetStrand == "+" ~ peakSummit - targetEnd,
-        peakType == overlapEnd & targetStrand == "-" ~ targetStart - peakSummit
-      ),
-      relativeSummitPos = dplyr::if_else(
-        condition = peakType == insideFeature,
-        true = round((peakSummit - targetStart) / (targetEnd - targetStart), 3),
-        false = relativeSummitPos
+        targetStrand == "+" ~ peakSummit - targetStart,
+        targetStrand == "-" ~ targetEnd - peakSummit
+      )
+    ) %>%
+    dplyr::mutate(
+      relativeSummitPos = dplyr::case_when(
+        summitDist > (targetEnd - targetStart) & targetStrand == "+" ~ 1,
+        summitDist > (targetEnd - targetStart) & targetStrand == "-" ~ 0,
+        summitDist < 0 & targetStrand == "+" ~ 0,
+        summitDist < 0 & targetStrand == "-" ~ 1,
+        summitDist > 0 ~ round((peakSummit - targetStart) / (targetEnd - targetStart), 3),
+        TRUE ~ relativeSummitPos
       )
     ) %>%
     dplyr::mutate(
