@@ -77,7 +77,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
     stop("unknown TXIDs in txIds: ",
          paste(c(head(txIds[which(!txIds %in% keys(txdb, keytype = "TXID"))]), "..."),
                collapse = " ")
-         )
+    )
   }
 
   ## started working for peak_annotation on larger genomes
@@ -220,7 +220,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 
     # #######################
     # optGr <- select_optimal_targets(
-    #   # targetGr = multipleHitPeaks[c(501,605)],
+    #   targetGr = tempTargetGrl$An_kdmB_20h_HA_1_withCtrl_peak_1288,
     #   promoterLength = promoterLength,
     #   bindingInGene = bindingInGene,
     #   insideSkewToEndCut = insideSkewToEndCut)
@@ -261,7 +261,8 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 
     mcols(peakTargetsGr)$peakType <- NA
     mcols(peakTargetsGr)$peakDist <- NA
-    mcols(peakTargetsGr)$featureCovFrac <- NA
+    mcols(peakTargetsGr)$targetOverlap <- NA
+    mcols(peakTargetsGr)$peakOverlap <- NA
     mcols(peakTargetsGr)$summitDist <- NA
     mcols(peakTargetsGr)$geneId <- NA
     mcols(peakTargetsGr)$txName <- NA
@@ -322,7 +323,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 #' selected.
 #'
 #' @return A modified peak GRanges object with additional columns: \code{tx_id,
-#' peakType, featureCovFrac, peakDist, summitDist}
+#' peakType, targetOverlap, peakOverlap, peakDist, summitDist}
 #' @export
 #'
 #' @examples NA
@@ -345,7 +346,7 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
   mcols(peakTargets)$peakType <- featureType
   mcols(peakTargets)$peakDist <- 0
 
-  ## featureCovFrac is at transcript level
+  ## targetOverlap is at transcript level
   txSubsetGrl <- GenomicFeatures::mapIdsToRanges(x = txdb,
                                                  keys = list(tx_id = mcols(peakTargets)$tx_id),
                                                  type = "tx", columns = c("gene_id"))
@@ -357,9 +358,12 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
   mcols(peakTargets)$targetStrand = strand(txSubsetGr)
   mcols(peakTargets)$txWidth = width(txSubsetGr)
   mcols(peakTargets)$gene_id = unlist(mcols(txSubsetGr)$gene_id)
-  mcols(peakTargets)$featureCovFrac <- round(
-	width(pintersect(x = peakTargets, y = txSubsetGr)) / width(txSubsetGr), 3
-	)
+  mcols(peakTargets)$targetOverlap <- round(
+    width(pintersect(x = peakTargets, y = txSubsetGr)) / width(txSubsetGr), 3
+  )
+  mcols(peakTargets)$peakOverlap <- round(
+    width(pintersect(x = peakTargets, y = txSubsetGr)) / width(peakTargets), 3
+  )
 
   ## calculate summit distance and change relativeSummitPos based on target gene
   ## summitDist > (targetEnd - targetStart) : peak overlap at end and summit is after end
@@ -413,7 +417,7 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
 #' @param name Feature type to be used as suffix in peak type annotation. Eg. CDS, gene etc.
 #'
 #' @return A modified peak GRanges object with additional columns: \code{tx_id,
-#' peakType, featureCovFrac, peakDist, summitDist}
+#' peakType, targetOverlap, peakOverlap, peakDist, summitDist}
 #' @export
 #'
 #' @examples NA
@@ -449,8 +453,11 @@ region_annotate <- function(peaksGr, featuresGr, includeFractionCut = 0.7, name 
   mcols(queryTargets)$targetStart = start(featuresGr[ovlpHits@to])
   mcols(queryTargets)$targetEnd = end(featuresGr[ovlpHits@to])
   mcols(queryTargets)$targetStrand = strand(featuresGr[ovlpHits@to])
-  mcols(queryTargets)$featureCovFrac <- round(
-  width(pintersect(x = queryTargets, y = featuresGr[ovlpHits@to])) / width(featuresGr[ovlpHits@to]), 3
+  mcols(queryTargets)$targetOverlap <- round(
+    width(pintersect(x = queryTargets, y = featuresGr[ovlpHits@to])) / width(featuresGr[ovlpHits@to]), 3
+  )
+  mcols(queryTargets)$peakOverlap <- round(
+    width(pintersect(x = queryTargets, y = featuresGr[ovlpHits@to])) / width(queryTargets), 3
   )
 
   ## assign appropriate target location
@@ -573,7 +580,7 @@ set_peakTarget_to_pseudo <- function(target){
 #' @param ... Other arguments for \code{nearest_upstream_bidirectional()} function
 #'
 #' @return A modified peak GRanges object with additional columns: \code{ tx_id,
-#' peakType, featureCovFrac, peakDist, summitDist}
+#' peakType, targetOverlap, peakOverlap, peakDist, summitDist}
 #' @export
 #'
 #' @examples NA
@@ -667,7 +674,7 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
   ## some of above otherUpstream target can overlap with peak. remove such targets
   ## as it is handled by splicing_unit_annotate() for 5' UTR overlap
   notOvlpWithPeak <- distance(x = peaksGr[otherUpstream$from], y = featuresGr[otherUpstream$to],
-           ignore.strand = TRUE) != 0
+                              ignore.strand = TRUE) != 0
 
   otherUpstream <- otherUpstream[notOvlpWithPeak, ]
 
@@ -771,7 +778,8 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
   ## calculate summit distance and change relativeSummitPos based on target gene
   upstreamPeaks <- as.data.frame(upstreamPeaks, stringsAsFactors = FALSE) %>%
     dplyr::mutate(
-      featureCovFrac = 0,
+      targetOverlap = 0,
+      peakOverlap = 0,
       summitDist = dplyr::case_when(
         targetStrand == "+" ~ peakSummit - targetStart,
         targetStrand == "-" ~ targetEnd - peakSummit
