@@ -33,7 +33,7 @@ get_TF_binding_data <- function(genesDf, exptInfo, allColumns = FALSE){
 
       # "hasPeak", "peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
       # "peakSummit", "peakDist", "summitDist", "bidirectional", "targetOverlap", "peakOverlap",
-      # "relativeSummitPos", "peakRegion", "peakCoverage"
+      # "relativeSummitPos", "peakRegion", "peakCoverage", "relativePeakPos"
 
       colNames <- paste(c("hasPeak", "peakPosition", "peakType", "peakId", "peakDist", "summitDist",
                           "peakEnrichment", "peakCoverage", "peakPval"), exptInfo$sampleId[i], sep = ".")

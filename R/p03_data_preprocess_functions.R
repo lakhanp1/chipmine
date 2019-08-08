@@ -216,7 +216,7 @@ gene_level_peak_annotation <- function(
 #' @param columns A vector of column names which should be returned. Allowed values are:
 #' \code{c("peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
 #' "peakSummit", "peakDist", "summitDist", "bidirectional", "targetOverlap", "relativeSummitPos",
-#' "peakRegion", "peakCoverage", "peakOverlap")}. Default: all columns are returned
+#' "peakRegion", "peakCoverage", "peakOverlap", "relativePeakPos")}. Default: all columns are returned
 #' @param renameColumn Logical indicating whether to add sampleId suffix to column name. If
 #' TRUE, each column name is suffixed with sampleId. Default: TRUE
 #'
@@ -231,7 +231,7 @@ import_peak_annotation <- function(sampleId, peakAnnoFile, removePseudo = TRUE,
 
   ## "peakChr", "peakStart", "peakEnd", "peakSummit", "relativeSummitPos", "peakType", "peakDist",
   ## "targetOverlap", "peakOverlap", "summitDist", "geneId", "txName", "peakPosition", "preference",
-  ## "bidirectional", "peakId", "peakEnrichment", "peakPval", "peakQval", "peakCategory"
+  ## "bidirectional", "peakId", "peakEnrichment", "peakPval", "peakQval", "peakCategory", "relativePeakPos"
 
   renameCols <- c("peakId", "peakEnrichment", "peakPval", "peakQval", "peakSummit", "peakDist",
                   "summitDist", "peakType", "bidirectional", "targetOverlap", "peakOverlap",

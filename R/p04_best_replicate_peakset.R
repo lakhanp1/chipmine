@@ -52,11 +52,12 @@ best_replicate_peakset <- function(sampleInfo, cdsFile, ...){
     ...) %>%
     dplyr::select(geneId, starts_with("hasPeak"), starts_with("peakId"), starts_with("peakPosition"),
                   starts_with("peakType"), starts_with("peakDist"), starts_with("peakPval"),
-                  starts_with("peakEnrichment"), starts_with("relativeSummitPos"), starts_with("bidirectional"))
+                  starts_with("peakEnrichment"), starts_with("relativeSummitPos"),
+				  starts_with("relativePeakPos"), starts_with("bidirectional"))
 
   # "hasPeak", "peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
   # "peakSummit", "peakDist", "summitDist", "bidirectional", "targetOverlap", "peakOverlap", 
-  # "relativeSummitPos", "peakRegion", "peakCoverage", "preference"
+  # "relativeSummitPos", "relativePeakPos", "peakRegion", "peakCoverage", "preference"
 
   ## generate confident peak and target gene list data
   confidentPeaks <- dplyr::left_join(x = commonPeaks, y = bestRepTargets,
