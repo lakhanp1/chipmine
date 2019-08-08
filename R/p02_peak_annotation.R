@@ -139,8 +139,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 
   ## annotate upstream targets: IMP to give excludeType so that rRNA, tRNA, snRNAs will be removed
   upstreamTargets <- upstream_annotate(peaksGr = peaks, featuresGr = transcriptsGr,
-                                       txdb = txdb, excludeType = excludeType,
-                                       promoterLength = promoterLength)
+                                       txdb = txdb, promoterLength = promoterLength)
 
   ## prepare target preference list and peak category list
   ## this is internal preference list
@@ -569,7 +568,6 @@ set_peakTarget_to_pseudo <- function(target){
 #' overlap of 0.2 with geneA is allowed in a case when peak overlaps with a geneA and
 #' is upstream of geneB. This is useful for the peaks which are near TES of a geneA.
 #' If TxDB object is not provided, featuresGr is used. Default: featuresGr is used.
-#' @param excludeType tx types to exclude from TxDB
 #' @param upstreamOverlappingFraction See details. Default: 0.2
 #' @param promoterLength Promoter region length. Upstream peaks within \code{promoterLength}
 #' distance of feature start are annotated as \code{promoter} region peaks.
@@ -580,7 +578,7 @@ set_peakTarget_to_pseudo <- function(target){
 #' @export
 #'
 #' @examples NA
-upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NULL,
+upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL,
                               upstreamOverlappingFraction = 0.2,
                               promoterLength, ...){
 
@@ -647,6 +645,9 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
   ## find if any other target overlap with false downstream target (gene1) which can
   ## be possible true downstream target
   falseTargets <- dplyr::filter(targetsAroundPeak, expectedFeatureStrand != featureStrand)
+
+  if (nrow(falseTargets) > 0) {
+
   falseTargetsGr <- featuresGr[falseTargets$to]
   mcols(falseTargetsGr)$from  <- falseTargets$from
   mcols(falseTargetsGr)$to <- falseTargets$to
@@ -674,6 +675,9 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
 
   otherUpstream <- otherUpstream[notOvlpWithPeak, ]
 
+  } else{
+    otherUpstream <- NULL
+  }
   ####################
 
 
@@ -747,11 +751,12 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
   isFeatureInBetweenDf$ovlpFeatureFrac <- isFeatureInBetweenDf$intersectWd / isFeatureInBetweenDf$ovlpFeatureWd
   isFeatureInBetweenDf$ovlpGapFrac <- isFeatureInBetweenDf$gapWidth / isFeatureInBetweenDf$intersectWd
 
-  ## upstreamOverlappingFraction based filtering
+  ## upstreamOverlappingFraction based filtering OR
+  ## select if target is within promoterLength distance
   ## 0.2 is still very big for the large genomes such as human, mouse as genes are very long
   upstreamHitsFiltered <- dplyr::left_join(x = upstreamHits, y = isFeatureInBetweenDf, by = "id") %>%
     tidyr::replace_na(list(intersectWd = 0, ovlpFeatureWd = 0, ovlpFeatureFrac = 0, ovlpGapFrac = 0)) %>%
-    dplyr::filter(ovlpFeatureFrac <= upstreamOverlappingFraction)
+    dplyr::filter(ovlpFeatureFrac <= upstreamOverlappingFraction | gapWidth < promoterLength)
 
   ## if no upstream peak after filtering
   if(nrow(upstreamHitsFiltered) == 0){
