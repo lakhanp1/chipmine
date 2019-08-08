@@ -20,7 +20,7 @@ than this proportion of CDS, it is annotated as \code{inside_CDS}. Default: 0.7}
 }
 \value{
 A modified peak GRanges object with additional columns: \code{tx_id,
-peakType, featureCovFrac, peakDist, summitDist}
+peakType, targetOverlap, peakOverlap, peakDist, summitDist}
 }
 \description{
 This function annotates the peaks onto a regions into e.g. \code{tx_start, tx_end,

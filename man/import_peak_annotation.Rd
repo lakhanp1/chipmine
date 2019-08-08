@@ -22,8 +22,8 @@ Default: TRUE}
 
 \item{columns}{A vector of column names which should be returned. Allowed values are:
 \code{c("peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
-"peakSummit", "peakDist", "summitDist", "bidirectional", "featureCovFrac", "relativeSummitPos",
-"peakRegion", "peakCoverage")}. Default: all columns are returned}
+"peakSummit", "peakDist", "summitDist", "bidirectional", "targetOverlap", "relativeSummitPos",
+"peakRegion", "peakCoverage", "peakOverlap")}. Default: all columns are returned}
 
 \item{renameColumn}{Logical indicating whether to add sampleId suffix to column name. If
 TRUE, each column name is suffixed with sampleId. Default: TRUE}

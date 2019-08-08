@@ -88,7 +88,7 @@ gene_level_peak_annotation <- function(
     several.ok = TRUE)
 
   tfCols <- sapply(
-    X = c("peakDist", "featureCovFrac", "hasPeak", "peakCoverage", "peakPosition",
+    X = c("peakDist", "targetOverlap", "peakOverlap", "hasPeak", "peakCoverage", "peakPosition",
           "peakId", "peakType", "peakPval", "peakEnrichment", "preference", "peakCategory"),
     FUN = function(x){ paste(x, ".", sampleId, sep = "") },
     simplify = F, USE.NAMES = T)
@@ -215,8 +215,8 @@ gene_level_peak_annotation <- function(
 #' @param pvalCutoff log10_pvalue cutoff for the peak. Default: 1 i.e. no cutoff
 #' @param columns A vector of column names which should be returned. Allowed values are:
 #' \code{c("peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
-#' "peakSummit", "peakDist", "summitDist", "bidirectional", "featureCovFrac", "relativeSummitPos",
-#' "peakRegion", "peakCoverage")}. Default: all columns are returned
+#' "peakSummit", "peakDist", "summitDist", "bidirectional", "targetOverlap", "relativeSummitPos",
+#' "peakRegion", "peakCoverage", "peakOverlap")}. Default: all columns are returned
 #' @param renameColumn Logical indicating whether to add sampleId suffix to column name. If
 #' TRUE, each column name is suffixed with sampleId. Default: TRUE
 #'
@@ -230,12 +230,12 @@ import_peak_annotation <- function(sampleId, peakAnnoFile, removePseudo = TRUE,
 
 
   ## "peakChr", "peakStart", "peakEnd", "peakSummit", "relativeSummitPos", "peakType", "peakDist",
-  ## "featureCovFrac", "summitDist", "geneId", "txName", "peakPosition", "preference",
+  ## "targetOverlap", "peakOverlap", "summitDist", "geneId", "txName", "peakPosition", "preference",
   ## "bidirectional", "peakId", "peakEnrichment", "peakPval", "peakQval", "peakCategory"
 
   renameCols <- c("peakId", "peakEnrichment", "peakPval", "peakQval", "peakSummit", "peakDist",
-                  "summitDist", "peakType", "bidirectional", "featureCovFrac", "relativeSummitPos",
-                  "peakRegion", "peakPosition", "peakCategory")
+                  "summitDist", "peakType", "bidirectional", "targetOverlap", "peakOverlap",
+                  "relativeSummitPos", "peakRegion", "peakPosition", "peakCategory")
 
   names(renameCols) <- paste(renameCols, sampleId, sep = ".")
 

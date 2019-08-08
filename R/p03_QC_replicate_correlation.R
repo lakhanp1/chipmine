@@ -58,8 +58,8 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title, yintercept
 
   tfCols <- sapply(
     X = c("hasPeak", "peakId", "peakEnrichment", "peakPval", "peakQval", "peakSummit", "peakDist", "summitDist",
-          "peakType", "bidirectional", "featureCovFrac", "relativeSummitPos", "peakRegion", "peakPosition",
-          "peakCoverage", "pvalFiltered", "summitSeq"),
+          "peakType", "bidirectional", "targetOverlap", "peakOverlap", "relativeSummitPos", "peakRegion",
+          "peakPosition", "peakCoverage", "pvalFiltered", "summitSeq"),
     FUN = function(x){ structure(paste(x, ".", sampleInfo$sampleId, sep = ""), names = sampleInfo$sampleId) },
     simplify = F, USE.NAMES = T)
 

@@ -29,7 +29,7 @@ distance of feature start are annotated as \code{promoter} region peaks.}
 }
 \value{
 A modified peak GRanges object with additional columns: \code{ tx_id,
-peakType, featureCovFrac, peakDist, summitDist}
+peakType, targetOverlap, peakOverlap, peakDist, summitDist}
 }
 \description{
 This function annotates the peaks with nearest downstream target. See Details.

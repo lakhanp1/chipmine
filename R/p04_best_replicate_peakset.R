@@ -55,8 +55,8 @@ best_replicate_peakset <- function(sampleInfo, cdsFile, ...){
                   starts_with("peakEnrichment"), starts_with("relativeSummitPos"), starts_with("bidirectional"))
 
   # "hasPeak", "peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
-  # "peakSummit", "peakDist", "summitDist", "bidirectional", "featureCovFrac", "relativeSummitPos",
-  # "peakRegion", "peakCoverage", "preference"
+  # "peakSummit", "peakDist", "summitDist", "bidirectional", "targetOverlap", "peakOverlap", 
+  # "relativeSummitPos", "peakRegion", "peakCoverage", "preference"
 
   ## generate confident peak and target gene list data
   confidentPeaks <- dplyr::left_join(x = commonPeaks, y = bestRepTargets,

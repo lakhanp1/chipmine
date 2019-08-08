@@ -20,7 +20,7 @@ selected.}
 }
 \value{
 A modified peak GRanges object with additional columns: \code{tx_id,
-peakType, featureCovFrac, peakDist, summitDist}
+peakType, targetOverlap, peakOverlap, peakDist, summitDist}
 }
 \description{
 Annotate peaks with 5UTR/exon/intron/3UTR overlap
