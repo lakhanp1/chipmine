@@ -25,10 +25,11 @@ column.}
 
 \item{bwFile}{bigWig format coverage track file}
 
-\item{preference}{A character vector with 5 values: \code{c("nearStart", "peakInFeature",
-"featureInPeak", "nearEnd", "upstreamTss", "intergenic")}. If the order of the values is
-used as preference order for selecting the most appropriate peak for a gene.
- Default: \code{c("nearStart", "peakInFeature", "featureInPeak", "nearEnd", "upstreamTss")}}
+\item{preference}{A character vector with 6 values: \code{c("nearStart", "peakInFeature",
+"featureInPeak", "upstreamTss", "nearEnd", "intergenic")}. Order of the values is
+used as preference order for selecting the most appropriate peak for a gene. \cr
+Default: \code{c("nearStart", "peakInFeature", "featureInPeak", "nearEnd",
+"upstreamTss", "intergenic")}}
 
 \item{outFile}{Optional output file. Default: NULL which means the output is not stored}
 

@@ -63,10 +63,11 @@ preProcess_polII_expression <- function(expMat, sampleId, expFraction, polIIExpF
 #' @param peakFile macs2 output file. Should be narrowPeak or broadPeak file
 #' @param bwFile bigWig format coverage track file
 #' @param outFile Optional output file. Default: NULL which means the output is not stored
-#' @param preference A character vector with 5 values: \code{c("nearStart", "peakInFeature",
-#' "featureInPeak", "nearEnd", "upstreamTss", "intergenic")}. If the order of the values is
-#' used as preference order for selecting the most appropriate peak for a gene.
-#'  Default: \code{c("nearStart", "peakInFeature", "featureInPeak", "nearEnd", "upstreamTss")}
+#' @param preference A character vector with 6 values: \code{c("nearStart", "peakInFeature",
+#' "featureInPeak", "upstreamTss", "nearEnd", "intergenic")}. Order of the values is
+#' used as preference order for selecting the most appropriate peak for a gene. \cr
+#' Default: \code{c("nearStart", "peakInFeature", "featureInPeak", "nearEnd",
+#' "upstreamTss", "intergenic")}
 #' @param removePseudo Logical: whether to remove peak targets which are marked as pseudo.
 #' Default: TRUE
 #' @param fcCutoff fold enrichment cutoff for the peak. Default: 1 i.e. no cutoff
@@ -84,7 +85,7 @@ gene_level_peak_annotation <- function(
 
   preference <- match.arg(
     arg = preference,
-    choices = c("nearStart", "peakInFeature", "featureInPeak", "nearEnd", "upstreamTss"),
+    choices = c("nearStart", "peakInFeature", "featureInPeak", "nearEnd", "upstreamTss", "intergenic"),
     several.ok = TRUE)
 
   tfCols <- sapply(
