@@ -42,6 +42,8 @@
 #' @param txIds A vector of transcript IDs to be used specifically in the annotation
 #' process instead of full transcript set. These should be internal tx_ids from TxDB
 #' object. This is useful feature to exclude tRNA, rRNA transcripts. Default: NULL
+#' @param blacklistRegions A BED file with ChIPseq blacklist regions. Peaks overlapping
+#' with these regions are not used for annotation.
 #' @param includeFractionCut Number between [0, 1]. If a peak covers more than this
 #' fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7
 #' @param bindingInGene Logical: whether the ChIPseq TF binds in gene body. This is
@@ -53,8 +55,8 @@
 #' @param excludeType Types of transcripts to exclude from annotation. Should be a
 #' character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}
 #' @param output Optionally store the annotation output to a file
-#' @param reportPseudo Logical. Whether to report peak targets which are marked as
-#' pseudo. Default: TRUE
+#' @param removePseudo Logical: whether to remove peak targets which are marked as pseudo.
+#' Default: FALSE
 #'
 #' @return A GenomicRanges object with peak annotation
 #' @export
@@ -62,10 +64,11 @@
 #' @examples NA
 narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
                                 txdb, txIds = NULL,
+                                blacklistRegions = NULL,
                                 excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
                                 includeFractionCut = 0.7, bindingInGene = FALSE,
                                 promoterLength, insideSkewToEndCut = 0.7,
-                                reportPseudo = TRUE,
+                                removePseudo = FALSE,
                                 output = NULL){
 
   stopifnot(is(object = txdb, class2 = "TxDb"))
@@ -74,7 +77,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
     stop("unknown TXIDs in txIds: ",
          paste(c(head(txIds[which(!txIds %in% keys(txdb, keytype = "TXID"))]), "..."),
                collapse = " ")
-         )
+    )
   }
 
   ## started working for peak_annotation on larger genomes
@@ -92,7 +95,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
   peaks <- rtracklayer::import(con = peakFile, format = fileFormat)
 
   if(length(peaks) == 0){
-    warning("no peak found in peak file")
+    warning("no peak found in peak file ", basename(peakFile))
     return(NULL)
   }
 
@@ -136,8 +139,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 
   ## annotate upstream targets: IMP to give excludeType so that rRNA, tRNA, snRNAs will be removed
   upstreamTargets <- upstream_annotate(peaksGr = peaks, featuresGr = transcriptsGr,
-                                       txdb = txdb, excludeType = excludeType,
-                                       promoterLength = promoterLength)
+                                       txdb = txdb, promoterLength = promoterLength)
 
   ## prepare target preference list and peak category list
   ## this is internal preference list
@@ -213,26 +215,42 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
     tempTargetGrl <- GenomicRanges::split(x = bestPeakGeneTargetsGr, f = mcols(bestPeakGeneTargetsGr)$name)
     # table(elementNROWS(tempTargetGrl))
     singleHitPeaks <- unlist(tempTargetGrl[which(elementNROWS(tempTargetGrl) == 1)], use.names = F)
-    multipleHitPeaks <- tempTargetGrl[which(elementNROWS(tempTargetGrl) != 1)]
+    multipleHitPeaksGrl <- tempTargetGrl[which(elementNROWS(tempTargetGrl) != 1)]
 
-    ## for each peak, find optimum target/s
-    multipleHitPeaks <- select_optimal_targets(
-      targetGr = sort(unlist(multipleHitPeaks, use.names = F)),
-      promoterLength = promoterLength,
-      bindingInGene = bindingInGene,
-      insideSkewToEndCut = insideSkewToEndCut)
+    # #######################
+    # optGr <- select_optimal_targets(
+    #   targetGr = tempTargetGrl$An_kdmB_20h_HA_1_withCtrl_peak_1288,
+    #   promoterLength = promoterLength,
+    #   bindingInGene = bindingInGene,
+    #   insideSkewToEndCut = insideSkewToEndCut)
+    # #######################
+
+    if(length(multipleHitPeaksGrl) > 0){
+      ## for each peak, find optimum target/s
+      multipleHitPeaks <- select_optimal_targets(
+        targetGr = sort(unlist(multipleHitPeaksGrl, use.names = F)),
+        promoterLength = promoterLength,
+        bindingInGene = bindingInGene,
+        insideSkewToEndCut = insideSkewToEndCut)
+    } else{
+      multipleHitPeaks <- NULL
+    }
+
 
     peakTargetsGr <- c(singleHitPeaks, multipleHitPeaks, ignore.mcols=FALSE)
 
     ## add the unannotated peaks
     unannotatedPeaks <- peaks[which(!peaks$name %in% peakTargetsGr$name)]
-    mcols(unannotatedPeaks)$peakType <- "intergenic"
-    mcols(unannotatedPeaks)$peakCategory <- "intergenic"
+    if(length(unannotatedPeaks) > 0){
+      mcols(unannotatedPeaks)$peakType <- "intergenic"
+      mcols(unannotatedPeaks)$peakCategory <- "intergenic"
+    }
+
 
     peakTargetsGr <- c(peakTargetsGr, unannotatedPeaks, ignore.mcols=FALSE)
 
     ## optionally filter peak targets which are marked as pseudo
-    if(!reportPseudo){
+    if(removePseudo){
       peakTargetsGr <- peakTargetsGr[!grepl(pattern = "pseudo_", x = mcols(peakTargetsGr)$peakType)]
     }
 
@@ -242,11 +260,13 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 
     mcols(peakTargetsGr)$peakType <- NA
     mcols(peakTargetsGr)$peakDist <- NA
-    mcols(peakTargetsGr)$featureCovFrac <- NA
+    mcols(peakTargetsGr)$targetOverlap <- NA
+    mcols(peakTargetsGr)$peakOverlap <- NA
     mcols(peakTargetsGr)$summitDist <- NA
     mcols(peakTargetsGr)$geneId <- NA
     mcols(peakTargetsGr)$txName <- NA
     mcols(peakTargetsGr)$peakPosition <- NA
+    mcols(peakTargetsGr)$relativePeakPos <- NA
     mcols(peakTargetsGr)$peakCategory <- NA
     mcols(peakTargetsGr)$bidirectional <- NA
 
@@ -275,6 +295,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
   mcols(peakTargetsGr)$targetEnd <- NULL
   mcols(peakTargetsGr)$targetStrand <- NULL
   mcols(peakTargetsGr)$tx_id <- NULL
+  mcols(peakTargetsGr)$txName <- NULL
   mcols(peakTargetsGr)$txType <- NULL
   mcols(peakTargetsGr)$preference <- NULL
   names(peakTargetsGr) <- NULL
@@ -302,7 +323,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 #' selected.
 #'
 #' @return A modified peak GRanges object with additional columns: \code{tx_id,
-#' peakType, featureCovFrac, peakDist, summitDist}
+#' peakType, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
 #' @export
 #'
 #' @examples NA
@@ -325,7 +346,7 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
   mcols(peakTargets)$peakType <- featureType
   mcols(peakTargets)$peakDist <- 0
 
-  ## featureCovFrac is at transcript level
+  ## targetOverlap is at transcript level
   txSubsetGrl <- GenomicFeatures::mapIdsToRanges(x = txdb,
                                                  keys = list(tx_id = mcols(peakTargets)$tx_id),
                                                  type = "tx", columns = c("gene_id"))
@@ -337,11 +358,14 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
   mcols(peakTargets)$targetStrand = strand(txSubsetGr)
   mcols(peakTargets)$txWidth = width(txSubsetGr)
   mcols(peakTargets)$gene_id = unlist(mcols(txSubsetGr)$gene_id)
-  mcols(peakTargets)$featureCovFrac <- round(
-	width(pintersect(x = peakTargets, y = txSubsetGr)) / width(txSubsetGr), 3
-	)
+  mcols(peakTargets)$targetOverlap <- round(
+    width(pintersect(x = peakTargets, y = txSubsetGr)) / width(txSubsetGr), 3
+  )
+  mcols(peakTargets)$peakOverlap <- round(
+    width(pintersect(x = peakTargets, y = txSubsetGr)) / width(peakTargets), 3
+  )
 
-  ## calculate summit distance and change relativeSummitPos based on target gene
+  ## calculate relativePeakPos using peak summit position
   ## summitDist > (targetEnd - targetStart) : peak overlap at end and summit is after end
   ## summitDist < 0 : peak overlap at start and summit before start
   targetsDf <- as.data.frame(peakTargets) %>%
@@ -357,11 +381,11 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
       )
     ) %>%
     dplyr::mutate(
-      relativeSummitPos = dplyr::case_when(
-        summitDist > (targetEnd - targetStart) ~ 1,
-        summitDist < 0 ~ 0,
-        summitDist > 0 ~ round((peakSummit - targetStart) / (targetEnd - targetStart), 3),
-        TRUE ~ relativeSummitPos
+      relativePeakPos = dplyr::case_when(
+        summitDist >= (targetEnd - targetStart) ~ 1,
+        summitDist <= 0 ~ 0,
+        summitDist > 0 ~ round((summitDist) / (targetEnd - targetStart), 3),
+        TRUE ~ 0
       )
     ) %>%
     dplyr::mutate(
@@ -391,7 +415,7 @@ splicing_unit_annotate <- function(peaksGr, featuresGr, featureType, txdb){
 #' @param name Feature type to be used as suffix in peak type annotation. Eg. CDS, gene etc.
 #'
 #' @return A modified peak GRanges object with additional columns: \code{tx_id,
-#' peakType, featureCovFrac, peakDist, summitDist}
+#' peakType, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
 #' @export
 #'
 #' @examples NA
@@ -427,25 +451,29 @@ region_annotate <- function(peaksGr, featuresGr, includeFractionCut = 0.7, name 
   mcols(queryTargets)$targetStart = start(featuresGr[ovlpHits@to])
   mcols(queryTargets)$targetEnd = end(featuresGr[ovlpHits@to])
   mcols(queryTargets)$targetStrand = strand(featuresGr[ovlpHits@to])
-  mcols(queryTargets)$featureCovFrac <- round(
-  width(pintersect(x = queryTargets, y = featuresGr[ovlpHits@to])) / width(featuresGr[ovlpHits@to]), 3
+  mcols(queryTargets)$targetOverlap <- round(
+    width(pintersect(x = queryTargets, y = featuresGr[ovlpHits@to])) / width(featuresGr[ovlpHits@to]), 3
+  )
+  mcols(queryTargets)$peakOverlap <- round(
+    width(pintersect(x = queryTargets, y = featuresGr[ovlpHits@to])) / width(queryTargets), 3
   )
 
-  ## assign appropriate target location
-  ## if the peak is inside_CDS, update the relativeSummitPos w.r.t. CDS
+  ## assign appropriate relativePeakPos using peak summit (shown as *)
   ##
-  ##     |>=====>=====>======>======>======>|            |<=====<=====<======<======<======<|
-  ##   -------                                                                           --------
-  ##                                    -------       -------
-  ##                 -------                                          --------
-  ##  -------------------------------------------     -------------------------------------------
+  ##     |>=====>=====>======>======>======>|           |<=====<=====<======<======<======<|
+  ##   -*----- 0                                                                     0 -----*--
+  ##                                    -----*- 1     ----*--0.97
+  ##                 ---*---0.45                                    ----*--- 0.55
+  ##  -------------------------------------------    -------------------------------------------
   ##
-  ## calculate summit distance and change relativeSummitPos based on target gene
+  ## calculate relativePeakPos using peak summit position
+  ## summitDist > (targetEnd - targetStart) : peak overlap at end and summit is after end
+  ## summitDist < 0 : peak overlap at start and summit before start
   targetsDf <- as.data.frame(queryTargets) %>%
     dplyr::mutate(
       peakType = dplyr::case_when(
         peakStart <= targetStart & peakEnd >= targetEnd ~ includeFeature,
-        featureCovFrac >= includeFractionCut ~ includeFeature,
+        targetOverlap >= includeFractionCut ~ includeFeature,
         targetStrand == "+" & peakStart <= targetStart & peakEnd < targetEnd ~ overlapStart,
         targetStrand == "+" & targetStart < peakStart & targetEnd <= peakEnd ~ overlapEnd,
         targetStrand == "-" & peakStart <= targetStart & peakEnd < targetEnd ~ overlapEnd,
@@ -455,15 +483,16 @@ region_annotate <- function(peaksGr, featuresGr, includeFractionCut = 0.7, name 
     ) %>%
     dplyr::mutate(
       summitDist = dplyr::case_when(
-        peakType != overlapEnd & targetStrand == "+" ~ peakSummit - targetStart,
-        peakType != overlapEnd & targetStrand == "-" ~ targetEnd - peakSummit,
-        peakType == overlapEnd & targetStrand == "+" ~ peakSummit - targetEnd,
-        peakType == overlapEnd & targetStrand == "-" ~ targetStart - peakSummit
-      ),
-      relativeSummitPos = dplyr::if_else(
-        condition = peakType == insideFeature,
-        true = round((peakSummit - targetStart) / (targetEnd - targetStart), 3),
-        false = relativeSummitPos
+        targetStrand == "+" ~ peakSummit - targetStart,
+        targetStrand == "-" ~ targetEnd - peakSummit
+      )
+    ) %>%
+    dplyr::mutate(
+      relativePeakPos = dplyr::case_when(
+        summitDist >= (targetEnd - targetStart) ~ 1,
+        summitDist <= 0 ~ 0,
+        summitDist > 0 ~ round((summitDist) / (targetEnd - targetStart), 3),
+        TRUE ~ 0
       )
     ) %>%
     dplyr::mutate(
@@ -539,18 +568,17 @@ set_peakTarget_to_pseudo <- function(target){
 #' overlap of 0.2 with geneA is allowed in a case when peak overlaps with a geneA and
 #' is upstream of geneB. This is useful for the peaks which are near TES of a geneA.
 #' If TxDB object is not provided, featuresGr is used. Default: featuresGr is used.
-#' @param excludeType tx types to exclude from TxDB
 #' @param upstreamOverlappingFraction See details. Default: 0.2
 #' @param promoterLength Promoter region length. Upstream peaks within \code{promoterLength}
 #' distance of feature start are annotated as \code{promoter} region peaks.
 #' @param ... Other arguments for \code{nearest_upstream_bidirectional()} function
 #'
 #' @return A modified peak GRanges object with additional columns: \code{ tx_id,
-#' peakType, featureCovFrac, peakDist, summitDist}
+#' peakType, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
 #' @export
 #'
 #' @examples NA
-upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NULL,
+upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL,
                               upstreamOverlappingFraction = 0.2,
                               promoterLength, ...){
 
@@ -572,11 +600,10 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
   peakDownHits <- data.frame(
     from = 1:length(peaksGr), peakId = mcols(peaksGr)$name,
     to = peakDownFeatures,
+    expectedFeatureStrand = "+",
     featureStrand = as.vector(strand(featuresGr))[peakDownFeatures],
     txName = featuresGr$tx_name[peakDownFeatures],
-    stringsAsFactors = FALSE) %>%
-    dplyr::filter(featureStrand == "+")
-
+    stringsAsFactors = FALSE)
 
   ## select immediate upstream feature to the peak
   peakUpFeatures <- GenomicRanges::follow(x = peaksGr, subject = featuresGr,
@@ -587,22 +614,82 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
   peakUpHits <- data.frame(
     from = 1:length(peaksGr), peakId = mcols(peaksGr)$name,
     to = peakUpFeatures,
+    expectedFeatureStrand = "-",
     featureStrand = as.vector(strand(featuresGr))[peakUpFeatures],
     txName = featuresGr$tx_name[peakUpFeatures],
+    stringsAsFactors = FALSE)
+
+
+  targetsAroundPeak <- dplyr::bind_rows(peakDownHits, peakUpHits) %>%
+    dplyr::filter(!is.na(to))
+
+  ## remove false downstream targets
+  upstreamHits <- dplyr::filter(targetsAroundPeak, expectedFeatureStrand == featureStrand)
+
+  ####################
+  ## if only one gene is found i.e. either upstream of peak or downstream of peak,
+  ## additionally select one immediate downstream gene in opposite direction.
+  ## In following case, gene0 is found by follow() method which is upstream of peak1
+  ## and is possible target. Gene2 can also be a possible target but precede() will
+  ## select gene1 (ignore.strand = TRUE) and it will be filtered ultimately.
+  ## So we select on gene in opposite direction with ignore.strand = TRUE. This way
+  ## we will have two targets on each side of peak. if its case like gene1 and gene3,
+  ## gene3 will be filtered using peak-gap overlap filter code below
+  ##                           ====<=======<======<====== gene1
+  ##                             ====>=====>======>======= gene2
+  ##  ====<======<=                                    ====>======> gene3
+  ##                   -----
+  ##     gene0            peak1
+  ##
+
+  ## find if any other target overlap with false downstream target (gene1) which can
+  ## be possible true downstream target
+  falseTargets <- dplyr::filter(targetsAroundPeak, expectedFeatureStrand != featureStrand)
+
+  if (nrow(falseTargets) > 0) {
+
+  falseTargetsGr <- featuresGr[falseTargets$to]
+  mcols(falseTargetsGr)$from  <- falseTargets$from
+  mcols(falseTargetsGr)$to <- falseTargets$to
+  mcols(falseTargetsGr)$peakId <- falseTargets$peakId
+  mcols(falseTargetsGr)$expectedFeatureStrand <- falseTargets$expectedFeatureStrand
+
+  falseTargetOverlaps <- GenomicRanges::findOverlaps(query = falseTargetsGr,
+                                                     subject = featuresGr,
+                                                     ignore.strand = TRUE)
+
+  otherUpstream <- data.frame(
+    from = mcols(falseTargetsGr)$from[falseTargetOverlaps@from],
+    peakId =  mcols(falseTargetsGr)$peakId[falseTargetOverlaps@from],
+    to = falseTargetOverlaps@to,
+    expectedFeatureStrand = mcols(falseTargetsGr)$expectedFeatureStrand[falseTargetOverlaps@from],
+    featureStrand = as.vector(strand(featuresGr))[falseTargetOverlaps@to],
+    txName = featuresGr$tx_name[falseTargetOverlaps@to],
     stringsAsFactors = FALSE) %>%
-    dplyr::filter(featureStrand == "-")
+    dplyr::filter(expectedFeatureStrand == featureStrand)
 
-  ## this has to be on dataframe and not vectors above because the dataframes
-  ## are filtering for strand
-  if(nrow(peakUpHits) == 0 && nrow(peakDownHits) == 0){
-    return(NULL)
+  ## some of above otherUpstream target can overlap with peak. remove such targets
+  ## as it is handled by splicing_unit_annotate() for 5' UTR overlap
+  notOvlpWithPeak <- distance(x = peaksGr[otherUpstream$from], y = featuresGr[otherUpstream$to],
+                              ignore.strand = TRUE) != 0
+
+  otherUpstream <- otherUpstream[notOvlpWithPeak, ]
+
+  } else{
+    otherUpstream <- NULL
   }
+  ####################
 
-  ## merge the putative upstream hits
-  upstreamHits <- dplyr::bind_rows(peakDownHits, peakUpHits) %>%
+
+  ## combine putative upstream hits
+  upstreamHits <- dplyr::bind_rows(upstreamHits, otherUpstream) %>%
     dplyr::arrange(from) %>%
     dplyr::mutate(id = row_number())
 
+  ## return null if nothing found
+  if(nrow(upstreamHits) == 0){
+    return(NULL)
+  }
 
   ## find the number of genes between peak and its target.
   ## only those targets are true where there is no other feature inbetween
@@ -664,11 +751,12 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
   isFeatureInBetweenDf$ovlpFeatureFrac <- isFeatureInBetweenDf$intersectWd / isFeatureInBetweenDf$ovlpFeatureWd
   isFeatureInBetweenDf$ovlpGapFrac <- isFeatureInBetweenDf$gapWidth / isFeatureInBetweenDf$intersectWd
 
-  ## upstreamOverlappingFraction based filtering
+  ## upstreamOverlappingFraction based filtering OR
+  ## select if target is within promoterLength distance
   ## 0.2 is still very big for the large genomes such as human, mouse as genes are very long
   upstreamHitsFiltered <- dplyr::left_join(x = upstreamHits, y = isFeatureInBetweenDf, by = "id") %>%
     tidyr::replace_na(list(intersectWd = 0, ovlpFeatureWd = 0, ovlpFeatureFrac = 0, ovlpGapFrac = 0)) %>%
-    dplyr::filter(ovlpFeatureFrac <= upstreamOverlappingFraction)
+    dplyr::filter(ovlpFeatureFrac <= upstreamOverlappingFraction | gapWidth < promoterLength)
 
   ## if no upstream peak after filtering
   if(nrow(upstreamHitsFiltered) == 0){
@@ -691,13 +779,15 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
   ## calculate summit distance and change relativeSummitPos based on target gene
   upstreamPeaks <- as.data.frame(upstreamPeaks, stringsAsFactors = FALSE) %>%
     dplyr::mutate(
-      featureCovFrac = 0,
+      targetOverlap = 0,
+      peakOverlap = 0,
       summitDist = dplyr::case_when(
         targetStrand == "+" ~ peakSummit - targetStart,
         targetStrand == "-" ~ targetEnd - peakSummit
       )
     ) %>%
     dplyr::mutate(
+      relativePeakPos = 0,
       relativeSummitPos = dplyr::if_else(
         condition = targetStrand == "-", true = 1 - relativeSummitPos, false = relativeSummitPos),
       peakType = if_else(abs(peakDist) < promoterLength, "promoter", peakType)
@@ -715,30 +805,35 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
     stop("More than two upstream targets targets found for peaks")
   }
 
-  dualTargetPeaksDf <- sort(unlist(dualTargetPeaks, use.names = FALSE)) %>%
-    as.data.frame(row.names = NULL, stringsAsFactors = FALSE) %>%
-    dplyr::mutate(rowIdx = 1:n(),
-                  target = TRUE)
+  dualTargetFiltered <- NULL
 
-  ## row index table for bidirectional peak
-  pairTable <- dualTargetPeaksDf %>%
-    dplyr::group_by(name) %>%
-    dplyr::mutate(group = 1:n()) %>%
-    dplyr::ungroup() %>%
-    dplyr::mutate(group = paste("t", group, sep = "")) %>%
-    dplyr::select(name, group, rowIdx) %>%
-    tidyr::spread(key = group, value = rowIdx)
+  if(length(dualTargetPeaks) > 0){
 
-  pseudoUpIdx <- nearest_upstream_bidirectional(targetDf = dualTargetPeaksDf,
-                                                t1Idx = pairTable$t1,
-                                                t2Idx = pairTable$t2)
+    dualTargetPeaksDf <- sort(unlist(dualTargetPeaks, use.names = FALSE)) %>%
+      as.data.frame(row.names = NULL, stringsAsFactors = FALSE) %>%
+      dplyr::mutate(rowIdx = 1:n(),
+                    target = TRUE)
 
-  ## remove the targets which are too far based on nearest_upstream_bidirectional()
-  dualTargetFiltered <- dualTargetPeaksDf[-pseudoUpIdx,] %>%
-    dplyr::select(-rowIdx, -target) %>%
-    GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = TRUE)
+    ## row index table for bidirectional peak
+    pairTable <- dualTargetPeaksDf %>%
+      dplyr::group_by(name) %>%
+      dplyr::mutate(group = 1:n()) %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(group = paste("t", group, sep = "")) %>%
+      dplyr::select(name, group, rowIdx) %>%
+      tidyr::spread(key = group, value = rowIdx)
 
-  ######
+    pseudoUpIdx <- nearest_upstream_bidirectional(targetDf = dualTargetPeaksDf,
+                                                  t1Idx = pairTable$t1,
+                                                  t2Idx = pairTable$t2,
+                                                  promoterLength = promoterLength)
+
+    ## remove the targets which are too far based on nearest_upstream_bidirectional()
+    dualTargetFiltered <- dualTargetPeaksDf[-pseudoUpIdx,] %>%
+      dplyr::select(-rowIdx, -target) %>%
+      GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = TRUE)
+
+  }
 
 
   upstreamPeaksAn <- sort(c(unlist(singalTargetPeaks, use.names = FALSE),
@@ -782,12 +877,13 @@ upstream_annotate <- function(peaksGr, featuresGr, txdb = NULL, excludeType = NU
 #' @param skewFraction Minimum fraction of peak region allowed on the side of false target
 #' from the midpoint of two target genes. Default: 0.2
 #' @param minTSS_gapForPseudo Valid distance between two target genes TSS to mark one as psuedo
+#' @param promoterLength Promoter length
 #'
 #' @return A vector of row index for pseudo targets.
 #' @export
 #'
 #' @examples NA
-nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
+nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLength,
                                            skewFraction = 0.2, minTSS_gapForPseudo = 500){
 
   targetPairDf <- tibble::tibble(t1Idx = t1Idx, t2Idx = t2Idx,
@@ -811,8 +907,8 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
   sameDirTargets <- which(targetA$targetStrand == targetB$targetStrand)
   targetPairDf$dir[sameDirTargets] <- "same"
 
-  targetPairDf$t1Select[sameDirTargets] <- targetA$preference[sameDirTargets] < targetB$preference[sameDirTargets]
-  targetPairDf$t2Select[sameDirTargets] <- targetA$preference[sameDirTargets] > targetB$preference[sameDirTargets]
+  # targetPairDf$t1Select[sameDirTargets] <- targetA$preference[sameDirTargets] < targetB$preference[sameDirTargets]
+  # targetPairDf$t2Select[sameDirTargets] <- targetA$preference[sameDirTargets] > targetB$preference[sameDirTargets]
 
 
   targetAGr <- dplyr::select(targetA, seqnames, targetStart, targetEnd, targetStrand, name, rowIdx) %>%
@@ -843,11 +939,13 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
     targetPairDf,
     t1Select = dplyr::case_when(
       gapWidth <= minTSS_gapForPseudo ~ t1Select,
+      abs(t1PeakDist) < promoterLength ~ TRUE,
       dir == "opposite" & (abs(t1PeakDist) + peakFraction) > (gapWidth/2) ~ FALSE,
       TRUE ~ t1Select
     ),
     t2Select = dplyr::case_when(
       gapWidth <= minTSS_gapForPseudo ~ t2Select,
+      abs(t2PeakDist) < promoterLength ~ TRUE,
       dir == "opposite" & (abs(t2PeakDist) + peakFraction) > (gapWidth/2) ~ FALSE,
       TRUE ~ t2Select
     )
@@ -906,26 +1004,31 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
 select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
                                    insideSkewToEndCut){
 
-  ## important to sort the targets based on peakDist and relativeSummitPos
+  ## important to sort the targets based on peakDist and relativePeakPos
   ## rowIdx will be used later to extract correct targets
   targetDf <- as.data.frame(targetGr) %>%
-    dplyr::arrange(seqnames, start, preference, peakDist, relativeSummitPos) %>%
+    dplyr::arrange(seqnames, start, preference, peakDist, relativePeakPos) %>%
     dplyr::mutate(rowIdx = 1:n(),
                   target = TRUE)
 
   subData <- targetDf %>%
-    dplyr::select(seqnames, start, end, name, peakCategory, peakDist,
-                  relativeSummitPos, rowIdx, target)
+    dplyr::select(seqnames, start, end, name, peakCategory, peakDist, summitDist,
+                  relativePeakPos, targetOverlap, peakOverlap, rowIdx, target)
 
   masterIndexDf <- tibble::tibble(name = unique(subData$name))
   peakFound <- masterIndexDf
   peakDistDf <- masterIndexDf
-  peakPosDf <- masterIndexDf
+  summitDistDf <- masterIndexDf
+  summitPosDf <- masterIndexDf
+  targetOvlpDf <- masterIndexDf
+  peakOvlpDf <- masterIndexDf
 
   ## create dataframes with columns for each peak category
+  ## each row is a peak and elements are stores as list of values of interest
   for (ctg in c("featureInPeak", "nearStart", "nearEnd", "peakInFeature", "upstreamTss")) {
     groupedDf <- dplyr::filter(subData, peakCategory == ctg) %>%
-      dplyr::select(name, rowIdx, target, peakDist, relativeSummitPos) %>%
+      dplyr::select(name, rowIdx, target, peakDist, summitDist,
+                    relativePeakPos, targetOverlap, peakOverlap) %>%
       dplyr::group_by(name) %>%
       dplyr::arrange(rowIdx, .by_group = T)
 
@@ -941,9 +1044,21 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
     distDf <- dplyr::summarise(groupedDf, !!ctg := list(peakDist))
     peakDistDf <- dplyr::left_join(x = peakDistDf, y = distDf, by = "name")
 
+    ## create summit distance df for each peak category
+    summitDf <- dplyr::summarise(groupedDf, !!ctg := list(summitDist))
+    summitDistDf <- dplyr::left_join(x = summitDistDf, y = summitDf, by = "name")
+
     ## create peak position df for each peak category
-    posDf <- dplyr::summarise(groupedDf, !!ctg := list(relativeSummitPos))
-    peakPosDf <- dplyr::left_join(x = peakPosDf, y = posDf, by = "name")
+    posDf <- dplyr::summarise(groupedDf, !!ctg := list(relativePeakPos))
+    summitPosDf <- dplyr::left_join(x = summitPosDf, y = posDf, by = "name")
+
+    ## create target overlap df for each cateogry
+    targetCov <- dplyr::summarise(groupedDf, !!ctg := list(targetOverlap))
+    targetOvlpDf <- dplyr::left_join(x = targetOvlpDf, y = targetCov, by = "name")
+
+    ## create peak overlap df for each category
+    peakCov <- dplyr::summarise(groupedDf, !!ctg := list(peakOverlap))
+    peakOvlpDf <- dplyr::left_join(x = peakOvlpDf, y = peakCov, by = "name")
   }
 
   ## Future development: use priority list of peak category to select peak targets
@@ -955,17 +1070,19 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   ruleA1 <- which(peakFound$nearStart & peakFound$upstreamTss)
   # targetDf[unlist(masterIndexDf$nearStart[ruleA1]), ]
 
-  ruleA1_far <- ruleA1[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleA1],
-                                      .f = function(x){abs(x[1]) > promoterLength})]
+  ruleA1_farUp <- ruleA1[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleA1],
+                                        .f = function(x){abs(x[1]) > promoterLength})]
 
-  ## set the upstreamTss to NULL if it is far than promoterLength
-  masterIndexDf$upstreamTss[ruleA1_far] <- purrr::map(.x = masterIndexDf$upstreamTss[ruleA1_far],
-                                                      .f = ~ NULL)
-  peakFound$upstreamTss[ruleA1_far] <- FALSE
+  ## ACTION: set the upstreamTss to NULL if it is far than promoterLength
+  masterIndexDf$upstreamTss[ruleA1_farUp] <- purrr::map(
+    .x = masterIndexDf$upstreamTss[ruleA1_farUp],
+    .f = ~ NULL)
 
-  ## mark other upstreamTss within promoterLength as pseudo
-  ruleA1_pro <- setdiff(x = ruleA1, ruleA1_far)
-  markPseudoIdx <- append(markPseudoIdx, ruleA1_pro)
+  peakFound$upstreamTss[ruleA1_farUp] <- FALSE
+
+  # ## ACTION: mark other upstreamTss within promoterLength as pseudo
+  # ruleA1_pro <- setdiff(x = ruleA1, ruleA1_farUp)
+  # markPseudoIdx <- append(markPseudoIdx, unlist(masterIndexDf$upstreamTss[ruleA1_pro]))
 
 
   ###########
@@ -973,7 +1090,7 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   ruleA2 <- which(peakFound$nearStart & peakFound$nearEnd)
   # targetDf[unlist(masterIndexDf$nearStart[ruleA2]), ]
 
-  ## set TES target to NULL
+  ## ACTION: set TES target to NULL
   masterIndexDf$nearEnd[ruleA2] <- purrr::map(.x = masterIndexDf$nearEnd[ruleA2],
                                               .f = ~ NULL)
   peakFound$nearEnd[ruleA2] <- FALSE
@@ -983,13 +1100,13 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   ## A3) nearStart & peakInFeature:
   ruleA3 <- which(peakFound$nearStart & peakFound$peakInFeature)
   # targetDf[unlist(masterIndexDf$nearStart[ruleA3]), ]
-
+  ## ACTION: nothing
 
   ###########
   ## A4) nearStart & featureInPeak:
   ruleA4 <- which(peakFound$nearStart & peakFound$featureInPeak)
   # targetDf[unlist(masterIndexDf$nearStart[ruleA4]), ]
-  ## no need to filter
+  ## ACTION: nothing
 
   ## featureInPeak peak
   ###########
@@ -997,7 +1114,7 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   ruleB1 <- which(peakFound$featureInPeak & peakFound$nearEnd)
   # targetDf[unlist(masterIndexDf$featureInPeak[ruleB1]), ]
 
-  ## remove nearEnd target
+  ## ACTION: remove nearEnd target
   masterIndexDf$nearEnd[ruleB1] <- purrr::map(.x = masterIndexDf$nearEnd[ruleB1],
                                               .f = ~ NULL)
   peakFound$nearEnd[ruleB1] <- FALSE
@@ -1008,16 +1125,18 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   ruleB2 <- which(peakFound$featureInPeak & peakFound$upstreamTss)
   # targetDf[unlist(masterIndexDf$featureInPeak[ruleB2]), ]
 
-  ruleB2_far <- ruleB2[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleB2],
-                                      .f = function(x){abs(x[1]) > promoterLength})]
+  ruleB2_farUp <- ruleB2[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleB2],
+                                        .f = function(x){abs(x[1]) > promoterLength})]
 
-  ## set the upstreamTss to NULL if it is far than promoterLength
-  masterIndexDf$upstreamTss[ruleB2_far] <- purrr::map(.x = masterIndexDf$upstreamTss[ruleB2_far],
-                                                      .f = ~ NULL)
-  peakFound$upstreamTss[ruleB2_far] <- FALSE
+  ## ACTION: set the upstreamTss to NULL if it is far than promoterLength
+  masterIndexDf$upstreamTss[ruleB2_farUp] <- purrr::map(
+    .x = masterIndexDf$upstreamTss[ruleB2_farUp],
+    .f = ~ NULL)
+
+  peakFound$upstreamTss[ruleB2_farUp] <- FALSE
   ## set bidirectional = 2
 
-  ## for the TF which has known binding over gene body (E.g. polII ChIP or histone marks)
+  ## ACTION: for the TF which has known binding over gene body (E.g. polII ChIP or histone marks)
   ## preference is for featureInPeak. all other targets are pseudo
   if(bindingInGene){
     masterIndexDf$upstreamTss[ruleB2] <- purrr::map(.x = masterIndexDf$upstreamTss[ruleB2],
@@ -1032,13 +1151,14 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   ruleB3 <- which(peakFound$featureInPeak & peakFound$peakInFeature)
   # targetDf[unlist(masterIndexDf$featureInPeak[ruleB3]), ]
 
-  ## for the TF which has known binding over gene body (E.g. polII ChIP or histone marks)
-  ## set peakInFeature to NULL
   if(bindingInGene){
+    ## for the TF which has known binding over gene body (E.g. polII ChIP or histone marks)
+    ## ACTION: set peakInFeature to NULL
     masterIndexDf$peakInFeature[ruleB3] <- purrr::map(.x = masterIndexDf$peakInFeature[ruleB3],
                                                       .f = ~ NULL)
     peakFound$peakInFeature[ruleB3] <- FALSE
   } else{
+    ## ACTION: set featureInPeak to NULL
     masterIndexDf$featureInPeak[ruleB3] <- purrr::map(.x = masterIndexDf$featureInPeak[ruleB3],
                                                       .f = ~ NULL)
     peakFound$featureInPeak[ruleB3] <- FALSE
@@ -1049,17 +1169,35 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   ruleC1 <- which(peakFound$upstreamTss & peakFound$nearEnd)
   # targetDf[unlist(masterIndexDf$upstreamTss[ruleC1]), ]
 
-  ## set nearEnd to NULL if upstreamTss within promoter
-  ruleC1_far <- ruleC1[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC1],
-                                      .f = function(x){abs(x[1]) > promoterLength})]
+  ## peaks which also have upstreamTss but its far than promoterLength
+  ruleC1_farUp <- ruleC1[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC1],
+                                              .f = function(x){abs(x[1]) > promoterLength})]
 
-  ## set the upstreamTss to NULL if it is far than promoterLength
-  masterIndexDf$upstreamTss[ruleC1_far] <- purrr::map(.x = masterIndexDf$upstreamTss[ruleC1_far],
-                                                      .f = ~ NULL)
-  peakFound$upstreamTss[ruleC1_far] <- FALSE
+  ## among these ruleC1_farUp peaks, check: nearEnd has peak summit after target end OR
+  ## the peak overlap with nearEnd target is very small. i.e. find nearEnd targets where peaks
+  ## are at very end of the target. upstreamTss targets should be TRUE for these
+  ruleC1_veryEnd <- purrr::map2_lgl(.x = summitPosDf$nearEnd[ruleC1_farUp],
+                                    .y = peakOvlpDf$nearEnd[ruleC1_farUp],
+                                    .f = function(x, y){x[1] == 1 || y[1] < 0.1})
 
-  ## ELSE just set the nearEnd peak to pseudo
-  ruleC1_pro <- setdiff(x = ruleC1, ruleC1_far)
+  ## #********************************************************************************##
+  ## using 0.1 as cutoff for peakOverlap. later can be converted to function argument ##
+  ## #********************************************************************************##
+
+  ## skip such ruleC1_veryEnd from setting to NULL
+  ruleC1_farUp <- ruleC1_farUp[! ruleC1_veryEnd]
+
+  ## ACTION: set upstreamTss = NULL if: upstreamTss is far & nearEnd is not at very end
+  masterIndexDf$upstreamTss[ruleC1_farUp] <- purrr::map(
+    .x = masterIndexDf$upstreamTss[ruleC1_farUp],
+    .f = ~ NULL)
+
+  peakFound$upstreamTss[ruleC1_farUp] <- FALSE
+
+  ## ACTION: set the nearEnd peaks to pseudo because:
+  ## it is upstreamTss within promoter range or it is at very end for nearEnd
+  ruleC1_pro <- setdiff(x = ruleC1, ruleC1_farUp)
+  markPseudoIdx <- append(markPseudoIdx, unlist(masterIndexDf$nearEnd[ruleC1_pro]))
 
 
   ###########
@@ -1067,20 +1205,22 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   ruleC2 <- which(peakFound$upstreamTss & peakFound$peakInFeature)
   # targetDf[unlist(masterIndexDf$upstreamTss[ruleC2]), ]
 
-  ## set the upstreamTss to NULL if it is far than promoterLength
-  ruleC2_far <- ruleC2[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC2],
-                                      .f = function(x){abs(x[1]) > promoterLength})]
+  ## ACTION: set the upstreamTss to NULL if it is far than promoterLength
+  ruleC2_farUp <- ruleC2[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC2],
+                                              .f = function(x){abs(x[1]) > promoterLength})]
 
-  masterIndexDf$upstreamTss[ruleC2_far] <- purrr::map(.x = masterIndexDf$upstreamTss[ruleC2_far],
-                                                      .f = ~ NULL)
-  peakFound$upstreamTss[ruleC2_far] <- FALSE
+  masterIndexDf$upstreamTss[ruleC2_farUp] <- purrr::map(
+    .x = masterIndexDf$upstreamTss[ruleC2_farUp],
+    .f = ~ NULL)
+
+  peakFound$upstreamTss[ruleC2_farUp] <- FALSE
 
   ## upstreamTss peaks which are within promoter region
-  ruleC2_pro <- setdiff(x = ruleC2, ruleC2_far)
+  ruleC2_pro <- setdiff(x = ruleC2, ruleC2_farUp)
 
-  ## if peakInFeature peak lies near start: set upstreamTss to pseudo
+  ## ACTION: if peakInFeature peak lies near start: set upstreamTss to pseudo
   ruleC2_pro_ovStart <- ruleC2_pro[purrr::map_lgl(
-    .x = peakPosDf$peakInFeature[ruleC2_pro],
+    .x = summitPosDf$peakInFeature[ruleC2_pro],
     .f = function(x){all(x < (1 - insideSkewToEndCut))})]
 
   markPseudoIdx <- append(markPseudoIdx, unlist(masterIndexDf$upstreamTss[ruleC2_pro_ovStart]))
@@ -1092,13 +1232,15 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   ## D1) peakInFeature & nearEnd:
   ruleD1 <- which(peakFound$peakInFeature & peakFound$nearEnd)
   # targetDf[unlist(masterIndexDf$peakInFeature[ruleD1]), ]
-
+  ## ACTION: nothing
 
   ###########
   ## for upstreamTss peak
   ## 8) two upstreamTss peaks: remove pseudo_upstream if peakDist > promoterLength
+  ## ACTION: already taken care of in upstream_annotate()
 
 
+  ## mark selected targets to pseudo
   targetDf$peakType[markPseudoIdx] <- paste("pseudo_", targetDf$peakType[markPseudoIdx], sep = "")
 
   ## get the true targets

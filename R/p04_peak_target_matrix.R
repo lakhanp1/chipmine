@@ -55,14 +55,16 @@ peak_target_matrix <- function(sampleInfo, position = "TSS"){
 
     } else{
       ## only TSS/TES
-      df <- dplyr::filter(df, !!as.name(peakPositionCol) == position)
+      df <- dplyr::filter(df, !!sym(peakPositionCol) == position)
     }
 
 
     if(is.null(mergedDf)){
       ## first sample
       mergedDf <- df
-      mergedDf$peakPosition <- mergedDf[[peakPositionCol]]
+      if(position == "both"){
+        mergedDf$peakPosition <- mergedDf[[peakPositionCol]]
+      }
 
     } else{
       ## very IMP to use full join instead of left join

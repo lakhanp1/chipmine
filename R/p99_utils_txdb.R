@@ -34,6 +34,8 @@ get_txdb_transcripts_gr <- function(txdb, excludeType = NULL, tx = NULL){
                                                   columns = c("tx_id", "tx_name", "tx_type", "gene_id"),
                                                   filter = txFilter)
 
+    mcols(transcriptsGr)$tx_id <- as.character(mcols(transcriptsGr)$tx_id)
+
     assign(x = "transcriptsGr", value = transcriptsGr, envir = txdbEnv)
 
   }
