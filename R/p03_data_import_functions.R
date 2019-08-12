@@ -51,7 +51,7 @@ get_polII_expressions = function(genesDf, exptInfo, log2 = FALSE){
 
     if(exptInfo$IP_tag[i] == "polII" & !is.na(exptInfo$polIIExpFile[i])){
 
-      df = readr::read_tsv(file = exptInfo$polIIExpFile[i])
+      df = suppressMessages(readr::read_tsv(file = exptInfo$polIIExpFile[i]))
       if(log2){
         df[[exptInfo$sampleId[i]]] <- log2(pmax(df[[exptInfo$sampleId[i]]], 1))
       }

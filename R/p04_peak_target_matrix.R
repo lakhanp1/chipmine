@@ -55,7 +55,7 @@ peak_target_matrix <- function(sampleInfo, position = "TSS"){
 
     } else{
       ## only TSS/TES
-      df <- dplyr::filter(df, !!as.name(peakPositionCol) == position)
+      df <- dplyr::filter(df, !!sym(peakPositionCol) == position)
     }
 
 
