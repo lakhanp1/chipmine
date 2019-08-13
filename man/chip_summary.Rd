@@ -41,8 +41,9 @@ A list with following elements is returned.
 This method generates various summary plots for TF ChIPseq data. \cr
 \itemize{
 \item A table summarizing quantils of peak enrichment, p-value and q-value
-\item A distribution dot plot for peak enrichment values.
-\item A distribution dot plot for peak p-value.
+\item A distribution beeswarm plot for peak enrichment values.
+\item A distribution beeswarm plot for peak p-value.
+\item A distribution beeswarm plot for peak width.
 \item A pie chart showing peak annotation distribution.
 }
 If there is no peak information, it returns blank plot with "No Data" text

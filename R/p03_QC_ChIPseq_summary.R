@@ -6,8 +6,9 @@
 #' This method generates various summary plots for TF ChIPseq data. \cr
 #' \itemize{
 #' \item A table summarizing quantils of peak enrichment, p-value and q-value
-#' \item A distribution dot plot for peak enrichment values.
-#' \item A distribution dot plot for peak p-value.
+#' \item A distribution beeswarm plot for peak enrichment values.
+#' \item A distribution beeswarm plot for peak p-value.
+#' \item A distribution beeswarm plot for peak width.
 #' \item A pie chart showing peak annotation distribution.
 #' }
 #' If there is no peak information, it returns blank plot with "No Data" text
@@ -86,7 +87,8 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakType,
       dplyr::slice(1L) %>%
       dplyr::ungroup() %>%
       dplyr::distinct() %>%
-      dplyr::mutate(sampleId = sampleId)
+      dplyr::mutate(sampleId = sampleId,
+                    peakWidth = peakEnd - peakStart + 1)
 
     plotData$geneType <- factor(x = plotData$geneType,
                                 levels = markingPreference$geneType,
@@ -110,6 +112,7 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakType,
     if(nrow(plotData) > 20){
       plotData$peakEnrichment <- pmin(plotData$peakEnrichment, quantile(plotData$peakEnrichment, 0.995))
       plotData$peakPval <- pmin(plotData$peakPval, quantile(plotData$peakPval, 0.99))
+      plotData$peakWidth <- pmin(plotData$peakWidth, quantile(plotData$peakWidth, 0.99))
     }
 
     # quantile(plotData$peakEnrichment,
@@ -121,8 +124,8 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakType,
     theme_scatter <- theme_bw() +
       theme(
         axis.title.x = element_blank(),
-        axis.title = element_text(size = 14),
-        axis.text = element_text(size = 14),
+        axis.title = element_text(size = 12),
+        axis.text = element_text(size = 12),
         panel.grid = element_blank()
       )
 
@@ -160,6 +163,22 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakType,
              color = guide_legend(override.aes = list(size = 4))) +
       theme_scatter
 
+
+    ## peak width distribution
+    gg_dot_width <- ggplot(
+      data = plotData,
+      mapping = aes(x = !!sampleId, y = peakWidth)) +
+      geom_hline(yintercept = 300, color = "black", linetype = "dashed") +
+      ggbeeswarm::geom_quasirandom(mapping = aes(color = geneType, alpha = geneType)) +
+      geom_boxplot(width=0.1, fill = NA, outlier.colour = NA, color = alpha("black", 0.7)) +
+      scale_color_manual(name = "Peak annotations",
+                         values = pointColor) +
+      scale_alpha_manual(values = pointAlpha) +
+      labs(title = "macs2 peak width distribution",
+           y = "peak width (bp)") +
+      guides(alpha = FALSE,
+             color = guide_legend(override.aes = list(size = 4))) +
+      theme_scatter
 
     ## peak annotation pie chart
     peakAnSummary <- dplyr::group_by(peakAnno, peakType) %>%
@@ -202,18 +221,19 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakType,
 
     plotList <- list(table = gg_stable,
                      distribution = list(enrichment = gg_dot_enrichment,
-                                         pval = gg_dot_pval),
+                                         pval = gg_dot_pval,
+                                         width = gg_dot_width),
                      annoPie = gg_pie_peakAn)
 
     ## combine plots + table to make a summary figure
     summaryFig <- ggpubr::ggarrange(
-      gg_stable,
-      ggpubr::ggarrange(gg_dot_enrichment, gg_dot_pval,
-                        nrow = 1, ncol = 2, legend = "bottom", common.legend = TRUE),
-      gg_pie_peakAn,
-      nrow = 3,
-      legend = "right",
-      heights = c(1, 4, 4)
+      ggpubr::ggarrange(gg_dot_enrichment, gg_dot_pval, gg_dot_width,
+                        nrow = 1, ncol = 3, legend = "bottom", common.legend = TRUE),
+      ggpubr::ggarrange(gg_stable, gg_pie_peakAn,
+                        nrow = 1, ncol = 2, legend = "right", widths = c(1, 1),
+                        hjust = 0),
+      nrow = 2,
+      heights = c(6, 4)
     ) +
       theme(
         plot.margin = unit(c(0.2, 0.2, 0.2, 0.2), "cm")
@@ -222,7 +242,7 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakType,
     summaryFig <- ggpubr::annotate_figure(
       p = summaryFig,
       top = ggpubr::text_grob(
-        label = paste(sampleId, "ChIPseq summary\n#peaks=",length(peaksGr)),
+        label = paste(sampleId, "ChIPseq summary (#peaks =",length(peaksGr), ")"),
         size = 16, face = "bold")
     )
 
