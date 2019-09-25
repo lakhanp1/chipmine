@@ -1,25 +1,41 @@
 
 
-#' annotate regions using TxDB object
+#' Annotate GRanges using TxDB
+#'
+#' This is a generic function to annotate GRanges object with TxDB annotations. \cr
+#' Regions are annnotated with following \strong{broad categories} and \emph{specific
+#' types} (listed in decreasing order of preference):
+#' \enumerate{
+#' \item \strong{featureInPeak:} \emph{"include_tx", "include_CDS"}
+#' \item \strong{nearStart:} \emph{"5UTR", "CDS_start", "tx_start"}
+#' \item \strong{nearEnd:} \emph{"3UTR", "tx_end", "CDS_end"}
+#' \item \strong{peakInFeature:} \emph{"exon", "intron", "inside_tx", "inside_CDS"}
+#' \item \strong{upstreamTss:} \emph{"promoter", "upstream"}
+#' \item \strong{intergenic:} \emph{"intergenic"}
+#' }
+#' Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
+#' annotated to two target genes/features and one of it is more optimum than other.
+#' The less optimum target type is prefixed with \emph{pseudo}.
+#'
 #'
 #' @param peaks A GRanges object with name column.
 #' @param txdb TxDB object which will be used for annotation
+#' @param promoterLength Promoter length in number of nucleotides.
 #' @param txIds A vector of transcript IDs to be used specifically in the annotation
 #' process instead of full transcript set. These should be internal tx_ids from TxDB
-#' object. This is useful feature to exclude tRNA, rRNA transcripts. Default: NULL
-#' @param blacklistRegions A BED file with ChIPseq blacklist regions. Peaks overlapping
-#' with these regions are not used for annotation.
+#' object. This is useful feature to exclude tRNA, rRNA transcripts while annotating
+#' the regions. Default: NULL
+#' @param excludeType Types of transcripts to exclude from annotation. Should be a
+#' character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}
+#' @param blacklistRegions A BED file or GRanges object with ChIPseq blacklist regions.
+#' Peaks overlapping with these regions are not used for annotation.
 #' @param includeFractionCut Number between [0, 1]. If a peak covers more than this
 #' fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7
 #' @param bindingInGene Logical: whether the ChIPseq TF binds in gene body. This is
 #' useful for polII ChIPseq data. Default: FALSE
-#' @param promoterLength Promoter length in number of nucleotides.
 #' @param insideSkewToEndCut A floating point number in range [0, 1]. If a peak is
 #' present inside feature/gene and the relative summit position is > insideSkewToEndCut,
 #' it is closer to the end of the feature. Default: 0.7
-#' @param excludeType Types of transcripts to exclude from annotation. Should be a
-#' character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}
-#' @param output Optionally store the annotation output to a file
 #' @param removePseudo Logical: whether to remove peak targets which are marked as pseudo.
 #' Default: FALSE
 #'
@@ -27,17 +43,23 @@
 #' @export
 #'
 #' @examples NA
-annotate_regions <- function(peaks, txdb, txIds = NULL,
-                             blacklistRegions = NULL,
-                             excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
-                             includeFractionCut = 0.7, bindingInGene = FALSE,
-                             promoterLength, insideSkewToEndCut = 0.7,
-                             removePseudo = FALSE,
-                             output = NULL){
+annotate_ranges <- function(peaks, txdb, promoterLength,
+                            txIds = NULL, blacklistRegions = NULL,
+                            excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
+                            includeFractionCut = 0.7, bindingInGene = FALSE,
+                            insideSkewToEndCut = 0.7,
+                            removePseudo = FALSE){
 
 
-  stopifnot(is(object = regions, class2 = "GRanges"))
+  stopifnot(is(object = peaks, class2 = "GRanges"))
   stopifnot(is(object = txdb, class2 = "TxDb"))
+
+  if(! all(txIds %in% keys(txdb, keytype = "TXID"))){
+    stop("unknown TXIDs in txIds: ",
+         paste(c(head(txIds[which(!txIds %in% keys(txdb, keytype = "TXID"))]), "..."),
+               collapse = " ")
+    )
+  }
 
   if(is.null(mcols(peaks)$name)){
     warning("name attribute not found in regions. Creating new...")
@@ -46,17 +68,32 @@ annotate_regions <- function(peaks, txdb, txIds = NULL,
     stop("Error: Duplicate values in name column")
   }
 
+  mcols(peaks)$peakChr <- as.character(seqnames(peaks))
+  mcols(peaks)$peakStart <- start(peaks)
+  mcols(peaks)$peakEnd <- end(peaks)
+
+
   if(is.null(mcols(peaks)$peak)){
     mcols(peaks)$peak <- as.integer(width(peaks) / 2)
   }
 
-  mcols(peaks)$peakChr <- as.character(seqnames(peaks))
-  mcols(peaks)$peakStart <- start(peaks)
-  mcols(peaks)$peakEnd <- end(peaks)
   mcols(peaks)$peakSummit <- GenomicRanges::start(peaks) + mcols(peaks)$peak
+
+  ## ensure that the peak is given as offset from peakStart
+  if(any(mcols(peaks)$peakSummit > end(peaks))){
+    stop("peak summit cannot be beyond peakEnd.
+         Make sure that peak is a 0 based offset from peakStart (eg. narrowPeak file 10th column)")
+  }
 
   mcols(peaks)$relativeSummitPos <- round((mcols(peaks)$peakSummit - start(peaks)) / width(peaks), 3)
 
+  ## new environment for global variables which takes time to generate
+  ## create once and use multiple times
+  # txdbEnv <- new.env(parent = emptyenv())
+
+  transcriptsGr <- get_txdb_transcripts_gr(txdb = txdb, excludeType = excludeType,
+                                           tx = txIds)
+  txToGene <- get(x = "txToGene", envir = txdbEnv)
 
   ## 5' UTR annotation
   fiveUtrGr <- get_txdb_fiveUtr_gr(txdb = txdb, tx = transcriptsGr$tx_id)
@@ -220,24 +257,18 @@ annotate_regions <- function(peaks, txdb, txIds = NULL,
   }
 
 
-
   peakTargetsGr <- sort(peakTargetsGr)
   names(x = peakTargetsGr) <- NULL
 
-  ## rename columns: "peakId", "peakEnrichment", "peakPval", "peakQval", "txName"
-  mcols(peakTargetsGr)$peakId <- mcols(peakTargetsGr)$name
-  mcols(peakTargetsGr)$peakEnrichment <- mcols(peakTargetsGr)$signalValue
-  mcols(peakTargetsGr)$peakPval <- mcols(peakTargetsGr)$pValue
-  mcols(peakTargetsGr)$peakQval <- mcols(peakTargetsGr)$qValue
+  ## rename columns to standard column names:
   mcols(peakTargetsGr)$txId <- mcols(peakTargetsGr)$txName
+  mcols(peakTargetsGr)$peakId <- mcols(peakTargetsGr)$name
 
-  ## remove unnecessary columns
+  ## remove unnecessary columns from query GRanges
   mcols(peakTargetsGr)$name <- NULL
-  mcols(peakTargetsGr)$signalValue <- NULL
-  mcols(peakTargetsGr)$pValue <- NULL
-  mcols(peakTargetsGr)$qValue <- NULL
   mcols(peakTargetsGr)$peak <- NULL
-  mcols(peakTargetsGr)$score <- NULL
+
+  ## remove unnecessary columns from TxDB features
   mcols(peakTargetsGr)$targetStart <- NULL
   mcols(peakTargetsGr)$targetEnd <- NULL
   mcols(peakTargetsGr)$targetStrand <- NULL
@@ -246,11 +277,6 @@ annotate_regions <- function(peaks, txdb, txIds = NULL,
   mcols(peakTargetsGr)$txType <- NULL
   mcols(peakTargetsGr)$preference <- NULL
   names(peakTargetsGr) <- NULL
-
-  ## optionally store the data
-  if(!is.null(output)){
-    readr::write_tsv(x = as.data.frame(mcols(peakTargetsGr)), path = output)
-  }
 
   return(peakTargetsGr)
 }
@@ -261,9 +287,7 @@ annotate_regions <- function(peaks, txdb, txIds = NULL,
 #' Annotate narrowPeak using TxDB
 #'
 #' This function annotate the MACS2 called peaks with appropriate target transcript and
-#' gene from TxDB object. Please refer to the \strong{Details} section for some
-#' suggestions while doing peak annotation. \cr
-#' Peaks are annnotated with following \strong{broad categories} and \emph{specific
+#' gene from TxDB object. Peaks are annnotated with following \strong{broad categories} and \emph{specific
 #' types} (listed in decreasing order of preference):
 #' \enumerate{
 #' \item \strong{featureInPeak:} \emph{"include_tx", "include_CDS"}
@@ -271,6 +295,7 @@ annotate_regions <- function(peaks, txdb, txIds = NULL,
 #' \item \strong{nearEnd:} \emph{"3UTR", "tx_end", "CDS_end"}
 #' \item \strong{peakInFeature:} \emph{"exon", "intron", "inside_tx", "inside_CDS"}
 #' \item \strong{upstreamTss:} \emph{"promoter", "upstream"}
+#' \item \strong{intergenic:} \emph{"intergenic"}
 #' }
 #' Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
 #' annotated to two target genes/features and one of it is more optimum than other.
@@ -297,58 +322,24 @@ annotate_regions <- function(peaks, txdb, txIds = NULL,
 #' @param peakFile A narroPeak or broadPeak file. If a broadPeak file, peak center is
 #' used as summit as broadPeak file does not report summit
 #' @param fileFormat Format of the peak file. One of "narrowPeak" (Default) or "broadPeak".
-#' @param txdb TxDB object which will be used for annotation
-#' @param txIds A vector of transcript IDs to be used specifically in the annotation
-#' process instead of full transcript set. These should be internal tx_ids from TxDB
-#' object. This is useful feature to exclude tRNA, rRNA transcripts. Default: NULL
-#' @param blacklistRegions A BED file with ChIPseq blacklist regions. Peaks overlapping
-#' with these regions are not used for annotation.
-#' @param includeFractionCut Number between [0, 1]. If a peak covers more than this
-#' fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7
-#' @param bindingInGene Logical: whether the ChIPseq TF binds in gene body. This is
-#' useful for polII ChIPseq data. Default: FALSE
-#' @param promoterLength Promoter length in number of nucleotides.
-#' @param insideSkewToEndCut A floating point number in range [0, 1]. If a peak is
-#' present inside feature/gene and the relative summit position is > insideSkewToEndCut,
-#' it is closer to the end of the feature. Default: 0.7
-#' @param excludeType Types of transcripts to exclude from annotation. Should be a
-#' character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}
 #' @param output Optionally store the annotation output to a file
-#' @param removePseudo Logical: whether to remove peak targets which are marked as pseudo.
-#' Default: FALSE
+#' @inheritParams annotate_ranges
 #'
 #' @return A GenomicRanges object with peak annotation
 #' @export
 #'
 #' @examples NA
 narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
-                                txdb, txIds = NULL,
-                                blacklistRegions = NULL,
+                                txdb, promoterLength,
+                                txIds = NULL, blacklistRegions = NULL,
                                 excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
                                 includeFractionCut = 0.7, bindingInGene = FALSE,
-                                promoterLength, insideSkewToEndCut = 0.7,
+                                insideSkewToEndCut = 0.7,
                                 removePseudo = FALSE,
                                 output = NULL){
 
-  stopifnot(is(object = txdb, class2 = "TxDb"))
-
-  if(! all(txIds %in% keys(txdb, keytype = "TXID"))){
-    stop("unknown TXIDs in txIds: ",
-         paste(c(head(txIds[which(!txIds %in% keys(txdb, keytype = "TXID"))]), "..."),
-               collapse = " ")
-    )
-  }
-
   ## started working for peak_annotation on larger genomes
   fileFormat <- match.arg(arg = fileFormat, choices = c("narrowPeak", "broadPeak"))
-
-  ## new environment for global variables which takes time to generate
-  ## create once and use multiple times
-  # txdbEnv <- new.env(parent = emptyenv())
-
-  transcriptsGr <- get_txdb_transcripts_gr(txdb = txdb, excludeType = excludeType,
-                                           tx = txIds)
-  txToGene <- get(x = "txToGene", envir = txdbEnv)
 
   ## calculate peak related features
   peaks <- rtracklayer::import(con = peakFile, format = fileFormat)
@@ -362,202 +353,24 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
     mcols(peaks)$peak <- as.integer(width(peaks) / 2)
   }
 
-  mcols(peaks)$peakChr <- as.character(seqnames(peaks))
-  mcols(peaks)$peakStart <- start(peaks)
-  mcols(peaks)$peakEnd <- end(peaks)
-  mcols(peaks)$peakSummit <- GenomicRanges::start(peaks) + mcols(peaks)$peak
-
-  mcols(peaks)$relativeSummitPos <- round((mcols(peaks)$peakSummit - start(peaks)) / width(peaks), 3)
-
-
-  ## 5' UTR annotation
-  fiveUtrGr <- get_txdb_fiveUtr_gr(txdb = txdb, tx = transcriptsGr$tx_id)
-  fiveUtrTargets <- splicing_unit_annotations(peaksGr = peaks, featuresGr = fiveUtrGr,
-                                              featureType = "5UTR", txdb = txdb)
-
-  ## 3' UTR region annotations
-  threeUtrGr <- get_txdb_threeUtr_gr(txdb = txdb, tx = transcriptsGr$tx_id)
-  threeUtrTargets <- splicing_unit_annotations(peaksGr = peaks, featuresGr = threeUtrGr,
-                                               featureType = "3UTR", txdb = txdb)
-
-  ## exons annotations
-  exonsGr <- get_txdb_exons_gr(txdb = txdb, tx = transcriptsGr$tx_id)
-  exonTargets <- splicing_unit_annotations(peaksGr = peaks, featuresGr = exonsGr,
-                                           featureType = "exon", txdb = txdb)
-
-  ## introns annotations
-  intronsGr <- get_txdb_introns_gr(txdb = txdb, tx = transcriptsGr$tx_id)
-  intronTargets <- splicing_unit_annotations(peaksGr = peaks, featuresGr = intronsGr,
-                                             featureType = "intron", txdb = txdb)
-
-  ## Transcript region annotations
-  transcriptTargets <- region_annotations(peaksGr = peaks,
-                                          featuresGr = transcriptsGr,
-                                          includeFractionCut = includeFractionCut,
-                                          name = "tx")
-
-  ## annotate upstream targets: IMP to give excludeType so that rRNA, tRNA, snRNAs will be removed
-  upstreamTargets <- upstream_annotations(peaksGr = peaks, featuresGr = transcriptsGr,
-                                          txdb = txdb, promoterLength = promoterLength)
-
-  ## prepare target preference list and peak category list
-  ## this is internal preference list
-  ## this order is IMP for: select 3UTR between 3UTR and inside_tx as it is more specific
-  peakTypes <- data.frame(
-    peakType = c("include_tx", "include_CDS", "5UTR", "CDS_start", "tx_start", "3UTR",
-                 "tx_end", "CDS_end", "EXON", "INTRON", "inside_tx", "inside_CDS",
-                 "promoter", "upstream", "pseudo_promoter", "pseudo_upstream"),
-    peakPosition = c("TSS", "TSS", "TSS", "TSS", "TSS", "TES",
-                     "TES", "TES", "TSS", "TSS", "TSS", "TSS",
-                     "TSS", "TSS", "TSS", "TSS"),
-    preference = 1:16,
-    stringsAsFactors = FALSE)
-
-  ## later these peak categories will be used to decide which type of target to prefer
-  peakCategories <- list(
-    featureInPeak = c("include_tx", "include_CDS"),
-    nearStart = c("5UTR", "CDS_start", "tx_start"),
-    nearEnd = c("3UTR", "tx_end", "CDS_end"),
-    peakInFeature = c("EXON", "INTRON", "inside_tx", "inside_CDS"),
-    upstreamTss = c("promoter", "upstream", "pseudo_promoter", "pseudo_upstream")
+  ## use main function annotate_ranges() for annotation
+  peakTargetsGr <- annotate_ranges(
+    peaks = peaks, txdb = txdb, promoterLength = promoterLength,
+    txIds = txIds, blacklistRegions = blacklistRegions, excludeType = excludeType,
+    includeFractionCut = includeFractionCut, bindingInGene = bindingInGene,
+    insideSkewToEndCut = insideSkewToEndCut, removePseudo = removePseudo
   )
 
-  peakCategoryDf <- map_dfr(.x = peakCategories,
-                            .f = function(x){data.frame(peakType = x, stringsAsFactors = F)},
-                            .id = "peakCategory")
-
-  peakTypes <- dplyr::left_join(x = peakTypes, y = peakCategoryDf, by = "peakType")
-
-  ## combine annotations
-  peakAnnotations <- NULL
-  if(!is.null(fiveUtrTargets)){ peakAnnotations <- append(peakAnnotations, fiveUtrTargets) }
-  if(!is.null(threeUtrTargets)){ peakAnnotations <- append(peakAnnotations, threeUtrTargets) }
-  if(!is.null(exonTargets)){ peakAnnotations <- append(peakAnnotations, exonTargets) }
-  if(!is.null(intronTargets)){ peakAnnotations <- append(peakAnnotations, intronTargets) }
-  if(!is.null(transcriptTargets)){ peakAnnotations <- append(peakAnnotations, transcriptTargets) }
-  if(!is.null(upstreamTargets)){ peakAnnotations <- append(peakAnnotations, upstreamTargets) }
-
-  if(!is.null(peakAnnotations)){
-
-    ## remove "tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"
-    allTargetsDf <- as.data.frame(peakAnnotations, row.names = NULL) %>%
-      dplyr::left_join(y = txToGene, by = c("tx_id" = "TXID")) %>%
-      dplyr::left_join(y = peakTypes, by = c("peakType" = "peakType"))
-
-    ## extract best transcript region annotation for each peak-gene combination using the preference
-    ## using geneId instead of tx_id: for gene which have multiple tx, 5UTR/3UTR/Intron can get
-    ## annotated with any tx
-    bestPeakGeneTargets <- allTargetsDf %>%
-      dplyr::mutate(bidirectional = 0) %>%
-      dplyr::group_by(name, geneId) %>%
-      dplyr::arrange(preference, .by_group = TRUE) %>%
-      dplyr::slice(1L) %>%
-      dplyr::ungroup()
-
-    bestPeakGeneTargetsGr <- GenomicRanges::makeGRangesFromDataFrame(
-      df = bestPeakGeneTargets,
-      keep.extra.columns = T)
-
-    #######################
-    # ## for summary and debugging
-    # tmpDf <- dplyr::group_by(bestPeakGeneTargets, name) %>%
-    #   dplyr::summarise(n = n(),
-    #                    peakType = paste(sort(peakType), collapse = ","),
-    #                    peakCat = paste(peakCategory, collapse = ","),
-    #                    uniqCat = paste(sort(unique(peakCategory)), collapse = ","),
-    #                    gene = paste(geneId, collapse = ",")) %>%
-    #   dplyr::filter(n > 1) %>%
-    #   dplyr::distinct(peakType, .keep_all = T) %>%
-    #   as.data.frame()
-    #######################
-
-    tempTargetGrl <- GenomicRanges::split(x = bestPeakGeneTargetsGr, f = mcols(bestPeakGeneTargetsGr)$name)
-    # table(elementNROWS(tempTargetGrl))
-    singleHitPeaks <- unlist(tempTargetGrl[which(elementNROWS(tempTargetGrl) == 1)], use.names = F)
-    multipleHitPeaksGrl <- tempTargetGrl[which(elementNROWS(tempTargetGrl) != 1)]
-
-    # #######################
-    # optGr <- select_optimal_targets(
-    #   targetGr = tempTargetGrl$An_kdmB_20h_HA_1_withCtrl_peak_1288,
-    #   promoterLength = promoterLength,
-    #   bindingInGene = bindingInGene,
-    #   insideSkewToEndCut = insideSkewToEndCut)
-    # #######################
-
-    if(length(multipleHitPeaksGrl) > 0){
-      ## for each peak, find optimum target/s
-      multipleHitPeaks <- select_optimal_targets(
-        targetGr = sort(unlist(multipleHitPeaksGrl, use.names = F)),
-        promoterLength = promoterLength,
-        bindingInGene = bindingInGene,
-        insideSkewToEndCut = insideSkewToEndCut)
-    } else{
-      multipleHitPeaks <- NULL
-    }
-
-
-    peakTargetsGr <- c(singleHitPeaks, multipleHitPeaks, ignore.mcols=FALSE)
-
-    ## add the unannotated peaks
-    unannotatedPeaks <- peaks[which(!peaks$name %in% peakTargetsGr$name)]
-    if(length(unannotatedPeaks) > 0){
-      mcols(unannotatedPeaks)$peakType <- "intergenic"
-      mcols(unannotatedPeaks)$peakCategory <- "intergenic"
-    }
-
-
-    peakTargetsGr <- c(peakTargetsGr, unannotatedPeaks, ignore.mcols=FALSE)
-
-    ## optionally filter peak targets which are marked as pseudo
-    if(removePseudo){
-      peakTargetsGr <- peakTargetsGr[!grepl(pattern = "pseudo_", x = mcols(peakTargetsGr)$peakType)]
-    }
-
-  } else{
-    ## use the original peakset
-    peakTargetsGr <- peaks
-
-    mcols(peakTargetsGr)$peakType <- NA
-    mcols(peakTargetsGr)$peakDist <- NA
-    mcols(peakTargetsGr)$targetOverlap <- NA
-    mcols(peakTargetsGr)$peakOverlap <- NA
-    mcols(peakTargetsGr)$summitDist <- NA
-    mcols(peakTargetsGr)$geneId <- NA
-    mcols(peakTargetsGr)$txName <- NA
-    mcols(peakTargetsGr)$peakPosition <- NA
-    mcols(peakTargetsGr)$relativePeakPos <- NA
-    mcols(peakTargetsGr)$peakCategory <- NA
-    mcols(peakTargetsGr)$bidirectional <- NA
-
-  }
-
-
-
-  peakTargetsGr <- sort(peakTargetsGr)
-  names(x = peakTargetsGr) <- NULL
-
-  ## rename columns: "peakId", "peakEnrichment", "peakPval", "peakQval", "txName"
-  mcols(peakTargetsGr)$peakId <- mcols(peakTargetsGr)$name
+  ## rename narrowPeak/broadPeak specific columns
   mcols(peakTargetsGr)$peakEnrichment <- mcols(peakTargetsGr)$signalValue
   mcols(peakTargetsGr)$peakPval <- mcols(peakTargetsGr)$pValue
   mcols(peakTargetsGr)$peakQval <- mcols(peakTargetsGr)$qValue
-  mcols(peakTargetsGr)$txId <- mcols(peakTargetsGr)$txName
 
-  ## remove unnecessary columns
-  mcols(peakTargetsGr)$name <- NULL
+  ## remove unnecessary columns from narrowPeak/broadPeak
   mcols(peakTargetsGr)$signalValue <- NULL
   mcols(peakTargetsGr)$pValue <- NULL
   mcols(peakTargetsGr)$qValue <- NULL
-  mcols(peakTargetsGr)$peak <- NULL
   mcols(peakTargetsGr)$score <- NULL
-  mcols(peakTargetsGr)$targetStart <- NULL
-  mcols(peakTargetsGr)$targetEnd <- NULL
-  mcols(peakTargetsGr)$targetStrand <- NULL
-  mcols(peakTargetsGr)$tx_id <- NULL
-  mcols(peakTargetsGr)$txName <- NULL
-  mcols(peakTargetsGr)$txType <- NULL
-  mcols(peakTargetsGr)$preference <- NULL
-  names(peakTargetsGr) <- NULL
 
   ## optionally store the data
   if(!is.null(output)){

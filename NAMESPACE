@@ -2,7 +2,7 @@
 
 export(add_annotation_titles)
 export(add_gene_info)
-export(annotate_regions)
+export(annotate_ranges)
 export(best_replicate_peakset)
 export(bigwig_profile_matrix)
 export(chip_summary)
