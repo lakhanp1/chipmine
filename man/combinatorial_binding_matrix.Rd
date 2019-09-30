@@ -5,8 +5,8 @@
 \title{Generate the combinatorial peak association matrix with merged master peak list}
 \usage{
 combinatorial_binding_matrix(sampleInfo, peakRegions = NULL,
-  peakFormat = "narrowPeak", peakCols = c("peakId", "peakEnrichment",
-  "peakPval"), genome = NULL, summitSeqLen = 200)
+  peakFormat = "narrowPeak", summitRegion = 0, peakCols = c("peakId",
+  "peakEnrichment", "peakPval"), genome = NULL, summitSeqLen = 200)
 }
 \arguments{
 \item{sampleInfo}{Sample information dataframe}
@@ -16,7 +16,15 @@ peaks from narrowPeak files are merged to create new master peakset.}
 
 \item{peakFormat}{Format of the peak file. One of \code{"narrowPeak", "broadPeak", "bed"}}
 
-\item{peakCols}{Column to extract from peak file. Default: \code{c("peakId", "peakEnrichment", "peakPval")}}
+\item{summitRegion}{Region width around peak summit to use for annotation purpose. This
+allows peaks with uniform peak width centered around summit. If 0, whole peak region
+is used. If > 0, it indicates how many basepairs to include upstream and downstream
+of the peak summit.}
+
+\item{peakCols}{Column to extract from peak file. Column names should be from this list:
+\code{c("peakChr", "peakStart", "peakEnd", "peakId", "peakScore", "peakStrand", "peakEnrichment",
+"peakPval", "peakQval", "peakSummit").}
+Default: \code{c("peakId", "peakEnrichment", "peakPval")}}
 
 \item{genome}{Optionally BSgenome object for extracting summit sequence}
 
