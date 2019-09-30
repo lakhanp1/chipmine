@@ -81,8 +81,8 @@ annotate_ranges <- function(peaks, txdb, promoterLength,
 
   ## ensure that the peak is given as offset from peakStart
   if(any(mcols(peaks)$peakSummit > end(peaks))){
-    stop("peak summit cannot be beyond peakEnd.
-         Make sure that peak is a 0 based offset from peakStart (eg. narrowPeak file 10th column)")
+    stop("ERROR: peak summit cannot be beyond peakEnd. ",
+         "Make sure that peak is a 0 based offset from peakStart (eg. narrowPeak file 10th column)")
   }
 
   mcols(peaks)$relativeSummitPos <- round((mcols(peaks)$peakSummit - start(peaks)) / width(peaks), 3)
@@ -323,6 +323,10 @@ annotate_ranges <- function(peaks, txdb, promoterLength,
 #' used as summit as broadPeak file does not report summit
 #' @param fileFormat Format of the peak file. One of "narrowPeak" (Default) or "broadPeak".
 #' @param output Optionally store the annotation output to a file
+#' @param summitRegion Region width around peak summit to use for annotation purpose. This
+#' allows peaks with uniform peak width centered around summit. If 0, whole peak region
+#' is used. If > 0, it indicates how many basepairs to include upstream and downstream
+#' of the peak summit.
 #' @inheritParams annotate_ranges
 #'
 #' @return A GenomicRanges object with peak annotation
@@ -330,6 +334,7 @@ annotate_ranges <- function(peaks, txdb, promoterLength,
 #'
 #' @examples NA
 narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
+                                summitRegion = 0,
                                 txdb, promoterLength,
                                 txIds = NULL, blacklistRegions = NULL,
                                 excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
@@ -351,6 +356,18 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 
   if(is.null(mcols(peaks)$peak)){
     mcols(peaks)$peak <- as.integer(width(peaks) / 2)
+  }
+
+  # mcols(peaks)$peakRegion <- paste(
+  #   as.character(seqnames(peaks)), ":", start(peaks), "-", end(peaks), sep = ""
+  # )
+
+  ## update the peak region used for the annotation.
+  if(summitRegion > 0){
+    peaks <- GenomicRanges::resize(
+      x = GenomicRanges::shift(x = peaks, shift = peaks$peak - summitRegion),
+      width = summitRegion*2, fix = "start"
+    )
   }
 
   ## use main function annotate_ranges() for annotation

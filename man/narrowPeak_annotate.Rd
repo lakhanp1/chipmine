@@ -4,10 +4,10 @@
 \alias{narrowPeak_annotate}
 \title{Annotate narrowPeak using TxDB}
 \usage{
-narrowPeak_annotate(peakFile, fileFormat = "narrowPeak", txdb,
-  promoterLength, txIds = NULL, blacklistRegions = NULL,
-  excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
-  includeFractionCut = 0.7, bindingInGene = FALSE,
+narrowPeak_annotate(peakFile, fileFormat = "narrowPeak",
+  summitRegion = 0, txdb, promoterLength, txIds = NULL,
+  blacklistRegions = NULL, excludeType = c("tRNA", "rRNA", "snRNA",
+  "snoRNA", "ncRNA"), includeFractionCut = 0.7, bindingInGene = FALSE,
   insideSkewToEndCut = 0.7, removePseudo = FALSE, output = NULL)
 }
 \arguments{
@@ -15,6 +15,11 @@ narrowPeak_annotate(peakFile, fileFormat = "narrowPeak", txdb,
 used as summit as broadPeak file does not report summit}
 
 \item{fileFormat}{Format of the peak file. One of "narrowPeak" (Default) or "broadPeak".}
+
+\item{summitRegion}{Region width around peak summit to use for annotation purpose. This
+allows peaks with uniform peak width centered around summit. If 0, whole peak region
+is used. If > 0, it indicates how many basepairs to include upstream and downstream
+of the peak summit.}
 
 \item{txdb}{TxDB object which will be used for annotation}
 
