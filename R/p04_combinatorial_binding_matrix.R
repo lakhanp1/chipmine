@@ -37,7 +37,7 @@ combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFor
     choices = c("peakChr", "peakStart", "peakEnd", "peakId", "peakScore", "peakStrand",
                 "peakEnrichment", "peakPval", "peakQval", "peakSummit"),
     several.ok = TRUE
-    )
+  )
 
   peakFormat <- match.arg(arg = peakFormat, choices = c("narrowPeak", "broadPeak"))
 
@@ -122,10 +122,11 @@ combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFor
 
     if(! is.null(genome)){
       ## get the sequence around summit
-      summitSeq <- get_narrowpeak_summit_seq(npFile = sampleInfo$peakFile[i],
-                                             id = sampleName,
-                                             genome = genome,
-                                             length = summitSeqLen)
+      summitSeq <- get_peak_summit_seq(file = sampleInfo$peakFile[i],
+                                       sampleId = sampleName,
+                                       peakFormat = peakFormat,
+                                       genome = genome,
+                                       length = summitSeqLen)
 
       hits <- dplyr::left_join(x = hits, y = summitSeq, by = setNames("name", peakIdCol))
     }
