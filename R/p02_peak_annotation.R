@@ -494,6 +494,7 @@ splicing_unit_annotations <- function(peaksGr, featuresGr, featureType, txdb){
       )
     ) %>%
     dplyr::mutate(
+      bidirectional = 0,
       relativeSummitPos = dplyr::if_else(
         condition = targetStrand == "-", true = 1 - relativeSummitPos, false = relativeSummitPos)
     )
@@ -601,6 +602,7 @@ region_annotations <- function(peaksGr, featuresGr, includeFractionCut = 0.7, na
       )
     ) %>%
     dplyr::mutate(
+      bidirectional = 0,
       relativeSummitPos = dplyr::if_else(
         condition = targetStrand == "-", true = 1 - relativeSummitPos, false = relativeSummitPos)
     )
@@ -899,6 +901,7 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
     ) %>%
     dplyr::mutate(
       relativePeakPos = 0,
+      bidirectional = 0,
       relativeSummitPos = dplyr::if_else(
         condition = targetStrand == "-", true = 1 - relativeSummitPos, false = relativeSummitPos),
       peakType = if_else(abs(peakDist) < promoterLength, "promoter", peakType)
@@ -944,6 +947,7 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
     ## remove the targets which are too far based on nearest_upstream_bidirectional()
     dualTargetFiltered <- dualTargetPeaksDf[-pseudoUpIdx,] %>%
       dplyr::select(-rowIdx, -target) %>%
+      dplyr::mutate(bidirectional = 1) %>%
       GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = TRUE)
 
   }
@@ -1123,7 +1127,7 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLengt
 #' In above example, peak1 is inside target1 but it is near the end
 #' Relative position of the peak is >0.7 in target1. peak1 is also
 #' upstream of target2 and within 500bp. So new annotation is
-#' target1: pasudo_inside
+#' target1: pseudo_inside
 #' target2: upstream
 #' }
 #' }
@@ -1207,6 +1211,7 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   ## Future development: use priority list of peak category to select peak targets
   markPseudoIdx <- c()
 
+  ## "featureInPeak", "nearStart", "nearEnd", "peakInFeature", "upstreamTss"
   ## nearStart peak
   ###########
   ## A1) nearStart & upstreamTss:

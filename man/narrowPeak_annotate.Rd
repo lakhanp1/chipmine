@@ -172,7 +172,7 @@ Use of \code{select_optimal_targets(..., insideSkewToEndCut = 0.7, promoterLengt
 In above example, peak1 is inside target1 but it is near the end
 Relative position of the peak is >0.7 in target1. peak1 is also
 upstream of target2 and within 500bp. So new annotation is
-target1: pasudo_inside
+target1: pseudo_inside
 target2: upstream
 }
 }
