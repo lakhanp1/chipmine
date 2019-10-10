@@ -15,7 +15,8 @@
 #' }
 #' Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
 #' annotated to two target genes/features and one of it is more optimum than other.
-#' The less optimum target type is prefixed with \emph{pseudo}.
+#' The less optimum target type is prefixed with \emph{pseudo}.\cr
+#' See \strong{Use of arguments} section for more details.
 #'
 #'
 #' @param peaks A GRanges object with name column.
@@ -38,6 +39,9 @@
 #' it is closer to the end of the feature. Default: 0.7
 #' @param removePseudo Logical: whether to remove peak targets which are marked as pseudo.
 #' Default: FALSE
+#' @inheritParams upstream_annotations
+#' @inheritSection upstream_annotations Use of arguments
+#' @inheritSection select_optimal_targets Use of arguments
 #'
 #' @return A GenomicRanges object with peak annotation
 #' @export
@@ -46,6 +50,7 @@
 annotate_ranges <- function(peaks, txdb, promoterLength,
                             txIds = NULL, blacklistRegions = NULL,
                             excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
+                            bidirectionalDistance = 500, bidirectionalSkew = 0.2,
                             includeFractionCut = 0.7, bindingInGene = FALSE,
                             insideSkewToEndCut = 0.7,
                             removePseudo = FALSE){
@@ -62,10 +67,10 @@ annotate_ranges <- function(peaks, txdb, promoterLength,
   }
 
   if(is.null(mcols(peaks)$name)){
-    warning("name attribute not found in regions. Creating new...")
+    warning("name attribute not found in regions. Using region center...")
     mcols(peaks)$name <- paste("region",1:length(peaks), sep = "_")
   } else if(any(duplicated(mcols(peaks)$name)) ){
-    stop("Error: Duplicate values in name column")
+    stop("Duplicate values in name column")
   }
 
   mcols(peaks)$peakChr <- as.character(seqnames(peaks))
@@ -81,7 +86,7 @@ annotate_ranges <- function(peaks, txdb, promoterLength,
 
   ## ensure that the peak is given as offset from peakStart
   if(any(mcols(peaks)$peakSummit > end(peaks))){
-    stop("ERROR: peak summit cannot be beyond peakEnd. ",
+    stop("Peak summit cannot be beyond peakEnd. ",
          "Make sure that peak is a 0 based offset from peakStart (eg. narrowPeak file 10th column)")
   }
 
@@ -123,7 +128,9 @@ annotate_ranges <- function(peaks, txdb, promoterLength,
 
   ## annotate upstream targets: IMP to give excludeType so that rRNA, tRNA, snRNAs will be removed
   upstreamTargets <- upstream_annotations(peaksGr = peaks, featuresGr = transcriptsGr,
-                                          txdb = txdb, promoterLength = promoterLength)
+                                          txdb = txdb, promoterLength = promoterLength,
+                                          bidirectionalDistance = bidirectionalDistance,
+                                          bidirectionalSkew = bidirectionalSkew)
 
   ## prepare target preference list and peak category list
   ## this is internal preference list
@@ -328,6 +335,7 @@ annotate_ranges <- function(peaks, txdb, promoterLength,
 #' is used. If > 0, it indicates how many basepairs to include upstream and downstream
 #' of the peak summit.
 #' @inheritParams annotate_ranges
+#' @inheritSection annotate_ranges Use of arguments
 #'
 #' @return A GenomicRanges object with peak annotation
 #' @export
@@ -338,6 +346,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
                                 txdb, promoterLength,
                                 txIds = NULL, blacklistRegions = NULL,
                                 excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
+                                bidirectionalDistance = 500, bidirectionalSkew = 0.2,
                                 includeFractionCut = 0.7, bindingInGene = FALSE,
                                 insideSkewToEndCut = 0.7,
                                 removePseudo = FALSE,
@@ -358,22 +367,27 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
     mcols(peaks)$peak <- as.integer(width(peaks) / 2)
   }
 
-  # mcols(peaks)$peakRegion <- paste(
-  #   as.character(seqnames(peaks)), ":", start(peaks), "-", end(peaks), sep = ""
-  # )
+  mcols(peaks)$peakRegion <- paste(
+    as.character(seqnames(peaks)), ":", start(peaks), "-", end(peaks), sep = ""
+  )
 
   ## update the peak region used for the annotation.
   if(summitRegion > 0){
+    ## start(peaks) + peaks$peak
     peaks <- GenomicRanges::resize(
       x = GenomicRanges::shift(x = peaks, shift = peaks$peak - summitRegion),
       width = summitRegion*2, fix = "start"
     )
+
+    ## update the summit
+    mcols(peaks)$peak <- as.integer(width(peaks) / 2)
   }
 
   ## use main function annotate_ranges() for annotation
   peakTargetsGr <- annotate_ranges(
     peaks = peaks, txdb = txdb, promoterLength = promoterLength,
     txIds = txIds, blacklistRegions = blacklistRegions, excludeType = excludeType,
+    bidirectionalDistance = bidirectionalDistance,
     includeFractionCut = includeFractionCut, bindingInGene = bindingInGene,
     insideSkewToEndCut = insideSkewToEndCut, removePseudo = removePseudo
   )
@@ -436,9 +450,11 @@ splicing_unit_annotations <- function(peaksGr, featuresGr, featureType, txdb){
   mcols(peakTargets)$peakDist <- 0
 
   ## targetOverlap is at transcript level
-  txSubsetGrl <- GenomicFeatures::mapIdsToRanges(x = txdb,
-                                                 keys = list(tx_id = mcols(peakTargets)$tx_id),
-                                                 type = "tx", columns = c("gene_id"))
+  txSubsetGrl <- GenomicFeatures::mapIdsToRanges(
+    x = txdb,
+    keys = list(tx_id = mcols(peakTargets)$tx_id),
+    type = "tx", columns = c("gene_id")
+  )
 
   txSubsetGr <- unlist(txSubsetGrl)
 
@@ -620,34 +636,36 @@ set_peakTarget_to_pseudo <- function(target){
 
 #' Annotate upstream peaks on transcripts
 #'
-#' This function annotates the peaks with nearest downstream target. See Details.
+#' This function annotates the peaks with nearest downstream target.
+#' See \strong{Use of arguments} section for more details.
 #'
+#' @section Use of arguments:
+#' \subsection{upstreamOverlappingFraction}{
 #' There will be cases when a peak is inside a gene and it is upstream of other gene.
-#' \cr \strong{Use of \code{upstreamOverlappingFraction} (default: 0.2): }
 #' \preformatted{
-#' #                                                                         #
-#' #        target1                     target2                              #
-#' #      =====<=======<===       =====<=======<========<=======             #
-#' #                                ---            ----                      #
-#' #                              peak1           peak2                      #
-#' #                      |<------>|                                         #
-#' #                      |<------------------------->|                      #
-#' #                                                                         #
-#' in above cases, peak1 can be annotated as Upstream of target1. However not peak2
+#' #                                                                            #
+#' #           target1                     target2                              #
+#' #         =====<=======<===       =====<=======<========<=======             #
+#' #                                   ---            ----                      #
+#' #                                 peak1           peak2                      #
+#' #                         |<------>|                                         #
+#' #                         |<------------------------->|                      #
+#' #                                                                            #
+#' In above cases, peak1 can be annotated as Upstream of target1. However not peak2
 #' because target2 has bigger fraction in-between [target1, peak2] range
 #'
 #' Target gene inside gene case:
-#' #                                                                         #
-#' #              target1          target2 (longer)                          #
-#' #      =====<=======<=======<=======<========<=======                     #
-#' #               ==<==                                                     #
-#' #                                ---            ----                      #
-#' #                              peak1           peak2                      #
-#' #                    |<-------->|                                         #
-#' #                                                                         #
+#' #                                                                            #
+#' #         =====<=======<=======<=======<========<======= target2             #
+#' #          target1 ==<==                                                     #
+#' #                                   ---            ----                      #
+#' #                                 peak1           peak2                      #
+#' #                       |<-------->|                                         #
+#' #                                                                            #
 #' }
 #' In above case, peak1 is inside targe2 and upstream of target1. These targets are
 #' selected in \code{select_optimal_targets()} if peak lies within promoter range.
+#' }
 #'
 #'
 #' @param peaksGr GRanges object for peak data
@@ -660,7 +678,8 @@ set_peakTarget_to_pseudo <- function(target){
 #' @param upstreamOverlappingFraction See details. Default: 0.2
 #' @param promoterLength Promoter region length. Upstream peaks within \code{promoterLength}
 #' distance of feature start are annotated as \code{promoter} region peaks.
-#' @param ... Other arguments for \code{nearest_upstream_bidirectional()} function
+#' @inheritParams nearest_upstream_bidirectional
+#' @inheritSection nearest_upstream_bidirectional Use of arguments
 #'
 #' @return A modified peak GRanges object with additional columns: \code{ tx_id,
 #' peakType, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
@@ -669,7 +688,8 @@ set_peakTarget_to_pseudo <- function(target){
 #' @examples NA
 upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
                                  upstreamOverlappingFraction = 0.2,
-                                 promoterLength, ...){
+                                 promoterLength, bidirectionalDistance,
+                                 bidirectionalSkew){
 
   stopifnot(is(object = peaksGr, class2 = "GRanges"))
   stopifnot(is(object = featuresGr, class2 = "GRanges"))
@@ -857,8 +877,10 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 
   mcols(upstreamPeaks)$tx_id <- mcols(featuresGr)$tx_id[upstreamHitsFiltered$to]
   mcols(upstreamPeaks)$peakType <- "upstream"
-  mcols(upstreamPeaks)$peakDist <- GenomicRanges::distance(x = upstreamPeaks,
-                                                           y = featuresGr[upstreamHitsFiltered$to])
+  mcols(upstreamPeaks)$peakDist <- GenomicRanges::distance(
+    x = upstreamPeaks,
+    y = featuresGr[upstreamHitsFiltered$to]
+  )
 
   mcols(upstreamPeaks)$peakDist <- mcols(upstreamPeaks)$peakDist * -1
   mcols(upstreamPeaks)$targetStart = start(featuresGr[upstreamHitsFiltered$to])
@@ -912,10 +934,12 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
       dplyr::select(name, group, rowIdx) %>%
       tidyr::spread(key = group, value = rowIdx)
 
-    pseudoUpIdx <- nearest_upstream_bidirectional(targetDf = dualTargetPeaksDf,
-                                                  t1Idx = pairTable$t1,
-                                                  t2Idx = pairTable$t2,
-                                                  promoterLength = promoterLength)
+    pseudoUpIdx <- nearest_upstream_bidirectional(
+      targetDf = dualTargetPeaksDf,
+      t1Idx = pairTable$t1,
+      t2Idx = pairTable$t2,
+      promoterLength = promoterLength,
+      bidirectionalDistance = bidirectionalDistance)
 
     ## remove the targets which are too far based on nearest_upstream_bidirectional()
     dualTargetFiltered <- dualTargetPeaksDf[-pseudoUpIdx,] %>%
@@ -940,32 +964,49 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 
 #' True target for bidirectional peak
 #'
-#' This function uses following logic to select or reject target from bidirectional peak.
-#' \cr \strong{Use of \code{minTSS_gapForPseudo} (Default: 500)* and \code{skewFraction}
-#' (Default: 0.2):}
+#' In case of peak at bidirectional promoter, this function assigns one or both genes
+#' as peak target. See \strong{Use of arguments} section for more details.
+#'
+#' @section Use of arguments:
+#' \subsection{bidirectionalDistance and bidirectionalSkew}{
+#' For peak at bidirectional promoter, its skewness from midpoint and summit poistion
+#' w.r.t. midpoint is used to decide correct target/s. \cr
+#' \code{nearest_upstream_bidirectional(..., bidirectionalDistance = 500,
+#' bidirectionalSkew = 0.2)}
 #' \preformatted{
-#' #                      *                                                   #
-#' #                     |<---more than 500bp--->|                            #
-#' #       target1                    |                    target2            #
-#' #   ==<=====<=====<===      peak1  |           ===>=====>=====>=====>==    #
-#' #                          ------- | peak2                                 #
-#' #                               ---|----                                   #
-#' #                                  |                                       #
-#' #                      midpoint between two targets                        #
-#' #                                                                          #
-#' peak1 => target1: more than 80% of the peak lies on target1 side
+#' #                        *                                                   #
+#' #                    |<-------more than 500bp------>|                        #
+#' #         target1                    |                    target2            #
+#' #  ==<=====<=====<===                |               ===>===>====>====>==    #
+#' #                              --^---|- peak1                                #
+#' #                                 ---|^--- peak2                             #
+#' #                                    |                                       #
+#' #                                  --|-^------ peak3                         #
+#' #                                    |                                       #
+#' #                                 {  |  } middle 20\% region                  #
+#' #                                    |                                       #
+#' #                        midpoint between two targets                        #
+#' #                                                                            #
+#' peak1 => target1: more than 80% of the peak lies on target1 side from TSS midpoint
+#'          and peak summit is not in central 20\% region.
 #' peak2 => target1, targe2: peak lies on the center
-#' If gap between two bidirectional genes < minTSS_gapForPseudo (default: 500bp),
-#' peak is assigned to both the targets
+#' peak3 => Additionally, if peak summit (^) is within central 20\% region
+#'          (bidirectionalSkew), peak is assigned to both the target genes
+#' If gap between two bidirectional genes < bidirectionalDistance (default: 500bp),
+#' peak is assigned to both the target genes
 #' }
+#' }
+#'
 #'
 #' @param targetDf A dataframe which has bidirectional targets for each peak.
 #' @param t1Idx target1 index vector
 #' @param t2Idx target2 index vector. IMP: \code{length(t1Idx)} should be equal to
 #' \code{length(t2Idx)}
-#' @param skewFraction Minimum fraction of peak region allowed on the side of false target
-#' from the midpoint of two target genes. Default: 0.2
-#' @param minTSS_gapForPseudo Valid distance between two target genes TSS to mark one as psuedo
+#' @param bidirectionalSkew Maximum fraction of peak region allowed on the side of
+#' false target from the midpoint of two target genes. Default: 0.2
+#' @param bidirectionalDistance If a peak is present at bidirectional promoter where
+#' distance between two TSS is < bidirectionalDistance, both the targets are assigned
+#' to the peak.
 #' @param promoterLength Promoter length
 #'
 #' @return A vector of row index for pseudo targets.
@@ -973,7 +1014,8 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 #'
 #' @examples NA
 nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLength,
-                                           skewFraction = 0.2, minTSS_gapForPseudo = 500){
+                                           bidirectionalSkew = 0.2,
+                                           bidirectionalDistance = 500){
 
   targetPairDf <- tibble::tibble(t1Idx = t1Idx, t2Idx = t2Idx,
                                  t1Select = TRUE, t2Select = TRUE,
@@ -987,11 +1029,15 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLengt
   }
 
   targetPairDf$peakId <- targetA$name
+  targetPairDf$peakSummit <- targetA$peakSummit
   targetPairDf$t1PeakDist <- targetA$peakDist
   targetPairDf$t2PeakDist <- targetB$peakDist
+  targetPairDf$t1SummitDist <- targetA$summitDist
+  targetPairDf$t2SummitDist <- targetB$summitDist
+
   peakGr <- GenomicRanges::makeGRangesFromDataFrame(df = targetA)
   targetPairDf$peakWidth <- width(peakGr)
-  targetPairDf$peakFraction <- round(targetPairDf$peakWidth * skewFraction)
+  targetPairDf$peakFraction <- round(targetPairDf$peakWidth * bidirectionalSkew)
 
   sameDirTargets <- which(targetA$targetStrand == targetB$targetStrand)
   targetPairDf$dir[sameDirTargets] <- "same"
@@ -1018,24 +1064,29 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLengt
   ## gap between two bidirectional targets
   targetGapGr <- unstrand(pgap(x = targetAGr, y = targetBGr, ignore.strand = TRUE))
   targetPairDf$gapWidth <- width(targetGapGr)
+  targetPairDf$midpoint <- start(targetGapGr) + round(width(targetGapGr)/2)
 
   ## midpoint of gap between bidirectional targets
-  midpoint <- resize(x = targetGapGr, width = 1, fix = "center", ignore.strand = TRUE)
+  # midpoint <- resize(x = targetGapGr, width = 1, fix = "center", ignore.strand = TRUE)
+  # targetPairDf$midpointDist <- distance(x = midpoint, y = peakGr, ignore.strand = TRUE)
 
-  targetPairDf$midpointDist <- distance(x = midpoint, y = peakGr, ignore.strand = TRUE)
-
+  ##
   targetPairDf <- dplyr::mutate(
     targetPairDf,
     t1Select = dplyr::case_when(
-      gapWidth <= minTSS_gapForPseudo ~ t1Select,
+      gapWidth <= bidirectionalDistance ~ t1Select,
       abs(t1PeakDist) < promoterLength ~ TRUE,
-      dir == "opposite" & (abs(t1PeakDist) + peakFraction) > (gapWidth/2) ~ FALSE,
+      dir == "opposite" &
+        ((abs(t1PeakDist) + peakFraction) > (gapWidth/2) &
+           abs(t1SummitDist) > ((gapWidth + gapWidth*bidirectionalSkew)/2)) ~ FALSE,
       TRUE ~ t1Select
     ),
     t2Select = dplyr::case_when(
-      gapWidth <= minTSS_gapForPseudo ~ t2Select,
+      gapWidth <= bidirectionalDistance ~ t2Select,
       abs(t2PeakDist) < promoterLength ~ TRUE,
-      dir == "opposite" & (abs(t2PeakDist) + peakFraction) > (gapWidth/2) ~ FALSE,
+      dir == "opposite" &
+        ((abs(t2PeakDist) + peakFraction) > (gapWidth/2) &
+           abs(t2SummitDist) > ((gapWidth + gapWidth*bidirectionalSkew)/2)) ~ FALSE,
       TRUE ~ t2Select
     )
   )
@@ -1054,24 +1105,27 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLengt
 #' Assign best target/s for each peak
 #'
 #' This function checks the different targets assigned for a peak and returns the
-#' optimum target gene/s.
+#' optimum target gene/s. See \strong{Use of arguments} section for more details.
 #'
-#' \strong{Use of \code{insideSkewToEndCut} (0.7)* and \code{promoterLength} (500)**: }
+#' @section Use of arguments:
+#' \subsection{insideSkewToEndCut}{
+#' Use of \code{select_optimal_targets(..., insideSkewToEndCut = 0.7, promoterLength = 500)}
 #' \preformatted{
-#' #                                                                #
-#' #           target1                *            target2          #
-#' #   0    0.25     0.5     0.75     |<--500-->|                   #
-#' #   =======>=======>=======>=======         =====>=====>===      #
-#' #                            ----                                #
-#' #                            peak1                               #
-#' #   |<--------0.7------->|                                       #
-#' #   **                                                           #
-#' #                                                                #
+#' #                                                                            #
+#' #                 target1                *            target2                #
+#' #         0    0.25     0.5     0.75     |<--500-->|                         #
+#' #         =======>=======>=======>=======           =====>=====>===>===      #
+#' #                                  ----                                      #
+#' #                                  peak1                                     #
+#' #         |<--------0.7------->|                                             #
+#' #         **                                                                 #
+#' #                                                                            #
 #' In above example, peak1 is inside target1 but it is near the end
 #' Relative position of the peak is >0.7 in target1. peak1 is also
 #' upstream of target2 and within 500bp. So new annotation is
 #' target1: pasudo_inside
 #' target2: upstream
+#' }
 #' }
 #'
 #'

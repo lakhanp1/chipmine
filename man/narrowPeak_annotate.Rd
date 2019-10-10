@@ -7,8 +7,10 @@
 narrowPeak_annotate(peakFile, fileFormat = "narrowPeak",
   summitRegion = 0, txdb, promoterLength, txIds = NULL,
   blacklistRegions = NULL, excludeType = c("tRNA", "rRNA", "snRNA",
-  "snoRNA", "ncRNA"), includeFractionCut = 0.7, bindingInGene = FALSE,
-  insideSkewToEndCut = 0.7, removePseudo = FALSE, output = NULL)
+  "snoRNA", "ncRNA"), bidirectionalDistance = 500,
+  bidirectionalSkew = 0.2, includeFractionCut = 0.7,
+  bindingInGene = FALSE, insideSkewToEndCut = 0.7,
+  removePseudo = FALSE, output = NULL)
 }
 \arguments{
 \item{peakFile}{A narroPeak or broadPeak file. If a broadPeak file, peak center is
@@ -35,6 +37,13 @@ Peaks overlapping with these regions are not used for annotation.}
 
 \item{excludeType}{Types of transcripts to exclude from annotation. Should be a
 character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}}
+
+\item{bidirectionalDistance}{If a peak is present at bidirectional promoter where
+distance between two TSS is < bidirectionalDistance, both the targets are assigned
+to the peak.}
+
+\item{bidirectionalSkew}{Maximum fraction of peak region allowed on the side of
+false target from the midpoint of two target genes. Default: 0.2}
 
 \item{includeFractionCut}{Number between [0, 1]. If a peak covers more than this
 fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7}
@@ -88,6 +97,87 @@ argument for the details.
 These observations will help to decide appropriate parameters while annotating
 the peaks using TxDB object.
 }
+\section{Use of arguments}{
+
+\subsection{upstreamOverlappingFraction}{
+There will be cases when a peak is inside a gene and it is upstream of other gene.
+\preformatted{
+#                                                                            #
+#           target1                     target2                              #
+#         =====<=======<===       =====<=======<========<=======             #
+#                                   ---            ----                      #
+#                                 peak1           peak2                      #
+#                         |<------>|                                         #
+#                         |<------------------------->|                      #
+#                                                                            #
+In above cases, peak1 can be annotated as Upstream of target1. However not peak2
+because target2 has bigger fraction in-between [target1, peak2] range
+
+Target gene inside gene case:
+#                                                                            #
+#         =====<=======<=======<=======<========<======= target2             #
+#          target1 ==<==                                                     #
+#                                   ---            ----                      #
+#                                 peak1           peak2                      #
+#                       |<-------->|                                         #
+#                                                                            #
+}
+In above case, peak1 is inside targe2 and upstream of target1. These targets are
+selected in \code{select_optimal_targets()} if peak lies within promoter range.
+}
+
+
+\subsection{bidirectionalDistance and bidirectionalSkew}{
+For peak at bidirectional promoter, its skewness from midpoint and summit poistion
+w.r.t. midpoint is used to decide correct target/s. \cr
+\code{nearest_upstream_bidirectional(..., bidirectionalDistance = 500,
+bidirectionalSkew = 0.2)}
+\preformatted{
+#                        *                                                   #
+#                    |<-------more than 500bp------>|                        #
+#         target1                    |                    target2            #
+#  ==<=====<=====<===                |               ===>===>====>====>==    #
+#                              --^---|- peak1                                #
+#                                 ---|^--- peak2                             #
+#                                    |                                       #
+#                                  --|-^------ peak3                         #
+#                                    |                                       #
+#                                 {  |  } middle 20\% region                  #
+#                                    |                                       #
+#                        midpoint between two targets                        #
+#                                                                            #
+peak1 => target1: more than 80% of the peak lies on target1 side from TSS midpoint
+         and peak summit is not in central 20\% region.
+peak2 => target1, targe2: peak lies on the center
+peak3 => Additionally, if peak summit (^) is within central 20\% region
+         (bidirectionalSkew), peak is assigned to both the target genes
+If gap between two bidirectional genes < bidirectionalDistance (default: 500bp),
+peak is assigned to both the target genes
+}
+}
+
+
+\subsection{insideSkewToEndCut}{
+Use of \code{select_optimal_targets(..., insideSkewToEndCut = 0.7, promoterLength = 500)}
+\preformatted{
+#                                                                            #
+#                 target1                *            target2                #
+#         0    0.25     0.5     0.75     |<--500-->|                         #
+#         =======>=======>=======>=======           =====>=====>===>===      #
+#                                  ----                                      #
+#                                  peak1                                     #
+#         |<--------0.7------->|                                             #
+#         **                                                                 #
+#                                                                            #
+In above example, peak1 is inside target1 but it is near the end
+Relative position of the peak is >0.7 in target1. peak1 is also
+upstream of target2 and within 500bp. So new annotation is
+target1: pasudo_inside
+target2: upstream
+}
+}
+}
+
 \examples{
 NA
 }

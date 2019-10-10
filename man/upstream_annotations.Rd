@@ -5,7 +5,8 @@
 \title{Annotate upstream peaks on transcripts}
 \usage{
 upstream_annotations(peaksGr, featuresGr, txdb = NULL,
-  upstreamOverlappingFraction = 0.2, promoterLength, ...)
+  upstreamOverlappingFraction = 0.2, promoterLength,
+  bidirectionalDistance, bidirectionalSkew)
 }
 \arguments{
 \item{peaksGr}{GRanges object for peak data}
@@ -23,43 +24,81 @@ If TxDB object is not provided, featuresGr is used. Default: featuresGr is used.
 \item{promoterLength}{Promoter region length. Upstream peaks within \code{promoterLength}
 distance of feature start are annotated as \code{promoter} region peaks.}
 
-\item{...}{Other arguments for \code{nearest_upstream_bidirectional()} function}
+\item{bidirectionalDistance}{If a peak is present at bidirectional promoter where
+distance between two TSS is < bidirectionalDistance, both the targets are assigned
+to the peak.}
+
+\item{bidirectionalSkew}{Maximum fraction of peak region allowed on the side of
+false target from the midpoint of two target genes. Default: 0.2}
 }
 \value{
 A modified peak GRanges object with additional columns: \code{ tx_id,
 peakType, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
 }
 \description{
-This function annotates the peaks with nearest downstream target. See Details.
+This function annotates the peaks with nearest downstream target.
+See \strong{Use of arguments} section for more details.
 }
-\details{
+\section{Use of arguments}{
+
+\subsection{upstreamOverlappingFraction}{
 There will be cases when a peak is inside a gene and it is upstream of other gene.
-\cr \strong{Use of \code{upstreamOverlappingFraction} (default: 0.2): }
 \preformatted{
-#                                                                         #
-#        target1                     target2                              #
-#      =====<=======<===       =====<=======<========<=======             #
-#                                ---            ----                      #
-#                              peak1           peak2                      #
-#                      |<------>|                                         #
-#                      |<------------------------->|                      #
-#                                                                         #
-in above cases, peak1 can be annotated as Upstream of target1. However not peak2
+#                                                                            #
+#           target1                     target2                              #
+#         =====<=======<===       =====<=======<========<=======             #
+#                                   ---            ----                      #
+#                                 peak1           peak2                      #
+#                         |<------>|                                         #
+#                         |<------------------------->|                      #
+#                                                                            #
+In above cases, peak1 can be annotated as Upstream of target1. However not peak2
 because target2 has bigger fraction in-between [target1, peak2] range
 
 Target gene inside gene case:
-#                                                                         #
-#              target1          target2 (longer)                          #
-#      =====<=======<=======<=======<========<=======                     #
-#               ==<==                                                     #
-#                                ---            ----                      #
-#                              peak1           peak2                      #
-#                    |<-------->|                                         #
-#                                                                         #
+#                                                                            #
+#         =====<=======<=======<=======<========<======= target2             #
+#          target1 ==<==                                                     #
+#                                   ---            ----                      #
+#                                 peak1           peak2                      #
+#                       |<-------->|                                         #
+#                                                                            #
 }
 In above case, peak1 is inside targe2 and upstream of target1. These targets are
 selected in \code{select_optimal_targets()} if peak lies within promoter range.
 }
+
+
+\subsection{bidirectionalDistance and bidirectionalSkew}{
+For peak at bidirectional promoter, its skewness from midpoint and summit poistion
+w.r.t. midpoint is used to decide correct target/s. \cr
+\code{nearest_upstream_bidirectional(..., bidirectionalDistance = 500,
+bidirectionalSkew = 0.2)}
+\preformatted{
+#                        *                                                   #
+#                    |<-------more than 500bp------>|                        #
+#         target1                    |                    target2            #
+#  ==<=====<=====<===                |               ===>===>====>====>==    #
+#                              --^---|- peak1                                #
+#                                 ---|^--- peak2                             #
+#                                    |                                       #
+#                                  --|-^------ peak3                         #
+#                                    |                                       #
+#                                 {  |  } middle 20\% region                  #
+#                                    |                                       #
+#                        midpoint between two targets                        #
+#                                                                            #
+peak1 => target1: more than 80% of the peak lies on target1 side from TSS midpoint
+         and peak summit is not in central 20\% region.
+peak2 => target1, targe2: peak lies on the center
+peak3 => Additionally, if peak summit (^) is within central 20\% region
+         (bidirectionalSkew), peak is assigned to both the target genes
+If gap between two bidirectional genes < bidirectionalDistance (default: 500bp),
+peak is assigned to both the target genes
+}
+}
+}
+
 \examples{
 NA
 }
