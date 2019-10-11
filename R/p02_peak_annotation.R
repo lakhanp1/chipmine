@@ -180,7 +180,6 @@ annotate_ranges <- function(peaks, txdb, promoterLength,
     ## using geneId instead of tx_id: for gene which have multiple tx, 5UTR/3UTR/Intron can get
     ## annotated with any tx
     bestPeakGeneTargets <- allTargetsDf %>%
-      dplyr::mutate(bidirectional = 0) %>%
       dplyr::group_by(name, geneId) %>%
       dplyr::arrange(preference, .by_group = TRUE) %>%
       dplyr::slice(1L) %>%
@@ -1116,19 +1115,22 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLengt
 #' Use of \code{select_optimal_targets(..., insideSkewToEndCut = 0.7, promoterLength = 500)}
 #' \preformatted{
 #' #                                                                            #
-#' #                 target1                *            target2                #
-#' #         0    0.25     0.5     0.75     |<--500-->|                         #
-#' #         =======>=======>=======>=======           =====>=====>===>===      #
-#' #                                  ----                                      #
-#' #                                  peak1                                     #
-#' #         |<--------0.7------->|                                             #
-#' #         **                                                                 #
+#' #                  d<500bp                                                   #
+#' #      target1    |<---->|    target2          |<--500-->|      target3      #
+#' #                        0  0.25  0.5  0.75  1                               #
+#' #    ====<====<===       =====>=====>=====>====           ====>====>===      #
+#' #                         --^--           --^--                              #
+#' #                         peak1           peak2                              #
+#' #                        |<----0.7---->|                                     #
+#' #                        **                                                  #
 #' #                                                                            #
-#' In above example, peak1 is inside target1 but it is near the end
-#' Relative position of the peak is >0.7 in target1. peak1 is also
-#' upstream of target2 and within 500bp. So new annotation is
-#' target1: pseudo_inside
-#' target2: upstream
+#' peak1 is inside target2 and it is near the start of target2. Even though peak1-
+#' target1 distance is < 500bp, target1 is marked as pseudo here.
+#' In above example, peak2 is inside target2 but it is near the end. Relative
+#' position of the peak2 is >0.7 in target2. peak2 is also upstream of target3 and
+#' within 750(500X1.5))bp. So correct annotations are:
+#' peak1: target2
+#' peak2: target2, target3
 #' }
 #' }
 #'
@@ -1274,7 +1276,7 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   # targetDf[unlist(masterIndexDf$featureInPeak[ruleB2]), ]
 
   ruleB2_farUp <- ruleB2[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleB2],
-                                        .f = function(x){abs(x[1]) > promoterLength})]
+                                        .f = function(x){abs(x[1]) > promoterLength * 1.5})]
 
   ## ACTION: set the upstreamTss to NULL if it is far than promoterLength
   masterIndexDf$upstreamTss[ruleB2_farUp] <- purrr::map(
@@ -1319,7 +1321,7 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
 
   ## peaks which also have upstreamTss but its far than promoterLength
   ruleC1_farUp <- ruleC1[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC1],
-                                        .f = function(x){abs(x[1]) > promoterLength})]
+                                        .f = function(x){abs(x[1]) > promoterLength * 1.5})]
 
   ## among these ruleC1_farUp peaks, check: nearEnd has peak summit after target end OR
   ## the peak overlap with nearEnd target is very small. i.e. find nearEnd targets where peaks
@@ -1344,7 +1346,7 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
 
   ## ACTION: set the nearEnd peaks to pseudo because:
   ## it is upstreamTss within promoter range or it is at very end for nearEnd
-  ruleC1_pro <- setdiff(x = ruleC1, ruleC1_farUp)
+  ruleC1_pro <- setdiff(x = ruleC1, y = ruleC1_farUp)
   markPseudoIdx <- append(markPseudoIdx, unlist(masterIndexDf$nearEnd[ruleC1_pro]))
 
 
@@ -1354,17 +1356,20 @@ select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
   # targetDf[unlist(masterIndexDf$upstreamTss[ruleC2]), ]
 
   ## ACTION: set the upstreamTss to NULL if it is far than promoterLength
+  ruleC2_pro <- ruleC2[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC2],
+                                      .f = function(x){abs(x[1]) <= promoterLength})]
+
   ruleC2_farUp <- ruleC2[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC2],
-                                        .f = function(x){abs(x[1]) > promoterLength})]
+                                        .f = function(x){abs(x[1]) > promoterLength * 1.5})]
+
+  ## upstreamTss peaks which are within promoter - 1.5Xpromoter region
+  ruleC2_nearUp <- setdiff(x = ruleC2, y = c(ruleC2_farUp, ruleC2_pro))
 
   masterIndexDf$upstreamTss[ruleC2_farUp] <- purrr::map(
     .x = masterIndexDf$upstreamTss[ruleC2_farUp],
     .f = ~ NULL)
 
   peakFound$upstreamTss[ruleC2_farUp] <- FALSE
-
-  ## upstreamTss peaks which are within promoter region
-  ruleC2_pro <- setdiff(x = ruleC2, ruleC2_farUp)
 
   ## ACTION: if peakInFeature peak lies near start: set upstreamTss to pseudo
   ruleC2_pro_ovStart <- ruleC2_pro[purrr::map_lgl(

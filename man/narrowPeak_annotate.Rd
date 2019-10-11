@@ -161,19 +161,22 @@ peak is assigned to both the target genes
 Use of \code{select_optimal_targets(..., insideSkewToEndCut = 0.7, promoterLength = 500)}
 \preformatted{
 #                                                                            #
-#                 target1                *            target2                #
-#         0    0.25     0.5     0.75     |<--500-->|                         #
-#         =======>=======>=======>=======           =====>=====>===>===      #
-#                                  ----                                      #
-#                                  peak1                                     #
-#         |<--------0.7------->|                                             #
-#         **                                                                 #
+#                  d<500bp                                                   #
+#      target1    |<---->|    target2          |<--500-->|      target3      #
+#                        0  0.25  0.5  0.75  1                               #
+#    ====<====<===       =====>=====>=====>====           ====>====>===      #
+#                         --^--           --^--                              #
+#                         peak1           peak2                              #
+#                        |<----0.7---->|                                     #
+#                        **                                                  #
 #                                                                            #
-In above example, peak1 is inside target1 but it is near the end
-Relative position of the peak is >0.7 in target1. peak1 is also
-upstream of target2 and within 500bp. So new annotation is
-target1: pseudo_inside
-target2: upstream
+peak1 is inside target2 and it is near the start of target2. Even though peak1-
+target1 distance is < 500bp, target1 is marked as pseudo here.
+In above example, peak2 is inside target2 but it is near the end. Relative
+position of the peak2 is >0.7 in target2. peak2 is also upstream of target3 and
+within 750(500X1.5))bp. So correct annotations are:
+peak1: target2
+peak2: target2, target3
 }
 }
 }
