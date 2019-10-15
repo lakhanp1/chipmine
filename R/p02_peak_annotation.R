@@ -1,4 +1,126 @@
+#' Annotate narrowPeak using TxDB
+#'
+#' This function annotate the MACS2 called peaks with appropriate target transcript and
+#' gene from TxDB object. Peaks are annnotated with following \strong{broad categories} and \emph{specific
+#' types} (listed in decreasing order of preference):
+#' \enumerate{
+#' \item \strong{featureInPeak:} \emph{"include_tx", "include_CDS"}
+#' \item \strong{nearStart:} \emph{"5UTR", "CDS_start", "tx_start"}
+#' \item \strong{nearEnd:} \emph{"3UTR", "tx_end", "CDS_end"}
+#' \item \strong{peakInFeature:} \emph{"exon", "intron", "inside_tx", "inside_CDS"}
+#' \item \strong{upstreamTss:} \emph{"promoter", "upstream"}
+#' \item \strong{intergenic:} \emph{"intergenic"}
+#' }
+#' Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
+#' annotated to two target genes/features and one of it is more optimum than other.
+#' The less optimum target type is prefixed with \emph{pseudo}. Please refer to the
+#' \strong{Details} section for specific information on this.
+#'
+#' Some important observations to do before annotating ChIPseq data:
+#' \enumerate{
+#' \item Whether the signal is like TF/polII i.e. factor binds across whole gene or not.
+#' Also see if binding is throughout the genome like CTCF factor.
+#' See \code{bindingInGene, promoterLength} arguments for the details.
+#' \item For the genes which are within peak region, what is the gene size (are
+#' genes shorter in length than normal) and how far is the next downstream gene.
+#' See \code{includeFractionCut} argument for the details.
+#' \item Are there any TES or 3' UTR peaks and how confident are they?
+#' \item Check the TXTYPE in TxDB object and see which type of features are of
+#' interest to you. Usually tRNA, rRNA are not needed. See \code{excludeType}
+#' argument for the details.
+#' }
+#' These observations will help to decide appropriate parameters while annotating
+#' the peaks using TxDB object.
+#'
+#'
+#' @param peakFile A narroPeak or broadPeak file. If a broadPeak file, peak center is
+#' used as summit as broadPeak file does not report summit
+#' @param fileFormat Format of the peak file. One of "narrowPeak" (Default) or "broadPeak".
+#' @param output Optionally store the annotation output to a file
+#' @param summitRegion Region width around peak summit to use for annotation purpose. This
+#' allows peaks with uniform peak width centered around summit. If 0, whole peak region
+#' is used. If > 0, it indicates how many basepairs to include upstream and downstream
+#' of the peak summit.
+#' @inheritParams annotate_ranges
+#' @inheritSection annotate_ranges Use of arguments
+#'
+#' @return A GenomicRanges object with peak annotation
+#' @export
+#'
+#' @examples NA
+narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
+                                summitRegion = 0,
+                                txdb, promoterLength, upstreamLimit,
+                                txIds = NULL, blacklistRegions = NULL,
+                                excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
+                                bidirectionalDistance = 500, bidirectionalSkew = 0.2,
+                                includeFractionCut = 0.7, bindingInGene = FALSE,
+                                insideSkewToEndCut = 0.7,
+                                removePseudo = FALSE,
+                                output = NULL){
 
+  ## started working for peak_annotation on larger genomes
+  fileFormat <- match.arg(arg = fileFormat, choices = c("narrowPeak", "broadPeak"))
+
+  ## calculate peak related features
+  peaks <- rtracklayer::import(con = peakFile, format = fileFormat)
+
+  if(length(peaks) == 0){
+    warning("no peak found in peak file ", basename(peakFile))
+    return(NULL)
+  }
+
+  if(is.null(mcols(peaks)$peak)){
+    mcols(peaks)$peak <- as.integer(width(peaks) / 2)
+  }
+
+  mcols(peaks)$peakRegion <- paste(
+    as.character(seqnames(peaks)), ":", start(peaks), "-", end(peaks), sep = ""
+  )
+
+  ## update the peak region used for the annotation.
+  if(summitRegion > 0){
+    ## start(peaks) + peaks$peak
+    peaks <- GenomicRanges::resize(
+      x = GenomicRanges::shift(x = peaks, shift = peaks$peak - summitRegion),
+      width = summitRegion*2, fix = "start"
+    )
+
+    ## update the summit
+    mcols(peaks)$peak <- as.integer(width(peaks) / 2)
+  }
+
+  ## use main function annotate_ranges() for annotation
+  peakTargetsGr <- annotate_ranges(
+    peaks = peaks, txdb = txdb,
+    promoterLength = promoterLength, upstreamLimit = upstreamLimit,
+    txIds = txIds, blacklistRegions = blacklistRegions, excludeType = excludeType,
+    bidirectionalDistance = bidirectionalDistance,
+    includeFractionCut = includeFractionCut, bindingInGene = bindingInGene,
+    insideSkewToEndCut = insideSkewToEndCut, removePseudo = removePseudo
+  )
+
+  ## rename narrowPeak/broadPeak specific columns
+  mcols(peakTargetsGr)$peakEnrichment <- mcols(peakTargetsGr)$signalValue
+  mcols(peakTargetsGr)$peakPval <- mcols(peakTargetsGr)$pValue
+  mcols(peakTargetsGr)$peakQval <- mcols(peakTargetsGr)$qValue
+
+  ## remove unnecessary columns from narrowPeak/broadPeak
+  mcols(peakTargetsGr)$signalValue <- NULL
+  mcols(peakTargetsGr)$pValue <- NULL
+  mcols(peakTargetsGr)$qValue <- NULL
+  mcols(peakTargetsGr)$score <- NULL
+
+  ## optionally store the data
+  if(!is.null(output)){
+    readr::write_tsv(x = as.data.frame(mcols(peakTargetsGr)), path = output)
+  }
+
+  return(peakTargetsGr)
+}
+
+
+##################################################################################
 
 #' Annotate GRanges using TxDB
 #'
@@ -32,14 +154,10 @@
 #' Peaks overlapping with these regions are not used for annotation.
 #' @param includeFractionCut Number between [0, 1]. If a peak covers more than this
 #' fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7
-#' @param bindingInGene Logical: whether the ChIPseq TF binds in gene body. This is
-#' useful for polII ChIPseq data. Default: FALSE
-#' @param insideSkewToEndCut A floating point number in range [0, 1]. If a peak is
-#' present inside feature/gene and the relative summit position is > insideSkewToEndCut,
-#' it is closer to the end of the feature. Default: 0.7
 #' @param removePseudo Logical: whether to remove peak targets which are marked as pseudo.
 #' Default: FALSE
 #' @inheritParams upstream_annotations
+#' @inheritParams select_optimal_targets
 #' @inheritSection upstream_annotations Use of arguments
 #' @inheritSection select_optimal_targets Use of arguments
 #'
@@ -47,7 +165,7 @@
 #' @export
 #'
 #' @examples NA
-annotate_ranges <- function(peaks, txdb, promoterLength,
+annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
                             txIds = NULL, blacklistRegions = NULL,
                             excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
                             bidirectionalDistance = 500, bidirectionalSkew = 0.2,
@@ -220,6 +338,7 @@ annotate_ranges <- function(peaks, txdb, promoterLength,
       multipleHitPeaks <- select_optimal_targets(
         targetGr = sort(unlist(multipleHitPeaksGrl, use.names = F)),
         promoterLength = promoterLength,
+        upstreamLimit = upstreamLimit,
         bindingInGene = bindingInGene,
         insideSkewToEndCut = insideSkewToEndCut)
     } else{
@@ -283,129 +402,6 @@ annotate_ranges <- function(peaks, txdb, promoterLength,
   mcols(peakTargetsGr)$txType <- NULL
   mcols(peakTargetsGr)$preference <- NULL
   names(peakTargetsGr) <- NULL
-
-  return(peakTargetsGr)
-}
-
-
-##################################################################################
-
-#' Annotate narrowPeak using TxDB
-#'
-#' This function annotate the MACS2 called peaks with appropriate target transcript and
-#' gene from TxDB object. Peaks are annnotated with following \strong{broad categories} and \emph{specific
-#' types} (listed in decreasing order of preference):
-#' \enumerate{
-#' \item \strong{featureInPeak:} \emph{"include_tx", "include_CDS"}
-#' \item \strong{nearStart:} \emph{"5UTR", "CDS_start", "tx_start"}
-#' \item \strong{nearEnd:} \emph{"3UTR", "tx_end", "CDS_end"}
-#' \item \strong{peakInFeature:} \emph{"exon", "intron", "inside_tx", "inside_CDS"}
-#' \item \strong{upstreamTss:} \emph{"promoter", "upstream"}
-#' \item \strong{intergenic:} \emph{"intergenic"}
-#' }
-#' Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
-#' annotated to two target genes/features and one of it is more optimum than other.
-#' The less optimum target type is prefixed with \emph{pseudo}. Please refer to the
-#' \strong{Details} section for specific information on this.
-#'
-#' Some important observations to do before annotating ChIPseq data:
-#' \enumerate{
-#' \item Whether the signal is like TF/polII i.e. factor binds across whole gene or not.
-#' Also see if binding is throughout the genome like CTCF factor.
-#' See \code{bindingInGene, promoterLength} arguments for the details.
-#' \item For the genes which are within peak region, what is the gene size (are
-#' genes shorter in length than normal) and how far is the next downstream gene.
-#' See \code{includeFractionCut} argument for the details.
-#' \item Are there any TES or 3' UTR peaks and how confident are they?
-#' \item Check the TXTYPE in TxDB object and see which type of features are of
-#' interest to you. Usually tRNA, rRNA are not needed. See \code{excludeType}
-#' argument for the details.
-#' }
-#' These observations will help to decide appropriate parameters while annotating
-#' the peaks using TxDB object.
-#'
-#'
-#' @param peakFile A narroPeak or broadPeak file. If a broadPeak file, peak center is
-#' used as summit as broadPeak file does not report summit
-#' @param fileFormat Format of the peak file. One of "narrowPeak" (Default) or "broadPeak".
-#' @param output Optionally store the annotation output to a file
-#' @param summitRegion Region width around peak summit to use for annotation purpose. This
-#' allows peaks with uniform peak width centered around summit. If 0, whole peak region
-#' is used. If > 0, it indicates how many basepairs to include upstream and downstream
-#' of the peak summit.
-#' @inheritParams annotate_ranges
-#' @inheritSection annotate_ranges Use of arguments
-#'
-#' @return A GenomicRanges object with peak annotation
-#' @export
-#'
-#' @examples NA
-narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
-                                summitRegion = 0,
-                                txdb, promoterLength,
-                                txIds = NULL, blacklistRegions = NULL,
-                                excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
-                                bidirectionalDistance = 500, bidirectionalSkew = 0.2,
-                                includeFractionCut = 0.7, bindingInGene = FALSE,
-                                insideSkewToEndCut = 0.7,
-                                removePseudo = FALSE,
-                                output = NULL){
-
-  ## started working for peak_annotation on larger genomes
-  fileFormat <- match.arg(arg = fileFormat, choices = c("narrowPeak", "broadPeak"))
-
-  ## calculate peak related features
-  peaks <- rtracklayer::import(con = peakFile, format = fileFormat)
-
-  if(length(peaks) == 0){
-    warning("no peak found in peak file ", basename(peakFile))
-    return(NULL)
-  }
-
-  if(is.null(mcols(peaks)$peak)){
-    mcols(peaks)$peak <- as.integer(width(peaks) / 2)
-  }
-
-  mcols(peaks)$peakRegion <- paste(
-    as.character(seqnames(peaks)), ":", start(peaks), "-", end(peaks), sep = ""
-  )
-
-  ## update the peak region used for the annotation.
-  if(summitRegion > 0){
-    ## start(peaks) + peaks$peak
-    peaks <- GenomicRanges::resize(
-      x = GenomicRanges::shift(x = peaks, shift = peaks$peak - summitRegion),
-      width = summitRegion*2, fix = "start"
-    )
-
-    ## update the summit
-    mcols(peaks)$peak <- as.integer(width(peaks) / 2)
-  }
-
-  ## use main function annotate_ranges() for annotation
-  peakTargetsGr <- annotate_ranges(
-    peaks = peaks, txdb = txdb, promoterLength = promoterLength,
-    txIds = txIds, blacklistRegions = blacklistRegions, excludeType = excludeType,
-    bidirectionalDistance = bidirectionalDistance,
-    includeFractionCut = includeFractionCut, bindingInGene = bindingInGene,
-    insideSkewToEndCut = insideSkewToEndCut, removePseudo = removePseudo
-  )
-
-  ## rename narrowPeak/broadPeak specific columns
-  mcols(peakTargetsGr)$peakEnrichment <- mcols(peakTargetsGr)$signalValue
-  mcols(peakTargetsGr)$peakPval <- mcols(peakTargetsGr)$pValue
-  mcols(peakTargetsGr)$peakQval <- mcols(peakTargetsGr)$qValue
-
-  ## remove unnecessary columns from narrowPeak/broadPeak
-  mcols(peakTargetsGr)$signalValue <- NULL
-  mcols(peakTargetsGr)$pValue <- NULL
-  mcols(peakTargetsGr)$qValue <- NULL
-  mcols(peakTargetsGr)$score <- NULL
-
-  ## optionally store the data
-  if(!is.null(output)){
-    readr::write_tsv(x = as.data.frame(mcols(peakTargetsGr)), path = output)
-  }
 
   return(peakTargetsGr)
 }
@@ -1116,19 +1112,19 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLengt
 #' \preformatted{
 #' #                                                                            #
 #' #                  d<500bp                                                   #
-#' #      target1    |<---->|    target2          |<--500-->|      target3      #
+#' #      target1    |<---->|    target2           |<--500-->|      target3     #
 #' #                        0  0.25  0.5  0.75  1                               #
-#' #    ====<====<===       =====>=====>=====>====           ====>====>===      #
-#' #                         --^--           --^--                              #
-#' #                         peak1           peak2                              #
+#' #    ====<====<===       =====>=====>=====>=~~~~           ====>====>===     #
+#' #                         --^--            --^--                             #
+#' #                         peak1            peak2                             #
 #' #                        |<----0.7---->|                                     #
 #' #                        **                                                  #
 #' #                                                                            #
-#' peak1 is inside target2 and it is near the start of target2. Even though peak1-
-#' target1 distance is < 500bp, target1 is marked as pseudo here.
-#' In above example, peak2 is inside target2 but it is near the end. Relative
-#' position of the peak2 is >0.7 in target2. peak2 is also upstream of target3 and
-#' within 750(500X1.5))bp. So correct annotations are:
+#' In first example, peak1 is inside target2 and it is near the start of target2.
+#' Even though peak1-target1 distance is < 500bp, target1 is marked as pseudo here.
+#' In another example, peak2 is inside target2 but it is near the end at 3'UTR.
+#' Relative position of the peak2 is >0.7 in target2. peak2 is also upstream of
+#' target3 and within (upstreamLimit)bp. So correct annotations are:
 #' peak1: target2
 #' peak2: target2, target3
 #' }
@@ -1142,6 +1138,8 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLengt
 #' present inside feature/gene and the relative summit position is > insideSkewToEndCut,
 #' it is closer to the end of the feature. Default: 0.7
 #' @param promoterLength Promoter length in number of nucleotides
+#' @param upstreamLimit Maximum distance of peak for upstream annotation. Peak beyond
+#' this distance can be considered as intergenic instead.
 #' @param bindingInGene Logical: whether the ChIPseq TF binds in gene body. This is
 #' useful for polII ChIPseq data. Default: FALSE
 #'
@@ -1150,8 +1148,8 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLengt
 #' @export
 #'
 #' @examples NA
-select_optimal_targets <- function(targetGr, promoterLength, bindingInGene,
-                                   insideSkewToEndCut){
+select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
+                                   bindingInGene, insideSkewToEndCut){
 
   ## important to sort the targets based on peakDist and relativePeakPos
   ## rowIdx will be used later to extract correct targets

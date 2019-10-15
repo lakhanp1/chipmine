@@ -4,7 +4,7 @@
 \alias{annotate_ranges}
 \title{Annotate GRanges using TxDB}
 \usage{
-annotate_ranges(peaks, txdb, promoterLength, txIds = NULL,
+annotate_ranges(peaks, txdb, promoterLength, upstreamLimit, txIds = NULL,
   blacklistRegions = NULL, excludeType = c("tRNA", "rRNA", "snRNA",
   "snoRNA", "ncRNA"), bidirectionalDistance = 500,
   bidirectionalSkew = 0.2, includeFractionCut = 0.7,
@@ -17,6 +17,9 @@ annotate_ranges(peaks, txdb, promoterLength, txIds = NULL,
 \item{txdb}{TxDB object which will be used for annotation}
 
 \item{promoterLength}{Promoter length in number of nucleotides.}
+
+\item{upstreamLimit}{Maximum distance of peak for upstream annotation. Peak beyond
+this distance can be considered as intergenic instead.}
 
 \item{txIds}{A vector of transcript IDs to be used specifically in the annotation
 process instead of full transcript set. These should be internal tx_ids from TxDB
@@ -134,19 +137,19 @@ Use of \code{select_optimal_targets(..., insideSkewToEndCut = 0.7, promoterLengt
 \preformatted{
 #                                                                            #
 #                  d<500bp                                                   #
-#      target1    |<---->|    target2          |<--500-->|      target3      #
+#      target1    |<---->|    target2           |<--500-->|      target3     #
 #                        0  0.25  0.5  0.75  1                               #
-#    ====<====<===       =====>=====>=====>====           ====>====>===      #
-#                         --^--           --^--                              #
-#                         peak1           peak2                              #
+#    ====<====<===       =====>=====>=====>=~~~~           ====>====>===     #
+#                         --^--            --^--                             #
+#                         peak1            peak2                             #
 #                        |<----0.7---->|                                     #
 #                        **                                                  #
 #                                                                            #
-peak1 is inside target2 and it is near the start of target2. Even though peak1-
-target1 distance is < 500bp, target1 is marked as pseudo here.
-In above example, peak2 is inside target2 but it is near the end. Relative
-position of the peak2 is >0.7 in target2. peak2 is also upstream of target3 and
-within 750(500X1.5))bp. So correct annotations are:
+In first example, peak1 is inside target2 and it is near the start of target2.
+Even though peak1-target1 distance is < 500bp, target1 is marked as pseudo here.
+In another example, peak2 is inside target2 but it is near the end at 3'UTR.
+Relative position of the peak2 is >0.7 in target2. peak2 is also upstream of
+target3 and within (upstreamLimit)bp. So correct annotations are:
 peak1: target2
 peak2: target2, target3
 }
