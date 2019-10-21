@@ -1283,6 +1283,7 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
 
   ## Future development: use priority list of peak category to select peak targets
   markPseudoIdx <- c()
+  bidirectIdx <- c()
 
   ## "featureInPeak", "nearStart", "nearEnd", "peakInFeature", "upstreamTss"
   ## nearStart peak
@@ -1291,8 +1292,56 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
   ruleA1 <- which(peakFound$nearStart & peakFound$upstreamTss)
   # targetDf[unlist(masterIndexDf$nearStart[ruleA1]), ]
 
+  ruleA1_bidirectIndex <- tibble::tibble(
+    masterIndex = ruleA1,
+    nearStart = masterIndexDf$nearStart[ruleA1],
+    upstreamTss = masterIndexDf$upstreamTss[ruleA1]
+  ) %>%
+    tidyr::unnest(cols = c(nearStart, upstreamTss)) %>%
+    dplyr::mutate(
+      nearStartStrand = targetDf$targetStrand[nearStart],
+      upstreamTssStrand = targetDf$targetStrand[upstreamTss]
+    ) %>%
+    dplyr::mutate(
+      strandMatch = if_else(condition = nearStartStrand == upstreamTssStrand,
+                            true = "same", false = "opposite")
+    )
+
+  ruleA1_sameDirUp <- ruleA1_bidirectIndex$masterIndex[
+    which(ruleA1_bidirectIndex$strandMatch == "same")]
+
+  ruleA1_bidirectPseudo <- nearest_upstream_bidirectional(
+    targetDf = targetDf,
+    t1Idx = ruleA1_bidirectIndex$nearStart,
+    t2Idx = ruleA1_bidirectIndex$upstreamTss,
+    promoterLength = promoterLength,
+    bidirectionalDistance = bidirectionalDistance,
+    pointBasedAnnotation = pointBasedAnnotation
+  )
+
+  ruleA1_bidirect <- purrr::map2(
+    .x = ruleA1_bidirectIndex$nearStart,
+    .y = ruleA1_bidirectIndex$upstreamTss,
+    .f = function(x, y){
+      if(any(c(x, y) %in% ruleA1_bidirectPseudo)){
+        return(NULL)
+      } else{
+        return(c(x, y))
+      }
+    }) %>%
+    purrr::flatten_int()
+
+  ## ACTION: mark upstreamTss as pseudo based on nearest_upstream_bidirectional()
+  ## no need to use masterIndexDf as ruleA1_bidirectPseudo has indices from targetDf
+  markPseudoIdx <- append(markPseudoIdx, ruleA1_bidirectPseudo)
+  bidirectIdx <- union(bidirectIdx, ruleA1_bidirect)
+
   ruleA1_farUp <- ruleA1[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleA1],
-                                        .f = function(x){abs(x[1]) > promoterLength})]
+                                        .f = function(x){abs(x[1]) > upstreamLimit})]
+
+  ## additionally add targets which are in same direction to mark them as NULL
+  ## use union to remove duplicates
+  ruleA1_farUp <- union(x = ruleA1_farUp, ruleA1_sameDirUp)
 
   ## ACTION: set the upstreamTss to NULL if it is far than promoterLength
   masterIndexDf$upstreamTss[ruleA1_farUp] <- purrr::map(
@@ -1300,10 +1349,6 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
     .f = ~ NULL)
 
   peakFound$upstreamTss[ruleA1_farUp] <- FALSE
-
-  # ## ACTION: mark other upstreamTss within promoterLength as pseudo
-  # ruleA1_pro <- setdiff(x = ruleA1, ruleA1_farUp)
-  # markPseudoIdx <- append(markPseudoIdx, unlist(masterIndexDf$upstreamTss[ruleA1_pro]))
 
 
   ###########

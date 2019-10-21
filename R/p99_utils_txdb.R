@@ -11,8 +11,9 @@ get_txdb_transcripts_gr <- function(txdb, excludeType = NULL, tx = NULL){
 
     ## transcript to gene map
     txToGene <- suppressMessages(
-      AnnotationDbi::select(x = txdb, keys = AnnotationDbi::keys(x = txdb, keytype = "TXID"),
-                            columns = c("GENEID", "TXNAME", "TXTYPE"), keytype = "TXID")) %>%
+      AnnotationDbi::select(
+        x = txdb, keys = AnnotationDbi::keys(x = txdb, keytype = "TXID"),
+        columns = c("GENEID", "TXNAME", "TXTYPE"), keytype = "TXID")) %>%
       dplyr::mutate(TXID = as.character(TXID)) %>%
       dplyr::rename(geneId = GENEID, txName = TXNAME, txType = TXTYPE)
 
@@ -30,9 +31,10 @@ get_txdb_transcripts_gr <- function(txdb, excludeType = NULL, tx = NULL){
     }
 
     ## extract transcript GRanges
-    transcriptsGr <- GenomicFeatures::transcripts(x = txdb,
-                                                  columns = c("tx_id", "tx_name", "tx_type", "gene_id"),
-                                                  filter = txFilter)
+    transcriptsGr <- GenomicFeatures::transcripts(
+      x = txdb, filter = txFilter,
+      columns = c("tx_id", "tx_name", "tx_type", "gene_id")
+    )
 
     mcols(transcriptsGr)$tx_id <- as.character(mcols(transcriptsGr)$tx_id)
 
