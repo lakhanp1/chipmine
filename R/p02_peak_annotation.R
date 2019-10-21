@@ -764,7 +764,7 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
                                                        subject = featuresGr,
                                                        ignore.strand = TRUE)
 
-    otherUpstream <- data.frame(
+    otherUpstream <- tibble::tibble(
       from = mcols(falseTargetsGr)$from[falseTargetOverlaps@from],
       peakId =  mcols(falseTargetsGr)$peakId[falseTargetOverlaps@from],
       to = falseTargetOverlaps@to,
@@ -790,7 +790,7 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
   ## combine putative upstream hits
   upstreamHits <- dplyr::bind_rows(upstreamHits, otherUpstream) %>%
     dplyr::arrange(from) %>%
-    dplyr::mutate(id = row_number())
+    dplyr::mutate(hitId = row_number())
 
   ## return null if nothing found
   if(nrow(upstreamHits) == 0){
@@ -806,41 +806,52 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
                                           y = featuresGr[upstreamHits$to])
 
   peakTargetGapsGr <- unstrand(peakTargetGapsGr)
-  names(peakTargetGapsGr) <- upstreamHits$id
+  names(peakTargetGapsGr) <- upstreamHits$hitId
+  mcols(peakTargetGapsGr)$hitId <- upstreamHits$hitId
 
   ## build a subject GRanges for tx - 3UTR
   ## Such custom regions are used because genes have very long 3' UTR.
   ## A peak in UTR region of a gene can be upstream of another gene
-  txMinusUtrs <- featuresGr
+  featureIdx <- tibble::tibble(
+    tx_id = mcols(featuresGr)$tx_id, featureIndex = 1:length(featuresGr)
+  )
+
   if(!is.null(txdb)){
     stopifnot(is(object = txdb, class2 = "TxDb"))
 
     fiveUtrGr <- get_txdb_fiveUtr_gr(txdb = txdb)
     threeUtrGr <- get_txdb_threeUtr_gr(txdb = txdb)
 
-    txMinusUtrs <- GenomicRanges::setdiff(x = txMinusUtrs,
-                                          y = threeUtrGr,
-                                          ignore.strand= TRUE)
+    threeUtrIdx <- tibble::tibble(
+      tx_id = mcols(threeUtrGr)$tx_id,
+      threeUtrIndex = 1:length(threeUtrGr)
+    ) %>%
+      dplyr::left_join(y = featureIdx, by = "tx_id")
 
-    ## 5UTR is not needed
-    # txMinusUtrs <- GenomicRanges::setdiff(x = txMinusUtrs,
-    #                                       y = fiveUtrGr,
-    #                                       ignore.strand= TRUE)
+    txMinus3Utrs <- GenomicRanges::psetdiff(
+      x = featuresGr[threeUtrIdx$featureIndex],
+      y = threeUtrGr[threeUtrIdx$threeUtrIndex],
+      ignore.strand= TRUE)
 
+    txMinusUtrs <- sort(
+      c(txMinus3Utrs,
+        featuresGr[setdiff(featureIdx$featureIndex, threeUtrIdx$featureIndex)],
+        ignore.mcols = TRUE)
+    )
+
+    ## no need to remove 5UTR
   }
 
-  ## find first overlapping gene/feature in gap GRanges
-  ## no need to find all.
-  featureInGap <- GenomicRanges::findOverlaps(query = peakTargetGapsGr,
-                                              subject = txMinusUtrs,
-                                              select = "first",
-                                              ignore.strand = TRUE)
+  ## find overlapping gene/features in gap GRanges.
+  featuresInGap <- GenomicRanges::findOverlaps(query = peakTargetGapsGr,
+                                               subject = txMinusUtrs,
+                                               ignore.strand = TRUE)
 
-  isFeatureInBetweenDf <- data.frame(
-    id = as.numeric(names(peakTargetGapsGr)),
-    gapWidth = width(peakTargetGapsGr),
-    gapGrRow = 1:length(featureInGap),
-    firstOverlapFeature = featureInGap,
+  isFeatureInBetweenDf <- tibble::tibble(
+    hitId = mcols(peakTargetGapsGr)$hitId[featuresInGap@from],
+    gapWidth = width(peakTargetGapsGr)[featuresInGap@from],
+    gapGrRow = featuresInGap@from,
+    firstOverlapFeature = featuresInGap@to,
     stringsAsFactors = FALSE
   ) %>%
     dplyr::filter(!is.na(firstOverlapFeature))
@@ -855,12 +866,17 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 
   isFeatureInBetweenDf$ovlpFeatureWd <- width(txMinusUtrs[isFeatureInBetweenDf$firstOverlapFeature])
   isFeatureInBetweenDf$ovlpFeatureFrac <- isFeatureInBetweenDf$intersectWd / isFeatureInBetweenDf$ovlpFeatureWd
-  isFeatureInBetweenDf$ovlpGapFrac <- isFeatureInBetweenDf$gapWidth / isFeatureInBetweenDf$intersectWd
+  isFeatureInBetweenDf$ovlpGapFrac <- isFeatureInBetweenDf$intersectWd / isFeatureInBetweenDf$gapWidth
+
+  isFeatureInBetweenDf <- dplyr::group_by(isFeatureInBetweenDf, hitId) %>%
+    dplyr::arrange(desc(ovlpFeatureFrac), .by_group = TRUE) %>%
+    dplyr::slice(1L) %>%
+    dplyr::ungroup()
 
   ## upstreamOverlappingFraction based filtering OR
   ## select if target is within promoterLength distance
   ## 0.2 is still very big for the large genomes such as human, mouse as genes are very long
-  upstreamHitsFiltered <- dplyr::left_join(x = upstreamHits, y = isFeatureInBetweenDf, by = "id") %>%
+  upstreamHitsFiltered <- dplyr::left_join(x = upstreamHits, y = isFeatureInBetweenDf, by = "hitId") %>%
     tidyr::replace_na(list(intersectWd = 0, ovlpFeatureWd = 0, ovlpFeatureFrac = 0, ovlpGapFrac = 0)) %>%
     dplyr::filter(ovlpFeatureFrac <= upstreamOverlappingFraction | gapWidth < promoterLength)
 
@@ -898,7 +914,8 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
       relativePeakPos = 0,
       bidirectional = 0,
       relativeSummitPos = dplyr::if_else(
-        condition = targetStrand == "-", true = 1 - relativeSummitPos, false = relativeSummitPos),
+        condition = targetStrand == "-",
+        true = round(1 - relativeSummitPos, 3), false = relativeSummitPos),
       peakType = if_else(abs(peakDist) < promoterLength, "promoter", peakType)
     ) %>%
     GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = TRUE)
