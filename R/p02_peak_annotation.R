@@ -214,6 +214,13 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
   ## create once and use multiple times
   # txdbEnv <- new.env(parent = emptyenv())
 
+  assign(x = "pointBasedAnnotation", value = FALSE, envir = txdbEnv)
+  if(all(width(peaks) < 10)){
+    assign(x = "pointBasedAnnotation", value = TRUE, envir = txdbEnv)
+  }
+
+  pointBasedAnnotation <- get(x = "pointBasedAnnotation", envir = txdbEnv)
+
   transcriptsGr <- get_txdb_transcripts_gr(txdb = txdb, excludeType = excludeType,
                                            tx = txIds)
   txToGene <- get(x = "txToGene", envir = txdbEnv)
@@ -339,7 +346,10 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
         promoterLength = promoterLength,
         upstreamLimit = upstreamLimit,
         bindingInGene = bindingInGene,
-        insideSkewToEndCut = insideSkewToEndCut)
+        insideSkewToEndCut = insideSkewToEndCut,
+        bidirectionalSkew = bidirectionalSkew,
+        bidirectionalDistance = bidirectionalDistance)
+
     } else{
       multipleHitPeaks <- NULL
     }
@@ -707,6 +717,12 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 
   stopifnot(is(object = peaksGr, class2 = "GRanges"))
   stopifnot(is(object = featuresGr, class2 = "GRanges"))
+
+  if(exists("pointBasedAnnotation", envir=txdbEnv, inherits=FALSE)) {
+    pointBasedAnnotation <- get(x = "pointBasedAnnotation", envir = txdbEnv)
+  } else{
+    stop("pointBasedAnnotation not found in txdbEnv")
+  }
 
   ## precede(ignore.strand = FALSE) is sufficient to find a peak that preceds a subject
   ## but for bidirectional peaks, precede() will return only nearest feature which is
@@ -1195,13 +1211,18 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLengt
 #' @param bindingInGene Logical: whether the ChIPseq TF binds in gene body. This is
 #' useful for polII ChIPseq data. Default: FALSE
 #'
+#' @inheritParams nearest_upstream_bidirectional
+#'
 #' @return Same GRanges object as peakGr but with modified peakType column or excluding
 #' some targets which were not optimum.
 #' @export
 #'
 #' @examples NA
 select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
-                                   bindingInGene, insideSkewToEndCut){
+                                   bindingInGene, insideSkewToEndCut,
+                                   bidirectionalSkew, bidirectionalDistance){
+
+  pointBasedAnnotation <- get(x = "pointBasedAnnotation", envir = txdbEnv)
 
   ## important to sort the targets based on peakDist and relativePeakPos
   ## rowIdx will be used later to extract correct targets
