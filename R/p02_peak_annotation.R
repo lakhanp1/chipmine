@@ -1435,23 +1435,28 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
   ruleC1 <- which(peakFound$upstreamTss & peakFound$nearEnd)
   # targetDf[unlist(masterIndexDf$upstreamTss[ruleC1]), ]
 
-  ## peaks which also have upstreamTss but its far than promoterLength
-  ruleC1_farUp <- ruleC1[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC1],
-                                        .f = function(x){abs(x[1]) > promoterLength * 1.5})]
+  ruleC1_pro <- ruleC1[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC1],
+                                      .f = function(x){abs(x[1]) <= promoterLength})]
 
-  ## among these ruleC1_farUp peaks, check: nearEnd has peak summit after target end OR
+  ## peaks which also have upstreamTss but its far than upstreamLimit
+  ruleC1_farUp <- ruleC1[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC1],
+                                        .f = function(x){abs(x[1]) > upstreamLimit})]
+
+  ## peaks which upstream but within upstreamLimit range
+  ruleC1_upLimit <- setdiff(x = ruleC1, y = ruleC1_farUp)
+  ruleC1_nearUp <- setdiff(x = ruleC1, y = c(ruleC1_pro, ruleC1_farUp))
+
+  ## among these ruleC1_nearUp peaks, check: nearEnd has peak summit after insideSkewToEndCut OR
   ## the peak overlap with nearEnd target is very small. i.e. find nearEnd targets where peaks
   ## are at very end of the target. upstreamTss targets should be TRUE for these
-  ruleC1_veryEnd <- purrr::map2_lgl(.x = summitPosDf$nearEnd[ruleC1_farUp],
-                                    .y = peakOvlpDf$nearEnd[ruleC1_farUp],
-                                    .f = function(x, y){x[1] == 1 || y[1] < 0.1})
+  ruleC1_veryEnd <- purrr::map2_lgl(
+    .x = summitPosDf$nearEnd[ruleC1_nearUp],
+    .y = peakOvlpDf$nearEnd[ruleC1_nearUp],
+    .f = function(x, y){x[1] >= insideSkewToEndCut || y[1] < 0.1})
 
   ## #********************************************************************************##
   ## using 0.1 as cutoff for peakOverlap. later can be converted to function argument ##
   ## #********************************************************************************##
-
-  ## skip such ruleC1_veryEnd from setting to NULL
-  ruleC1_farUp <- ruleC1_farUp[! ruleC1_veryEnd]
 
   ## ACTION: set upstreamTss = NULL if: upstreamTss is far & nearEnd is not at very end
   masterIndexDf$upstreamTss[ruleC1_farUp] <- purrr::map(
@@ -1460,9 +1465,11 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
 
   peakFound$upstreamTss[ruleC1_farUp] <- FALSE
 
+  ## add ruleC1_nearUp peaks which are also ruleC1_veryEnd to ruleC1_pro
+  ruleC1_pro <- append(ruleC1_pro, ruleC1_nearUp[ruleC1_veryEnd])
+
   ## ACTION: set the nearEnd peaks to pseudo because:
-  ## it is upstreamTss within promoter range or it is at very end for nearEnd
-  ruleC1_pro <- setdiff(x = ruleC1, y = ruleC1_farUp)
+  ## it is upstreamTss within promoter OR (nearUp range and it is at very end for nearEnd)
   markPseudoIdx <- append(markPseudoIdx, unlist(masterIndexDf$nearEnd[ruleC1_pro]))
 
 
