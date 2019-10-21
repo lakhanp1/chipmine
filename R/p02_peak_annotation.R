@@ -491,8 +491,25 @@ splicing_unit_annotations <- function(peaksGr, featuresGr, featureType, txdb){
     dplyr::mutate(
       bidirectional = 0,
       relativeSummitPos = dplyr::if_else(
-        condition = targetStrand == "-", true = 1 - relativeSummitPos, false = relativeSummitPos)
+        condition = targetStrand == "-",
+        true = round(1 - relativeSummitPos, 3), false = relativeSummitPos)
     )
+
+  if(featureType == "5UTR"){
+    ## ensure that for 5UTR region peak, peak does not go beyond target end
+    targetsDf <- dplyr::filter(
+      targetsDf,
+      (targetStrand == "+" & peakEnd < targetEnd) |
+        (targetStrand == "-" & peakStart > targetStart)
+    )
+  } else if(featureType == "3UTR"){
+    ## ensure that for 3UTR region peak, peak does not start before target start
+    targetsDf <- dplyr::filter(
+      targetsDf,
+      (targetStrand == "+" & peakStart > targetStart) |
+        (targetStrand == "-" & peakEnd < targetEnd)
+    )
+  }
 
   targetsGr <- sort(makeGRangesFromDataFrame(df = targetsDf, keep.extra.columns = TRUE))
   return(targetsGr)
