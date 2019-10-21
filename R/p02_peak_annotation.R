@@ -289,7 +289,6 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
 
   if(!is.null(peakAnnotations)){
 
-    ## remove "tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"
     allTargetsDf <- as.data.frame(peakAnnotations, row.names = NULL) %>%
       dplyr::left_join(y = txToGene, by = c("tx_id" = "TXID")) %>%
       dplyr::left_join(y = peakTypes, by = c("peakType" = "peakType"))
@@ -616,7 +615,8 @@ region_annotations <- function(peaksGr, featuresGr, includeFractionCut = 0.7, na
     dplyr::mutate(
       bidirectional = 0,
       relativeSummitPos = dplyr::if_else(
-        condition = targetStrand == "-", true = 1 - relativeSummitPos, false = relativeSummitPos)
+        condition = targetStrand == "-",
+        true = round(1 - relativeSummitPos, 3), false = relativeSummitPos)
     )
 
   ## convert back to GRanges
@@ -971,12 +971,25 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
       t1Idx = pairTable$t1,
       t2Idx = pairTable$t2,
       promoterLength = promoterLength,
-      bidirectionalDistance = bidirectionalDistance)
+      bidirectionalDistance = bidirectionalDistance,
+      pointBasedAnnotation = pointBasedAnnotation)
+
+    bidirectIdx <- purrr::map2(
+      .x = pairTable$t1, .y = pairTable$t2,
+      .f = function(x, y){
+        if(any(c(x, y) %in% pseudoUpIdx)){
+          return(NULL)
+        } else{
+          return(c(x, y))
+        }
+      }) %>%
+      purrr::flatten_int()
+
+    dualTargetPeaksDf$bidirectional[bidirectIdx] <- 1
 
     ## remove the targets which are too far based on nearest_upstream_bidirectional()
     dualTargetFiltered <- dualTargetPeaksDf[-pseudoUpIdx,] %>%
       dplyr::select(-rowIdx, -target) %>%
-      dplyr::mutate(bidirectional = 1) %>%
       GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = TRUE)
 
   }
@@ -1078,9 +1091,6 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLengt
 
   sameDirTargets <- which(targetA$targetStrand == targetB$targetStrand)
   targetPairDf$dir[sameDirTargets] <- "same"
-
-  # targetPairDf$t1Select[sameDirTargets] <- targetA$preference[sameDirTargets] < targetB$preference[sameDirTargets]
-  # targetPairDf$t2Select[sameDirTargets] <- targetA$preference[sameDirTargets] > targetB$preference[sameDirTargets]
 
 
   targetAGr <- dplyr::select(targetA, seqnames, targetStart, targetEnd, targetStrand, name, rowIdx) %>%
