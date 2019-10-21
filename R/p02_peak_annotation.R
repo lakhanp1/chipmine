@@ -1478,30 +1478,93 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
   ruleC2 <- which(peakFound$upstreamTss & peakFound$peakInFeature)
   # targetDf[unlist(masterIndexDf$upstreamTss[ruleC2]), ]
 
-  ## ACTION: set the upstreamTss to NULL if it is far than promoterLength
   ruleC2_pro <- ruleC2[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC2],
                                       .f = function(x){abs(x[1]) <= promoterLength})]
 
   ruleC2_farUp <- ruleC2[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC2],
-                                        .f = function(x){abs(x[1]) > promoterLength * 1.5})]
+                                        .f = function(x){abs(x[1]) > upstreamLimit})]
 
-  ## upstreamTss peaks which are within promoter - 1.5Xpromoter region
-  ruleC2_nearUp <- setdiff(x = ruleC2, y = c(ruleC2_farUp, ruleC2_pro))
+  ## upstreamTss peaks which are within upstreamLimit
+  ruleC2_upLimit <- setdiff(x = ruleC2, y = ruleC2_farUp)
+  ruleC2_nearUp <- setdiff(x = ruleC2, y = c(ruleC2_pro, ruleC2_farUp))
 
+  ## Identify ruleC2_upLimit peaks which are at very end for peakInFeature
+  ruleC2_upLimit_veryEnd <- ruleC2_upLimit[purrr::map_lgl(
+    .x = summitPosDf$peakInFeature[ruleC2_upLimit],
+    .f = function(x){all(x >= 0.95)})]
+
+  ## ACTION: upstreamTss is within upstreamLimit & peakInFeature is at very end:
+  ## set peakInFeature as pseudo
+  markPseudoIdx <- append(markPseudoIdx, unlist(masterIndexDf$peakInFeature[ruleC2_upLimit_veryEnd]))
+
+
+  ## identify ruleC2_upLimit peaks which are near start for peakInFeature
+  ruleC2_upLimit_ovStart <- ruleC2_upLimit[purrr::map_lgl(
+    .x = summitPosDf$peakInFeature[ruleC2_upLimit],
+    .f = function(x){all(x < (1 - insideSkewToEndCut))})]
+
+  ## solve this using nearest_upstream_bidirectional()
+  ruleC2_bidirectIndex <- tibble::tibble(
+    masterIndex = ruleC2_upLimit_ovStart,
+    peakInFeature = masterIndexDf$peakInFeature[ruleC2_upLimit_ovStart],
+    upstreamTss = masterIndexDf$upstreamTss[ruleC2_upLimit_ovStart]
+  ) %>%
+    tidyr::unnest(cols = c(peakInFeature, upstreamTss)) %>%
+    dplyr::mutate(
+      peakInFeatureStrand = targetDf$targetStrand[peakInFeature],
+      upstreamTssStrand = targetDf$targetStrand[upstreamTss]
+    ) %>%
+    dplyr::mutate(
+      strandMatch = if_else(condition = peakInFeatureStrand == upstreamTssStrand,
+                            true = "same", false = "opposite")
+    )
+
+  # ruleC2_targetDf <- targetDf
+  # ruleC2_targetDf$targetStart[ruleC2_bidirectIndex$peakInFeature] <- dplyr::if_else(
+  #   condition = ruleC2_targetDf$targetStrand[ruleC2_bidirectIndex$peakInFeature] == "+",
+  #   true = ruleC2_targetDf$peakSummit[ruleC2_bidirectIndex$peakInFeature],
+  #   false = ruleC2_targetDf$targetStart[ruleC2_bidirectIndex$peakInFeature])
+  #
+  # ruleC2_targetDf$targetEnd[ruleC2_bidirectIndex$peakInFeature] <- dplyr::if_else(
+  #   condition = ruleC2_targetDf$targetStrand[ruleC2_bidirectIndex$peakInFeature] == "-",
+  #   true = ruleC2_targetDf$peakSummit[ruleC2_bidirectIndex$peakInFeature],
+  #   false = ruleC2_targetDf$targetEnd[ruleC2_bidirectIndex$peakInFeature])
+
+  ruleC2_bidirectPseudo <- nearest_upstream_bidirectional(
+    targetDf = targetDf,
+    t1Idx = ruleC2_bidirectIndex$peakInFeature,
+    t2Idx = ruleC2_bidirectIndex$upstreamTss,
+    promoterLength = promoterLength,
+    bidirectionalDistance = bidirectionalDistance,
+    pointBasedAnnotation = pointBasedAnnotation
+  )
+
+  ruleC2_bidirect <- purrr::map2(
+    .x = ruleC2_bidirectIndex$peakInFeature,
+    .y = ruleC2_bidirectIndex$upstreamTss,
+    .f = function(x, y){
+      if(any(c(x, y) %in% ruleC2_bidirectPseudo)){
+        return(NULL)
+      } else{
+        return(c(x, y))
+      }
+    }) %>%
+    purrr::flatten_int()
+
+  ## no need to use masterIndexDf as ruleC2_bidirectPseudo has indices from targetDf
+  markPseudoIdx <- append(markPseudoIdx, ruleC2_bidirectPseudo)
+  bidirectIdx <- union(bidirectIdx, ruleC2_bidirect)
+
+  ## remaining ruleC2_nearUp: set as NULL
+  ruleC2_remaining_nearUp <- setdiff(x = ruleC2_nearUp, y = ruleC2_upLimit_ovStart)
+  ruleC2_farUp <- append(ruleC2_farUp, ruleC2_remaining_nearUp)
+
+  ## ACTION: set upstreamTss = NULL if: upstreamTss is beyond upstreamLimit
   masterIndexDf$upstreamTss[ruleC2_farUp] <- purrr::map(
     .x = masterIndexDf$upstreamTss[ruleC2_farUp],
     .f = ~ NULL)
 
   peakFound$upstreamTss[ruleC2_farUp] <- FALSE
-
-  ## ACTION: if peakInFeature peak lies near start: set upstreamTss to pseudo
-  ruleC2_pro_ovStart <- ruleC2_pro[purrr::map_lgl(
-    .x = summitPosDf$peakInFeature[ruleC2_pro],
-    .f = function(x){all(x < (1 - insideSkewToEndCut))})]
-
-  markPseudoIdx <- append(markPseudoIdx, unlist(masterIndexDf$upstreamTss[ruleC2_pro_ovStart]))
-
-  ## if peakInFeature peak lies near end: set peakInFeature to pseudo
 
 
   ###########
