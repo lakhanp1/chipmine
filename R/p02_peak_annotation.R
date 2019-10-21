@@ -1582,6 +1582,9 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
   ## mark selected targets to pseudo
   targetDf$peakType[markPseudoIdx] <- paste("pseudo_", targetDf$peakType[markPseudoIdx], sep = "")
 
+  ## add bidirectional information
+  targetDf$bidirectional[bidirectIdx] <- 2
+
   ## get the true targets
   trueTargetIdx <- c()
   for (ctg in c("featureInPeak", "nearStart", "nearEnd", "peakInFeature", "upstreamTss")) {
