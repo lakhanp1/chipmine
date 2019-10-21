@@ -1042,6 +1042,8 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 #' distance between two TSS is < bidirectionalDistance, both the targets are assigned
 #' to the peak.
 #' @param promoterLength Promoter length
+#' @param pointBasedAnnotation Logical: whether peak annotation is based on just
+#' the summit or whole peak region.
 #'
 #' @return A vector of row index for pseudo targets.
 #' @export
@@ -1049,7 +1051,8 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 #' @examples NA
 nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLength,
                                            bidirectionalSkew = 0.2,
-                                           bidirectionalDistance = 500){
+                                           bidirectionalDistance = 500,
+                                           pointBasedAnnotation = FALSE){
 
   targetPairDf <- tibble::tibble(t1Idx = t1Idx, t2Idx = t2Idx,
                                  t1Select = TRUE, t2Select = TRUE,
@@ -1090,10 +1093,10 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLengt
                              strand.field = "targetStrand",
                              keep.extra.columns = TRUE)
 
-
-  if(any(distance(x = targetAGr, y = targetBGr, ignore.strand = TRUE) == 0)){
-    stop("Distance between bidirectional target genes cannot be 0")
-  }
+  zeroGapTargets <- which(distance(x = targetAGr, y = targetBGr, ignore.strand = TRUE) == 0)
+  # if(any(distance(x = targetAGr, y = targetBGr, ignore.strand = TRUE) == 0)){
+  #   stop("Distance between bidirectional target genes cannot be 0")
+  # }
 
   ## gap between two bidirectional targets
   targetGapGr <- unstrand(pgap(x = targetAGr, y = targetBGr, ignore.strand = TRUE))
@@ -1104,23 +1107,27 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLengt
   # midpoint <- resize(x = targetGapGr, width = 1, fix = "center", ignore.strand = TRUE)
   # targetPairDf$midpointDist <- distance(x = midpoint, y = peakGr, ignore.strand = TRUE)
 
-  ##
-  targetPairDf <- dplyr::mutate(
-    targetPairDf,
+  centralNoSummitZone <- bidirectionalSkew
+
+  ## gapWidth condition has to be 1st always to ensure that the targets which are
+  ## very close are not marked pseudo
+  targetPairDf <- targetPairDf %>% dplyr::mutate(
     t1Select = dplyr::case_when(
-      gapWidth <= bidirectionalDistance ~ t1Select,
-      abs(t1PeakDist) < promoterLength ~ TRUE,
-      dir == "opposite" &
-        ((abs(t1PeakDist) + peakFraction) > (gapWidth/2) &
-           abs(t1SummitDist) > ((gapWidth + gapWidth*bidirectionalSkew)/2)) ~ FALSE,
+      gapWidth <= bidirectionalDistance & abs(t1PeakDist) < promoterLength ~ TRUE,
+      pointBasedAnnotation == FALSE & abs(t1PeakDist) < promoterLength ~ TRUE,
+      dir == "opposite" & pointBasedAnnotation == FALSE &
+        (abs(t1PeakDist) + peakFraction) > (gapWidth/2) ~ FALSE,
+      dir == "opposite" & pointBasedAnnotation &
+        abs(t1SummitDist) > ((gapWidth + gapWidth*centralNoSummitZone)/2) ~ FALSE,
       TRUE ~ t1Select
     ),
     t2Select = dplyr::case_when(
-      gapWidth <= bidirectionalDistance ~ t2Select,
-      abs(t2PeakDist) < promoterLength ~ TRUE,
-      dir == "opposite" &
-        ((abs(t2PeakDist) + peakFraction) > (gapWidth/2) &
-           abs(t2SummitDist) > ((gapWidth + gapWidth*bidirectionalSkew)/2)) ~ FALSE,
+      gapWidth <= bidirectionalDistance & abs(t2PeakDist) < promoterLength ~ TRUE,
+      pointBasedAnnotation == FALSE & abs(t2PeakDist) < promoterLength ~ TRUE,
+      dir == "opposite" & pointBasedAnnotation == FALSE &
+        (abs(t2PeakDist) + peakFraction) > (gapWidth/2) ~ FALSE,
+      dir == "opposite" & pointBasedAnnotation &
+        abs(t2SummitDist) > ((gapWidth + gapWidth*centralNoSummitZone)/2) ~ FALSE,
       TRUE ~ t2Select
     )
   )
