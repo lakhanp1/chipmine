@@ -5,7 +5,8 @@
 \title{True target for bidirectional peak}
 \usage{
 nearest_upstream_bidirectional(targetDf, t1Idx, t2Idx, promoterLength,
-  bidirectionalSkew = 0.2, bidirectionalDistance = 500)
+  bidirectionalSkew = 0.2, bidirectionalDistance = 500,
+  pointBasedAnnotation = FALSE)
 }
 \arguments{
 \item{targetDf}{A dataframe which has bidirectional targets for each peak.}
@@ -23,6 +24,9 @@ false target from the midpoint of two target genes. Default: 0.2}
 \item{bidirectionalDistance}{If a peak is present at bidirectional promoter where
 distance between two TSS is < bidirectionalDistance, both the targets are assigned
 to the peak.}
+
+\item{pointBasedAnnotation}{Logical: whether peak annotation is based on just
+the summit or whole peak region.}
 }
 \value{
 A vector of row index for pseudo targets.
@@ -45,18 +49,19 @@ bidirectionalSkew = 0.2)}
 #  ==<=====<=====<===                |               ===>===>====>====>==    #
 #                              --^---|- peak1                                #
 #                                 ---|^--- peak2                             #
+#                                  --|^------ peak3                          #
+#                peak4  --^--        |                                       #
 #                                    |                                       #
-#                                  --|-^------ peak3                         #
-#                                    |                                       #
-#                                 {  |  } middle 20\% region                  #
+#                                  { | } central 10\% region                 #
 #                                    |                                       #
 #                        midpoint between two targets                        #
 #                                                                            #
 peak1 => target1: more than 80% of the peak lies on target1 side from TSS midpoint
          and peak summit is not in central 20\% region.
 peak2 => target1, targe2: peak lies on the center
-peak3 => Additionally, if peak summit (^) is within central 20\% region
-         (bidirectionalSkew), peak is assigned to both the target genes
+peak3 => Additionally, if peak summit (^) is within central 10\% region
+         (= bidirectionalSkew/2), peak is assigned to both the target genes
+peak4 => target1
 If gap between two bidirectional genes < bidirectionalDistance (default: 500bp),
 peak is assigned to both the target genes
 }

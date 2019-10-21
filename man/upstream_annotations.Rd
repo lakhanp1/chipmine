@@ -81,18 +81,19 @@ bidirectionalSkew = 0.2)}
 #  ==<=====<=====<===                |               ===>===>====>====>==    #
 #                              --^---|- peak1                                #
 #                                 ---|^--- peak2                             #
+#                                  --|^------ peak3                          #
+#                peak4  --^--        |                                       #
 #                                    |                                       #
-#                                  --|-^------ peak3                         #
-#                                    |                                       #
-#                                 {  |  } middle 20\% region                  #
+#                                  { | } central 10\% region                 #
 #                                    |                                       #
 #                        midpoint between two targets                        #
 #                                                                            #
 peak1 => target1: more than 80% of the peak lies on target1 side from TSS midpoint
          and peak summit is not in central 20\% region.
 peak2 => target1, targe2: peak lies on the center
-peak3 => Additionally, if peak summit (^) is within central 20\% region
-         (bidirectionalSkew), peak is assigned to both the target genes
+peak3 => Additionally, if peak summit (^) is within central 10\% region
+         (= bidirectionalSkew/2), peak is assigned to both the target genes
+peak4 => target1
 If gap between two bidirectional genes < bidirectionalDistance (default: 500bp),
 peak is assigned to both the target genes
 }
