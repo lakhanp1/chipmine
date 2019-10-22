@@ -13,8 +13,8 @@ region_annotations(peaksGr, featuresGr, includeFractionCut = 0.7,
 \item{featuresGr}{GRanges object for regions on which peaks needs to be mapped. E.g:
 \code{GenomicFeatures::cdsBy()} or \code{GenomicFeatures::transcripts()}}
 
-\item{includeFractionCut}{A cutoff on peak coverage value of CDS. If peak covers more
-than this proportion of CDS, it is annotated as \code{inside_CDS}. Default: 0.7}
+\item{includeFractionCut}{A floating point number between [0, 1]. If peak covers more
+than this proportion of CDS, it is annotated as, eg. \code{include_tx}. Default: 0.7}
 
 \item{name}{Feature type to be used as suffix in peak type annotation. Eg. CDS, gene etc.}
 }

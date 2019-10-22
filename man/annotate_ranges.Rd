@@ -16,7 +16,8 @@ annotate_ranges(peaks, txdb, promoterLength, upstreamLimit, txIds = NULL,
 
 \item{txdb}{TxDB object which will be used for annotation}
 
-\item{promoterLength}{Promoter length in number of nucleotides.}
+\item{promoterLength}{Promoter region length. Upstream peaks within \code{promoterLength}
+distance of feature start are annotated as \code{promoter} region peaks.}
 
 \item{upstreamLimit}{Maximum distance of peak for upstream annotation. Peak beyond
 this distance can be considered as intergenic instead.}
@@ -39,8 +40,8 @@ to the peak.}
 \item{bidirectionalSkew}{Maximum fraction of peak region allowed on the side of
 false target from the midpoint of two target genes. Default: 0.2}
 
-\item{includeFractionCut}{Number between [0, 1]. If a peak covers more than this
-fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7}
+\item{includeFractionCut}{A floating point number between [0, 1]. If peak covers more
+than this proportion of CDS, it is annotated as, eg. \code{include_tx}. Default: 0.7}
 
 \item{bindingInGene}{Logical: whether the ChIPseq TF binds in gene body. This is
 useful for polII ChIPseq data. Default: FALSE}

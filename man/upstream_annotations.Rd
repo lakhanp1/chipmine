@@ -5,7 +5,7 @@
 \title{Annotate upstream peaks on transcripts}
 \usage{
 upstream_annotations(peaksGr, featuresGr, txdb = NULL,
-  upstreamOverlappingFraction = 0.2, promoterLength,
+  upstreamOverlappingFraction = 0.2, promoterLength, upstreamLimit,
   bidirectionalDistance, bidirectionalSkew)
 }
 \arguments{
@@ -23,6 +23,9 @@ If TxDB object is not provided, featuresGr is used. Default: featuresGr is used.
 
 \item{promoterLength}{Promoter region length. Upstream peaks within \code{promoterLength}
 distance of feature start are annotated as \code{promoter} region peaks.}
+
+\item{upstreamLimit}{Maximum distance of peak for upstream annotation. Peak beyond
+this distance can be considered as intergenic instead.}
 
 \item{bidirectionalDistance}{If a peak is present at bidirectional promoter where
 distance between two TSS is < bidirectionalDistance, both the targets are assigned

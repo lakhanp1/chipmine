@@ -13,7 +13,8 @@ select_optimal_targets(targetGr, promoterLength, upstreamLimit,
 combining \code{UTR_annotate(), region_annotations(), upstream_annotations()}
 functions.}
 
-\item{promoterLength}{Promoter length in number of nucleotides}
+\item{promoterLength}{Promoter region length. Upstream peaks within \code{promoterLength}
+distance of feature start are annotated as \code{promoter} region peaks.}
 
 \item{upstreamLimit}{Maximum distance of peak for upstream annotation. Peak beyond
 this distance can be considered as intergenic instead.}

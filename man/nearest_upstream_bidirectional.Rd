@@ -5,7 +5,7 @@
 \title{True target for bidirectional peak}
 \usage{
 nearest_upstream_bidirectional(targetDf, t1Idx, t2Idx, promoterLength,
-  bidirectionalSkew = 0.2, bidirectionalDistance = 500,
+  upstreamLimit, bidirectionalSkew = 0.2, bidirectionalDistance = 500,
   pointBasedAnnotation = FALSE)
 }
 \arguments{
@@ -16,7 +16,11 @@ nearest_upstream_bidirectional(targetDf, t1Idx, t2Idx, promoterLength,
 \item{t2Idx}{target2 index vector. IMP: \code{length(t1Idx)} should be equal to
 \code{length(t2Idx)}}
 
-\item{promoterLength}{Promoter length}
+\item{promoterLength}{Promoter region length. Upstream peaks within \code{promoterLength}
+distance of feature start are annotated as \code{promoter} region peaks.}
+
+\item{upstreamLimit}{Maximum distance of peak for upstream annotation. Peak beyond
+this distance can be considered as intergenic instead.}
 
 \item{bidirectionalSkew}{Maximum fraction of peak region allowed on the side of
 false target from the midpoint of two target genes. Default: 0.2}
