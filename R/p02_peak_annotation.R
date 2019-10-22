@@ -254,6 +254,7 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
   ## annotate upstream targets: IMP to give excludeType so that rRNA, tRNA, snRNAs will be removed
   upstreamTargets <- upstream_annotations(peaksGr = peaks, featuresGr = transcriptsGr,
                                           txdb = txdb, promoterLength = promoterLength,
+                                          upstreamLimit = upstreamLimit,
                                           bidirectionalDistance = bidirectionalDistance,
                                           bidirectionalSkew = bidirectionalSkew)
 
@@ -712,8 +713,8 @@ set_peakTarget_to_pseudo <- function(target){
 #' @examples NA
 upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
                                  upstreamOverlappingFraction = 0.2,
-                                 promoterLength, bidirectionalDistance,
-                                 bidirectionalSkew){
+                                 promoterLength, upstreamLimit,
+                                 bidirectionalDistance, bidirectionalSkew){
 
   stopifnot(is(object = peaksGr, class2 = "GRanges"))
   stopifnot(is(object = featuresGr, class2 = "GRanges"))
@@ -987,10 +988,13 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
       t1Idx = pairTable$t1,
       t2Idx = pairTable$t2,
       promoterLength = promoterLength,
+      upstreamLimit = upstreamLimit,
       bidirectionalDistance = bidirectionalDistance,
       pointBasedAnnotation = pointBasedAnnotation)
 
-    bidirectIdx <- purrr::map2(
+    correctUpstream <- setdiff(x = c(pairTable$t1, pairTable$t2), y = pseudoUpIdx)
+
+    bidirectAIdx <- purrr::map2(
       .x = pairTable$t1, .y = pairTable$t2,
       .f = function(x, y){
         if(any(c(x, y) %in% pseudoUpIdx)){
@@ -1004,7 +1008,7 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
     dualTargetPeaksDf$bidirectional[bidirectIdx] <- 1
 
     ## remove the targets which are too far based on nearest_upstream_bidirectional()
-    dualTargetFiltered <- dualTargetPeaksDf[-pseudoUpIdx,] %>%
+    dualTargetFiltered <- dualTargetPeaksDf[correctUpstream, ] %>%
       dplyr::select(-rowIdx, -target) %>%
       GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = TRUE)
 
@@ -1078,7 +1082,8 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 #' @export
 #'
 #' @examples NA
-nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLength,
+nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
+                                           promoterLength, upstreamLimit,
                                            bidirectionalSkew = 0.2,
                                            bidirectionalDistance = 500,
                                            pointBasedAnnotation = FALSE){
@@ -1141,6 +1146,7 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLengt
     t1Select = dplyr::case_when(
       gapWidth <= bidirectionalDistance & abs(t1PeakDist) < promoterLength ~ TRUE,
       pointBasedAnnotation == FALSE & abs(t1PeakDist) < promoterLength ~ TRUE,
+      abs(t1PeakDist) > upstreamLimit & abs(t2PeakDist) <= promoterLength ~ FALSE,
       dir == "opposite" & pointBasedAnnotation == FALSE &
         (abs(t1PeakDist) + peakFraction) > (gapWidth/2) ~ FALSE,
       dir == "opposite" & pointBasedAnnotation &
@@ -1150,6 +1156,7 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx, promoterLengt
     t2Select = dplyr::case_when(
       gapWidth <= bidirectionalDistance & abs(t2PeakDist) < promoterLength ~ TRUE,
       pointBasedAnnotation == FALSE & abs(t2PeakDist) < promoterLength ~ TRUE,
+      abs(t2PeakDist) > upstreamLimit & abs(t1PeakDist) <= promoterLength ~ FALSE,
       dir == "opposite" & pointBasedAnnotation == FALSE &
         (abs(t2PeakDist) + peakFraction) > (gapWidth/2) ~ FALSE,
       dir == "opposite" & pointBasedAnnotation &
@@ -1315,6 +1322,7 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
     t1Idx = ruleA1_bidirectIndex$nearStart,
     t2Idx = ruleA1_bidirectIndex$upstreamTss,
     promoterLength = promoterLength,
+    upstreamLimit = upstreamLimit,
     bidirectionalDistance = bidirectionalDistance,
     pointBasedAnnotation = pointBasedAnnotation
   )
@@ -1535,6 +1543,7 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
     t1Idx = ruleC2_bidirectIndex$peakInFeature,
     t2Idx = ruleC2_bidirectIndex$upstreamTss,
     promoterLength = promoterLength,
+    upstreamLimit = upstreamLimit,
     bidirectionalDistance = bidirectionalDistance,
     pointBasedAnnotation = pointBasedAnnotation
   )
