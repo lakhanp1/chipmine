@@ -499,7 +499,7 @@ splicing_unit_annotations <- function(peaksGr, featuresGr, featureType, txdb){
       )
     ) %>%
     dplyr::mutate(
-      bidirectional = 0,
+      bidirectional = NA,
       relativeSummitPos = dplyr::if_else(
         condition = targetStrand == "-",
         true = round(1 - relativeSummitPos, 3), false = relativeSummitPos)
@@ -624,7 +624,7 @@ region_annotations <- function(peaksGr, featuresGr, includeFractionCut = 0.7, na
       )
     ) %>%
     dplyr::mutate(
-      bidirectional = 0,
+      bidirectional = NA,
       relativeSummitPos = dplyr::if_else(
         condition = targetStrand == "-",
         true = round(1 - relativeSummitPos, 3), false = relativeSummitPos)
@@ -946,7 +946,7 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
     ) %>%
     dplyr::mutate(
       relativePeakPos = 0,
-      bidirectional = 0,
+      bidirectional = NA,
       relativeSummitPos = dplyr::if_else(
         condition = targetStrand == "-",
         true = round(1 - relativeSummitPos, 3), false = relativeSummitPos),
@@ -1005,7 +1005,7 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
       }) %>%
       purrr::flatten_int()
 
-    dualTargetPeaksDf$bidirectional[bidirectIdx] <- 1
+    dualTargetPeaksDf$bidirectional[bidirectAIdx] <- "A"
 
     ## remove the targets which are too far based on nearest_upstream_bidirectional()
     dualTargetFiltered <- dualTargetPeaksDf[correctUpstream, ] %>%
@@ -1290,7 +1290,7 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
 
   ## Future development: use priority list of peak category to select peak targets
   markPseudoIdx <- c()
-  bidirectIdx <- c()
+  bidirectBIdx <- c()
 
   ## "featureInPeak", "nearStart", "nearEnd", "peakInFeature", "upstreamTss"
   ## nearStart peak
@@ -1342,7 +1342,7 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
   ## ACTION: mark upstreamTss as pseudo based on nearest_upstream_bidirectional()
   ## no need to use masterIndexDf as ruleA1_bidirectPseudo has indices from targetDf
   markPseudoIdx <- append(markPseudoIdx, ruleA1_bidirectPseudo)
-  bidirectIdx <- union(bidirectIdx, ruleA1_bidirect)
+  bidirectBIdx <- union(bidirectBIdx, ruleA1_bidirect)
 
   ruleA1_farUp <- ruleA1[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleA1],
                                         .f = function(x){abs(x[1]) > upstreamLimit})]
@@ -1562,7 +1562,7 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
 
   ## no need to use masterIndexDf as ruleC2_bidirectPseudo has indices from targetDf
   markPseudoIdx <- append(markPseudoIdx, ruleC2_bidirectPseudo)
-  bidirectIdx <- union(bidirectIdx, ruleC2_bidirect)
+  bidirectBIdx <- union(bidirectBIdx, ruleC2_bidirect)
 
   ## remaining ruleC2_nearUp: set as NULL
   ruleC2_remaining_nearUp <- setdiff(x = ruleC2_nearUp, y = ruleC2_upLimit_ovStart)
@@ -1592,7 +1592,8 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
   targetDf$peakType[markPseudoIdx] <- paste("pseudo_", targetDf$peakType[markPseudoIdx], sep = "")
 
   ## add bidirectional information
-  targetDf$bidirectional[bidirectIdx] <- 2
+  targetDf$bidirectional[bidirectBIdx] <- "B"
+  targetDf$bidirectional[bidirectCIdx] <- "C"
 
   ## get the true targets
   trueTargetIdx <- c()
