@@ -26,8 +26,8 @@ this distance can be considered as intergenic instead.}
 false target from the midpoint of two target genes. Default: 0.2}
 
 \item{bidirectionalDistance}{If a peak is present at bidirectional promoter where
-distance between two TSS is < bidirectionalDistance, both the targets are assigned
-to the peak.}
+distance between two TSS is < \code{bidirectionalDistance}, both the targets are
+assigned to the peak.}
 
 \item{pointBasedAnnotation}{Logical: whether peak annotation is based on just
 the summit or whole peak region.}
@@ -66,8 +66,8 @@ peak2 => target1, targe2: peak lies on the center
 peak3 => Additionally, if peak summit (^) is within central 10\% region
          (= bidirectionalSkew/2), peak is assigned to both the target genes
 peak4 => target1
-If gap between two bidirectional genes < bidirectionalDistance (default: 500bp),
-peak is assigned to both the target genes
+If gap between two bidirectional genes < \code{bidirectionalDistance}
+(default: 500bp), peak is assigned to both the target genes
 }
 }
 }

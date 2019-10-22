@@ -1,8 +1,9 @@
-#' Annotate narrowPeak using TxDB
+#' Annotate narrowPeak using \code{TxDB} object
 #'
 #' This function annotate the MACS2 called peaks with appropriate target transcript and
-#' gene from TxDB object. Peaks are annnotated with following \strong{broad categories} and \emph{specific
-#' types} (listed in decreasing order of preference):
+#' gene from \code{TxDB} object. Internally uses \code{annotate_ranges()} for Granges
+#' annotation. Peaks are annnotated with the following \strong{broad categories} and
+#' \emph{specific types} (listed in decreasing order of preference):
 #' \enumerate{
 #' \item \strong{featureInPeak:} \emph{"include_tx", "include_CDS"}
 #' \item \strong{nearStart:} \emph{"5UTR", "CDS_start", "tx_start"}
@@ -12,22 +13,23 @@
 #' \item \strong{intergenic:} \emph{"intergenic"}
 #' }
 #' Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
-#' annotated to two target genes/features and one of it is more optimum than other.
+#' annotated to two target genes/features and one of it is more optimum than the other.
 #' The less optimum target type is prefixed with \emph{pseudo}. Please refer to the
-#' \strong{Details} section for specific information on this.
+#' \strong{Guidelines} section for specific information on this.
 #'
+#' @section Guidelines:
 #' Some important observations to do before annotating ChIPseq data:
 #' \enumerate{
-#' \item Whether the signal is like TF/polII i.e. factor binds across whole gene or not.
-#' Also see if binding is throughout the genome like CTCF factor.
-#' See \code{bindingInGene, promoterLength} arguments for the details.
+#' \item Whether the signal is sharp peak (normal TF peaks) or over broader region
+#' (polII signal over gene body). Also check if binding is throughout the genome like
+#' CTCF factor. See \code{bindingInGene, promoterLength} arguments for the details.
 #' \item For the genes which are within peak region, what is the gene size (are
 #' genes shorter in length than normal) and how far is the next downstream gene.
 #' See \code{includeFractionCut} argument for the details.
 #' \item Are there any TES or 3' UTR peaks and how confident are they?
-#' \item Check the TXTYPE in TxDB object and see which type of features are of
-#' interest to you. Usually tRNA, rRNA are not needed. See \code{excludeType}
-#' argument for the details.
+#' \item Check the \code{TXTYPE} column in \code{TxDB} object and see which type of
+#' features are of interest to you. Usually tRNA, rRNA are not needed.See
+#' \code{excludeType} argument for the details.
 #' }
 #' These observations will help to decide appropriate parameters while annotating
 #' the peaks using TxDB object.
@@ -41,7 +43,9 @@
 #' allows peaks with uniform peak width centered around summit. If 0, whole peak region
 #' is used. If > 0, it indicates how many basepairs to include upstream and downstream
 #' of the peak summit.
+#'
 #' @inheritParams annotate_ranges
+#'
 #' @inheritSection annotate_ranges Use of arguments
 #'
 #' @return A GenomicRanges object with peak annotation
@@ -122,7 +126,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 
 ##################################################################################
 
-#' Annotate GRanges using TxDB
+#' Annotate GRanges using \code{TxDB} object
 #'
 #' This is a generic function to annotate GRanges object with TxDB annotations. \cr
 #' Regions are annnotated with following \strong{broad categories} and \emph{specific
@@ -142,13 +146,15 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 #'
 #'
 #' @param peaks A GRanges object with name column.
-#' @param txdb TxDB object which will be used for annotation
+#' @param txdb \code{TxDB} object which will be used for annotation
 #' @param txIds A vector of transcript IDs to be used specifically in the annotation
-#' process instead of full transcript set. These should be internal tx_ids from TxDB
+#' process instead of full transcript set. These should be internal tx_ids from \code{TxDB}
 #' object. This is useful feature to exclude tRNA, rRNA transcripts while annotating
 #' the regions. Default: NULL
 #' @param excludeType Types of transcripts to exclude from annotation. Should be a
-#' character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}
+#' character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}.
+#' This argument work only when \code{TxDB} object has \code{TXTYPE} column with
+#' appropriate transcripy type values.
 #' @param blacklistRegions A BED file or GRanges object with ChIPseq blacklist regions.
 #' Peaks overlapping with these regions are not used for annotation.
 #' @param removePseudo Logical: whether to remove peak targets which are marked as pseudo.
@@ -538,8 +544,8 @@ splicing_unit_annotations <- function(peaksGr, featuresGr, featureType, txdb){
 #' @param peaksGr GRanges object generated from narrowPeak or broadPeak file
 #' @param featuresGr GRanges object for regions on which peaks needs to be mapped. E.g:
 #'  \code{GenomicFeatures::cdsBy()} or \code{GenomicFeatures::transcripts()}
-#' @param includeFractionCut A floating point number between [0, 1]. If peak covers more
-#' than this proportion of CDS, it is annotated as, eg. \code{include_tx}. Default: 0.7
+#' @param includeFractionCut A floating point number between [0, 1]. If a peak covers more
+#' than this proportion of feature, it is annotated as, eg. \code{include_tx}. Default: 0.7
 #' @param name Feature type to be used as suffix in peak type annotation. Eg. CDS, gene etc.
 #'
 #' @return A modified peak GRanges object with additional columns: \code{tx_id,
@@ -671,7 +677,7 @@ set_peakTarget_to_pseudo <- function(target){
 #' #                                                                            #
 #' #           target1                     target2                              #
 #' #         =====<=======<===       =====<=======<========<=======             #
-#' #                                   ---            ----                      #
+#' #                                   -^--           --^-                      #
 #' #                                 peak1           peak2                      #
 #' #                         |<------>|                                         #
 #' #                         |<------------------------->|                      #
@@ -683,7 +689,7 @@ set_peakTarget_to_pseudo <- function(target){
 #' #                                                                            #
 #' #         =====<=======<=======<=======<========<======= target2             #
 #' #          target1 ==<==                                                     #
-#' #                                   ---            ----                      #
+#' #                                  -^--           --^-                      #
 #' #                                 peak1           peak2                      #
 #' #                       |<-------->|                                         #
 #' #                                                                            #
@@ -695,7 +701,7 @@ set_peakTarget_to_pseudo <- function(target){
 #'
 #' @param peaksGr GRanges object for peak data
 #' @param featuresGr A transcript GRanges object
-#' @param txdb Optional TxDB object. A UTR less region is created using TxDB and used
+#' @param txdb Optional TxDB object. A 3UTR less region is created using TxDB and used
 #' to find the overlap between peak and its downstream target. A max fractional
 #' overlap of 0.2 with geneA is allowed in a case when peak overlaps with a geneA and
 #' is upstream of geneB. This is useful for the peaks which are near TES of a geneA.
@@ -1059,8 +1065,8 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 #' peak3 => Additionally, if peak summit (^) is within central 10\% region
 #'          (= bidirectionalSkew/2), peak is assigned to both the target genes
 #' peak4 => target1
-#' If gap between two bidirectional genes < bidirectionalDistance (default: 500bp),
-#' peak is assigned to both the target genes
+#' If gap between two bidirectional genes < \code{bidirectionalDistance}
+#' (default: 500bp), peak is assigned to both the target genes
 #' }
 #' }
 #'
@@ -1072,8 +1078,8 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 #' @param bidirectionalSkew Maximum fraction of peak region allowed on the side of
 #' false target from the midpoint of two target genes. Default: 0.2
 #' @param bidirectionalDistance If a peak is present at bidirectional promoter where
-#' distance between two TSS is < bidirectionalDistance, both the targets are assigned
-#' to the peak.
+#' distance between two TSS is < \code{bidirectionalDistance}, both the targets are
+#' assigned to the peak.
 #' @param promoterLength Promoter region length. Upstream peaks within \code{promoterLength}
 #' distance of feature start are annotated as \code{promoter} region peaks.
 #' @param upstreamLimit Maximum distance of peak for upstream annotation. Peak beyond
@@ -1213,8 +1219,8 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
 #' combining \code{UTR_annotate(), region_annotations(), upstream_annotations()}
 #' functions.
 #' @param insideSkewToEndCut A floating point number in range [0, 1]. If a peak is
-#' present inside feature/gene and the relative summit position is > insideSkewToEndCut,
-#' it is closer to the end of the feature. Default: 0.7
+#' present inside feature/gene and the relative summit position is >
+#' \code{insideSkewToEndCut}, it is closer to the end of the feature. Default: 0.7
 #' @param bindingInGene Logical: whether the ChIPseq TF binds in gene body. This is
 #' useful for polII ChIPseq data. Default: FALSE
 #'

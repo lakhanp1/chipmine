@@ -13,7 +13,7 @@ upstream_annotations(peaksGr, featuresGr, txdb = NULL,
 
 \item{featuresGr}{A transcript GRanges object}
 
-\item{txdb}{Optional TxDB object. A UTR less region is created using TxDB and used
+\item{txdb}{Optional TxDB object. A 3UTR less region is created using TxDB and used
 to find the overlap between peak and its downstream target. A max fractional
 overlap of 0.2 with geneA is allowed in a case when peak overlaps with a geneA and
 is upstream of geneB. This is useful for the peaks which are near TES of a geneA.
@@ -28,8 +28,8 @@ distance of feature start are annotated as \code{promoter} region peaks.}
 this distance can be considered as intergenic instead.}
 
 \item{bidirectionalDistance}{If a peak is present at bidirectional promoter where
-distance between two TSS is < bidirectionalDistance, both the targets are assigned
-to the peak.}
+distance between two TSS is < \code{bidirectionalDistance}, both the targets are
+assigned to the peak.}
 
 \item{bidirectionalSkew}{Maximum fraction of peak region allowed on the side of
 false target from the midpoint of two target genes. Default: 0.2}
@@ -50,7 +50,7 @@ There will be cases when a peak is inside a gene and it is upstream of other gen
 #                                                                            #
 #           target1                     target2                              #
 #         =====<=======<===       =====<=======<========<=======             #
-#                                   ---            ----                      #
+#                                   -^--           --^-                      #
 #                                 peak1           peak2                      #
 #                         |<------>|                                         #
 #                         |<------------------------->|                      #
@@ -62,7 +62,7 @@ Target gene inside gene case:
 #                                                                            #
 #         =====<=======<=======<=======<========<======= target2             #
 #          target1 ==<==                                                     #
-#                                   ---            ----                      #
+#                                  -^--           --^-                      #
 #                                 peak1           peak2                      #
 #                       |<-------->|                                         #
 #                                                                            #
@@ -97,8 +97,8 @@ peak2 => target1, targe2: peak lies on the center
 peak3 => Additionally, if peak summit (^) is within central 10\% region
          (= bidirectionalSkew/2), peak is assigned to both the target genes
 peak4 => target1
-If gap between two bidirectional genes < bidirectionalDistance (default: 500bp),
-peak is assigned to both the target genes
+If gap between two bidirectional genes < \code{bidirectionalDistance}
+(default: 500bp), peak is assigned to both the target genes
 }
 }
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/p02_peak_annotation.R
 \name{annotate_ranges}
 \alias{annotate_ranges}
-\title{Annotate GRanges using TxDB}
+\title{Annotate GRanges using \code{TxDB} object}
 \usage{
 annotate_ranges(peaks, txdb, promoterLength, upstreamLimit, txIds = NULL,
   blacklistRegions = NULL, excludeType = c("tRNA", "rRNA", "snRNA",
@@ -14,7 +14,7 @@ annotate_ranges(peaks, txdb, promoterLength, upstreamLimit, txIds = NULL,
 \arguments{
 \item{peaks}{A GRanges object with name column.}
 
-\item{txdb}{TxDB object which will be used for annotation}
+\item{txdb}{\code{TxDB} object which will be used for annotation}
 
 \item{promoterLength}{Promoter region length. Upstream peaks within \code{promoterLength}
 distance of feature start are annotated as \code{promoter} region peaks.}
@@ -23,7 +23,7 @@ distance of feature start are annotated as \code{promoter} region peaks.}
 this distance can be considered as intergenic instead.}
 
 \item{txIds}{A vector of transcript IDs to be used specifically in the annotation
-process instead of full transcript set. These should be internal tx_ids from TxDB
+process instead of full transcript set. These should be internal tx_ids from \code{TxDB}
 object. This is useful feature to exclude tRNA, rRNA transcripts while annotating
 the regions. Default: NULL}
 
@@ -31,24 +31,26 @@ the regions. Default: NULL}
 Peaks overlapping with these regions are not used for annotation.}
 
 \item{excludeType}{Types of transcripts to exclude from annotation. Should be a
-character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}}
+character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}.
+This argument work only when \code{TxDB} object has \code{TXTYPE} column with
+appropriate transcripy type values.}
 
 \item{bidirectionalDistance}{If a peak is present at bidirectional promoter where
-distance between two TSS is < bidirectionalDistance, both the targets are assigned
-to the peak.}
+distance between two TSS is < \code{bidirectionalDistance}, both the targets are
+assigned to the peak.}
 
 \item{bidirectionalSkew}{Maximum fraction of peak region allowed on the side of
 false target from the midpoint of two target genes. Default: 0.2}
 
-\item{includeFractionCut}{A floating point number between [0, 1]. If peak covers more
-than this proportion of CDS, it is annotated as, eg. \code{include_tx}. Default: 0.7}
+\item{includeFractionCut}{A floating point number between [0, 1]. If a peak covers more
+than this proportion of feature, it is annotated as, eg. \code{include_tx}. Default: 0.7}
 
 \item{bindingInGene}{Logical: whether the ChIPseq TF binds in gene body. This is
 useful for polII ChIPseq data. Default: FALSE}
 
 \item{insideSkewToEndCut}{A floating point number in range [0, 1]. If a peak is
-present inside feature/gene and the relative summit position is > insideSkewToEndCut,
-it is closer to the end of the feature. Default: 0.7}
+present inside feature/gene and the relative summit position is >
+\code{insideSkewToEndCut}, it is closer to the end of the feature. Default: 0.7}
 
 \item{removePseudo}{Logical: whether to remove peak targets which are marked as pseudo.
 Default: FALSE}
@@ -81,7 +83,7 @@ There will be cases when a peak is inside a gene and it is upstream of other gen
 #                                                                            #
 #           target1                     target2                              #
 #         =====<=======<===       =====<=======<========<=======             #
-#                                   ---            ----                      #
+#                                   -^--           --^-                      #
 #                                 peak1           peak2                      #
 #                         |<------>|                                         #
 #                         |<------------------------->|                      #
@@ -93,7 +95,7 @@ Target gene inside gene case:
 #                                                                            #
 #         =====<=======<=======<=======<========<======= target2             #
 #          target1 ==<==                                                     #
-#                                   ---            ----                      #
+#                                  -^--           --^-                      #
 #                                 peak1           peak2                      #
 #                       |<-------->|                                         #
 #                                                                            #
@@ -128,8 +130,8 @@ peak2 => target1, targe2: peak lies on the center
 peak3 => Additionally, if peak summit (^) is within central 10\% region
          (= bidirectionalSkew/2), peak is assigned to both the target genes
 peak4 => target1
-If gap between two bidirectional genes < bidirectionalDistance (default: 500bp),
-peak is assigned to both the target genes
+If gap between two bidirectional genes < \code{bidirectionalDistance}
+(default: 500bp), peak is assigned to both the target genes
 }
 }
 

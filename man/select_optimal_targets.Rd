@@ -23,15 +23,15 @@ this distance can be considered as intergenic instead.}
 useful for polII ChIPseq data. Default: FALSE}
 
 \item{insideSkewToEndCut}{A floating point number in range [0, 1]. If a peak is
-present inside feature/gene and the relative summit position is > insideSkewToEndCut,
-it is closer to the end of the feature. Default: 0.7}
+present inside feature/gene and the relative summit position is >
+\code{insideSkewToEndCut}, it is closer to the end of the feature. Default: 0.7}
 
 \item{bidirectionalSkew}{Maximum fraction of peak region allowed on the side of
 false target from the midpoint of two target genes. Default: 0.2}
 
 \item{bidirectionalDistance}{If a peak is present at bidirectional promoter where
-distance between two TSS is < bidirectionalDistance, both the targets are assigned
-to the peak.}
+distance between two TSS is < \code{bidirectionalDistance}, both the targets are
+assigned to the peak.}
 }
 \value{
 Same GRanges object as peakGr but with modified peakType column or excluding
