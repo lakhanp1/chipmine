@@ -143,7 +143,6 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 #'
 #' @param peaks A GRanges object with name column.
 #' @param txdb TxDB object which will be used for annotation
-#' @param promoterLength Promoter length in number of nucleotides.
 #' @param txIds A vector of transcript IDs to be used specifically in the annotation
 #' process instead of full transcript set. These should be internal tx_ids from TxDB
 #' object. This is useful feature to exclude tRNA, rRNA transcripts while annotating
@@ -152,12 +151,13 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 #' character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}
 #' @param blacklistRegions A BED file or GRanges object with ChIPseq blacklist regions.
 #' Peaks overlapping with these regions are not used for annotation.
-#' @param includeFractionCut Number between [0, 1]. If a peak covers more than this
-#' fraction of feature/gene, it will be marked as include_tx/include_CDS. Default: 0.7
 #' @param removePseudo Logical: whether to remove peak targets which are marked as pseudo.
 #' Default: FALSE
+#'
+#' @inheritParams region_annotations
 #' @inheritParams upstream_annotations
 #' @inheritParams select_optimal_targets
+#'
 #' @inheritSection upstream_annotations Use of arguments
 #' @inheritSection select_optimal_targets Use of arguments
 #'
@@ -538,8 +538,8 @@ splicing_unit_annotations <- function(peaksGr, featuresGr, featureType, txdb){
 #' @param peaksGr GRanges object generated from narrowPeak or broadPeak file
 #' @param featuresGr GRanges object for regions on which peaks needs to be mapped. E.g:
 #'  \code{GenomicFeatures::cdsBy()} or \code{GenomicFeatures::transcripts()}
-#' @param includeFractionCut A cutoff on peak coverage value of CDS. If peak covers more
-#' than this proportion of CDS, it is annotated as \code{inside_CDS}. Default: 0.7
+#' @param includeFractionCut A floating point number between [0, 1]. If peak covers more
+#' than this proportion of CDS, it is annotated as, eg. \code{include_tx}. Default: 0.7
 #' @param name Feature type to be used as suffix in peak type annotation. Eg. CDS, gene etc.
 #'
 #' @return A modified peak GRanges object with additional columns: \code{tx_id,
@@ -701,9 +701,9 @@ set_peakTarget_to_pseudo <- function(target){
 #' is upstream of geneB. This is useful for the peaks which are near TES of a geneA.
 #' If TxDB object is not provided, featuresGr is used. Default: featuresGr is used.
 #' @param upstreamOverlappingFraction See details. Default: 0.2
-#' @param promoterLength Promoter region length. Upstream peaks within \code{promoterLength}
-#' distance of feature start are annotated as \code{promoter} region peaks.
+#'
 #' @inheritParams nearest_upstream_bidirectional
+#'
 #' @inheritSection nearest_upstream_bidirectional Use of arguments
 #'
 #' @return A modified peak GRanges object with additional columns: \code{ tx_id,
@@ -1074,7 +1074,10 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 #' @param bidirectionalDistance If a peak is present at bidirectional promoter where
 #' distance between two TSS is < bidirectionalDistance, both the targets are assigned
 #' to the peak.
-#' @param promoterLength Promoter length
+#' @param promoterLength Promoter region length. Upstream peaks within \code{promoterLength}
+#' distance of feature start are annotated as \code{promoter} region peaks.
+#' @param upstreamLimit Maximum distance of peak for upstream annotation. Peak beyond
+#' this distance can be considered as intergenic instead.
 #' @param pointBasedAnnotation Logical: whether peak annotation is based on just
 #' the summit or whole peak region.
 #'
@@ -1212,9 +1215,6 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
 #' @param insideSkewToEndCut A floating point number in range [0, 1]. If a peak is
 #' present inside feature/gene and the relative summit position is > insideSkewToEndCut,
 #' it is closer to the end of the feature. Default: 0.7
-#' @param promoterLength Promoter length in number of nucleotides
-#' @param upstreamLimit Maximum distance of peak for upstream annotation. Peak beyond
-#' this distance can be considered as intergenic instead.
 #' @param bindingInGene Logical: whether the ChIPseq TF binds in gene body. This is
 #' useful for polII ChIPseq data. Default: FALSE
 #'
