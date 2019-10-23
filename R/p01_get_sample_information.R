@@ -132,6 +132,13 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath,
         IP_tag %in% !!tfChipTags & !hasControl ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.targets.tab", sep = ""),
         TRUE ~ "NA"
+      ),
+      FE_bwFile = dplyr::case_when(
+        IP_tag %in% !!tfChipTags & hasControl ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.FE.bw", sep = ""),
+        IP_tag %in% !!tfChipTags & !hasControl ~
+          paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.FE.bw", sep = ""),
+        TRUE ~ "NA"
       )
     ) %>%
     dplyr::mutate_at(

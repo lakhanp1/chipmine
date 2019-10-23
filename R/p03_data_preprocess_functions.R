@@ -238,6 +238,10 @@ import_peak_annotation <- function(sampleId, peakAnnoFile, removePseudo = TRUE,
                   "summitDist", "peakType", "bidirectional", "targetOverlap", "peakOverlap",
                   "relativeSummitPos", "peakRegion", "peakPosition", "peakCategory")
 
+  if(!is.null(columns)){
+    columns <- match.arg(arg = columns, choices = c(renameCols, "geneId"), several.ok = TRUE)
+  }
+
   names(renameCols) <- paste(renameCols, sampleId, sep = ".")
 
   ## read peak annotation output

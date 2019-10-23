@@ -5,7 +5,8 @@
 \title{True target for bidirectional peak}
 \usage{
 nearest_upstream_bidirectional(targetDf, t1Idx, t2Idx, promoterLength,
-  skewFraction = 0.2, minTSS_gapForPseudo = 500)
+  upstreamLimit, bidirectionalSkew = 0.2, bidirectionalDistance = 500,
+  pointBasedAnnotation = FALSE)
 }
 \arguments{
 \item{targetDf}{A dataframe which has bidirectional targets for each peak.}
@@ -15,36 +16,62 @@ nearest_upstream_bidirectional(targetDf, t1Idx, t2Idx, promoterLength,
 \item{t2Idx}{target2 index vector. IMP: \code{length(t1Idx)} should be equal to
 \code{length(t2Idx)}}
 
-\item{promoterLength}{Promoter length}
+\item{promoterLength}{Promoter region length. Upstream peaks within \code{promoterLength}
+distance of feature start are annotated as \code{promoter} region peaks.}
 
-\item{skewFraction}{Minimum fraction of peak region allowed on the side of false target
-from the midpoint of two target genes. Default: 0.2}
+\item{upstreamLimit}{Maximum distance of peak for upstream annotation. Peak beyond
+this distance can be considered as intergenic instead.}
 
-\item{minTSS_gapForPseudo}{Valid distance between two target genes TSS to mark one as psuedo}
+\item{bidirectionalSkew}{Maximum fraction of peak region allowed on the side of
+false target from the midpoint of two target genes. Default: 0.2}
+
+\item{bidirectionalDistance}{If a peak is present at bidirectional promoter where
+distance between two TSS is < \code{bidirectionalDistance}, both the targets are
+assigned to the peak.}
+
+\item{pointBasedAnnotation}{Logical: whether peak annotation is based on just
+the summit or whole peak region.}
 }
 \value{
 A vector of row index for pseudo targets.
 }
 \description{
-This function uses following logic to select or reject target from bidirectional peak.
-\cr \strong{Use of \code{minTSS_gapForPseudo} (Default: 500)* and \code{skewFraction}
-(Default: 0.2):}
+In case of peak at bidirectional promoter, this function assigns one or both genes
+as peak target. See \strong{Use of arguments} section for more details.
+}
+\section{Use of arguments}{
+
+\subsection{bidirectionalDistance and bidirectionalSkew}{
+For peak at bidirectional promoter, its skewness from midpoint and summit poistion
+w.r.t. midpoint is used to decide correct target/s. \cr
+\code{nearest_upstream_bidirectional(..., bidirectionalDistance = 500,
+bidirectionalSkew = 0.2)}
 \preformatted{
-#                      *                                                   #
-#                     |<---more than 500bp--->|                            #
-#       target1                    |                    target2            #
-#   ==<=====<=====<===      peak1  |           ===>=====>=====>=====>==    #
-#                          ------- | peak2                                 #
-#                               ---|----                                   #
-#                                  |                                       #
-#                      midpoint between two targets                        #
-#                                                                          #
-peak1 => target1: more than 80% of the peak lies on target1 side
+#                        *                                                   #
+#                    |<-------more than 500bp------>|                        #
+#         target1                    |                    target2            #
+#  ==<=====<=====<===                |               ===>===>====>====>==    #
+#                              --^---|- peak1                                #
+#                                 ---|^--- peak2                             #
+#                                  --|^------ peak3                          #
+#                peak4  --^--        |                                       #
+#                                    |                                       #
+#                                  { | } central 10\% region                 #
+#                                    |                                       #
+#                        midpoint between two targets                        #
+#                                                                            #
+peak1 => target1: more than 80% of the peak lies on target1 side from TSS midpoint
+         and peak summit is not in central 20\% region.
 peak2 => target1, targe2: peak lies on the center
-If gap between two bidirectional genes < minTSS_gapForPseudo (default: 500bp),
-peak is assigned to both the targets
+peak3 => Additionally, if peak summit (^) is within central 10\% region
+         (= bidirectionalSkew/2), peak is assigned to both the target genes
+peak4 => target1
+If gap between two bidirectional genes < \code{bidirectionalDistance}
+(default: 500bp), peak is assigned to both the target genes
 }
 }
+}
+
 \examples{
 NA
 }
