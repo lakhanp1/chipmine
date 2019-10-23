@@ -12,7 +12,14 @@
 #' @param peakRegions Optional GRanges object which has master peak regions. If not provided,
 #' peaks from narrowPeak files are merged to create new master peakset.
 #' @param peakFormat Format of the peak file. One of \code{"narrowPeak", "broadPeak", "bed"}
-#' @param peakCols Column to extract from peak file. Default: \code{c("peakId", "peakEnrichment", "peakPval")}
+#' @param summitRegion Region width around peak summit to use for annotation purpose. This
+#' allows peaks with uniform peak width centered around summit. If 0, whole peak region
+#' is used. If > 0, it indicates how many basepairs to include upstream and downstream
+#' of the peak summit.
+#' @param peakCols Column to extract from peak file. Column names should be from this list:
+#' \code{c("peakChr", "peakStart", "peakEnd", "peakId", "peakScore", "peakStrand", "peakEnrichment",
+#' "peakPval", "peakQval", "peakSummit").}
+#' Default: \code{c("peakId", "peakEnrichment", "peakPval")}
 #' @param genome Optionally BSgenome object for extracting summit sequence
 #' @param summitSeqLen Length of sequence to extract at summit position. Default: 200
 #'
@@ -21,14 +28,43 @@
 #'
 #' @examples NA
 combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFormat = "narrowPeak",
+                                         summitRegion = 0,
                                          peakCols = c("peakId", "peakEnrichment", "peakPval"),
                                          genome = NULL, summitSeqLen = 200){
 
-  peakList <- GenomicRanges::GRangesList(lapply(X = sampleInfo$peakFile,
-                                                FUN = rtracklayer::import, format = peakFormat))
+  peakCols <- match.arg(
+    arg = peakCols,
+    choices = c("peakChr", "peakStart", "peakEnd", "peakId", "peakScore", "peakStrand",
+                "peakEnrichment", "peakPval", "peakQval", "peakSummit"),
+    several.ok = TRUE
+  )
+
+  peakFormat <- match.arg(arg = peakFormat, choices = c("narrowPeak", "broadPeak"))
+
+  peakList <- GenomicRanges::GRangesList(
+    lapply(X = sampleInfo$peakFile, FUN = rtracklayer::import, format = peakFormat)
+  )
+
+  ## optionally select a fix width region around summit instead of whole peak region
+  if(summitRegion > 0){
+    peakList <- endoapply(
+      X = peakList,
+      FUN = function(gr){
+
+        if(is.null(mcols(gr)$peak)){
+          mcols(gr)$peak <- as.integer(width(gr) / 2)
+        }
+
+        gr <- GenomicRanges::resize(
+          x = GenomicRanges::shift(x = gr, shift = gr$peak - summitRegion),
+          width = summitRegion*2, fix = "start"
+        )
+        return(gr)
+      }
+    )
+  }
 
   names(peakList) <- sampleInfo$sampleId
-
 
   ## create a GRangesList masterlist of peak regions
   if(is.null(peakRegions)){
@@ -86,10 +122,11 @@ combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFor
 
     if(! is.null(genome)){
       ## get the sequence around summit
-      summitSeq <- get_narrowpeak_summit_seq(npFile = sampleInfo$peakFile[i],
-                                             id = sampleName,
-                                             genome = genome,
-                                             length = summitSeqLen)
+      summitSeq <- get_peak_summit_seq(file = sampleInfo$peakFile[i],
+                                       sampleId = sampleName,
+                                       peakFormat = peakFormat,
+                                       genome = genome,
+                                       length = summitSeqLen)
 
       hits <- dplyr::left_join(x = hits, y = summitSeq, by = setNames("name", peakIdCol))
     }

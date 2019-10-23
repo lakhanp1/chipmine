@@ -79,17 +79,12 @@ region_coverage_matrix <- function(regions, exptInfo){
     stop("regions should be a GRanges  object")
   }
 
-  if(is.null(mcols(regions)$name)){
-    mcols(regions)$name <- names(regions)
-  }
-
   ## calculate coverage
   for(i in 1:nrow(exptInfo)){
     regions <- region_coverage(regions = regions, bwFile = exptInfo$bwFile[i], name = exptInfo$sampleId[i])
   }
 
-  covMat <- as.data.frame(mcols(regions)) %>%
-    dplyr::select(name, !!!exptInfo$sampleId)
+  covMat <- as.data.frame(mcols(regions))
 
   return(covMat)
 }
