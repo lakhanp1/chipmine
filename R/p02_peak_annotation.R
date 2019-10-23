@@ -1405,8 +1405,18 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
   ruleB2 <- which(peakFound$featureInPeak & peakFound$upstreamTss)
   # targetDf[unlist(masterIndexDf$featureInPeak[ruleB2]), ]
 
+  ## ********************* :future development: *******************************
+  ## work only on masterIndexDf and peakFound. use index directly to comapre/extract
+  ## various values from targetDf
+  # ruleB2_index <- masterIndexDf[ruleB2, ] %>%
+  #   dplyr::select(name, featureInPeak, upstreamTss) %>%
+  #   tidyr::unnest(cols = c(featureInPeak, upstreamTss))
+  ## ********************* :future development: *******************************
+
   ruleB2_farUp <- ruleB2[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleB2],
-                                        .f = function(x){abs(x[1]) > promoterLength * 1.5})]
+                                        .f = function(x){abs(x[1]) > upstreamLimit})]
+
+  ruleB2_upLimit <- setdiff(ruleB2, ruleB2_farUp)
 
   ## ACTION: set the upstreamTss to NULL if it is far than promoterLength
   masterIndexDf$upstreamTss[ruleB2_farUp] <- purrr::map(
@@ -1414,7 +1424,6 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
     .f = ~ NULL)
 
   peakFound$upstreamTss[ruleB2_farUp] <- FALSE
-  ## set bidirectional = 2
 
   ## ACTION: for the TF which has known binding over gene body (E.g. polII ChIP or histone marks)
   ## preference is for featureInPeak. all other targets are pseudo
@@ -1422,6 +1431,11 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
     masterIndexDf$upstreamTss[ruleB2] <- purrr::map(.x = masterIndexDf$upstreamTss[ruleB2],
                                                     .f = ~ NULL)
     peakFound$upstreamTss[ruleB2] <- FALSE
+
+  } else{
+    ## set bidirectional = 2
+    bidirectCIdx <- c(unlist(masterIndexDf$upstreamTss[ruleB2_upLimit]),
+                      unlist(masterIndexDf$featureInPeak[ruleB2_upLimit]))
 
   }
 
