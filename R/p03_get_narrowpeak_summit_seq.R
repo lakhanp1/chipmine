@@ -39,7 +39,7 @@ get_peak_summit_seq = function(file, peakFormat = "narrowPeak", sampleId, genome
   )
 
   ## check if there are any out of bound ranges based on seqlengths and trim
-  suppressWarnings(seqlengths(np) <- seqlengths(genome))
+  suppressWarnings(seqlengths(np) <- seqlengths(genome)[seqlevels(np)])
   np <- trim(np)
 
   ## get the DNA sequence for region
