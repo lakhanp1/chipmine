@@ -145,19 +145,17 @@ import_peaks_as_df <- function(file, sampleId, peakFormat = "narrowPeak",
 
   if(peakFormat == "narrowPeak"){
     peakCols <- match.arg(arg = peakCols, choices = colNames, several.ok = TRUE)
-    peaksDf <- data.table::fread(file = file, col.names = colNames, sep = "\t") %>%
-      tibble::as_tibble()
 
   } else if(peakFormat == "broadPeak"){
     peakCols <- match.arg(arg = peakCols, choices = colNames[1:9], several.ok = TRUE)
-    peaksDf <- data.table::fread(file = file, col.names = colNames[1:9], sep = "\t") %>%
-      tibble::as_tibble()
+    colNames <- colNames[1:9]
 
   } else{
     peakCols <- match.arg(arg = peakCols, choices = colNames[1:6], several.ok = TRUE)
-    peaksDf <- data.table::fread(file = file, col.names = colNames[1:6], sep = "\t") %>%
-      tibble::as_tibble()
+    colNames <- colNames[1:6]
   }
+
+  peaksDf <- suppressMessages(readr::read_tsv(file = file, col_names = colNames))
 
   renameCols <- peakCols
   names(renameCols) <- paste(peakCols, sampleId, sep = ".")
