@@ -20,7 +20,7 @@ Default: narrowPeak}
 \item{length}{Length of the region. Default: 200}
 
 \item{column_name_prefix}{Whether to modify the column names to include sampleId.
-If TRUE, the new column names are of format: sampleId.colName}
+If TRUE, the new column names are of format: colName.sampleId}
 }
 \value{
 A dataframe with three columns: name, summitRegion, summitSeq

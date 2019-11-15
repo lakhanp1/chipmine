@@ -128,7 +128,7 @@ combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFor
                                        genome = genome,
                                        length = summitSeqLen)
 
-      hits <- dplyr::left_join(x = hits, y = summitSeq, by = setNames("name", peakIdCol))
+      hits <- dplyr::left_join(x = hits, y = summitSeq, by = setNames(peakIdCol, peakIdCol))
     }
 
     ## join with master data
