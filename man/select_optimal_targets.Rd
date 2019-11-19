@@ -31,7 +31,7 @@ false target from the midpoint of two target genes. Default: 0.2}
 
 \item{bidirectionalDistance}{If a peak is present at bidirectional promoter where
 distance between two TSS is < \code{bidirectionalDistance}, both the targets are
-assigned to the peak.}
+assigned to the peak. Default: 1000}
 }
 \value{
 Same GRanges object as peakGr but with modified peakType column or excluding

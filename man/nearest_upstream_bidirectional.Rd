@@ -5,7 +5,7 @@
 \title{True target for bidirectional peak}
 \usage{
 nearest_upstream_bidirectional(targetDf, t1Idx, t2Idx, promoterLength,
-  upstreamLimit, bidirectionalSkew = 0.2, bidirectionalDistance = 500,
+  upstreamLimit, bidirectionalSkew = 0.2, bidirectionalDistance = 1000,
   pointBasedAnnotation = FALSE)
 }
 \arguments{
@@ -27,7 +27,7 @@ false target from the midpoint of two target genes. Default: 0.2}
 
 \item{bidirectionalDistance}{If a peak is present at bidirectional promoter where
 distance between two TSS is < \code{bidirectionalDistance}, both the targets are
-assigned to the peak.}
+assigned to the peak. Default: 1000}
 
 \item{pointBasedAnnotation}{Logical: whether peak annotation is based on just
 the summit or whole peak region.}
@@ -44,7 +44,7 @@ as peak target. See \strong{Use of arguments} section for more details.
 \subsection{bidirectionalDistance and bidirectionalSkew}{
 For peak at bidirectional promoter, its skewness from midpoint and summit poistion
 w.r.t. midpoint is used to decide correct target/s. \cr
-\code{nearest_upstream_bidirectional(..., bidirectionalDistance = 500,
+\code{nearest_upstream_bidirectional(..., bidirectionalDistance = 1000,
 bidirectionalSkew = 0.2)}
 \preformatted{
 #                        *                                                   #
@@ -67,7 +67,7 @@ peak3 => Additionally, if peak summit (^) is within central 10\% region
          (= bidirectionalSkew/2), peak is assigned to both the target genes
 peak4 => target1
 If gap between two bidirectional genes < \code{bidirectionalDistance}
-(default: 500bp), peak is assigned to both the target genes
+(default: 1000bp), peak is assigned to both the target genes
 }
 }
 }

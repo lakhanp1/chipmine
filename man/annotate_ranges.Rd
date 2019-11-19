@@ -6,7 +6,7 @@
 \usage{
 annotate_ranges(peaks, txdb, promoterLength, upstreamLimit, txIds = NULL,
   blacklistRegions = NULL, excludeType = c("tRNA", "rRNA", "snRNA",
-  "snoRNA", "ncRNA"), bidirectionalDistance = 500,
+  "snoRNA", "ncRNA"), bidirectionalDistance = 1000,
   bidirectionalSkew = 0.2, includeFractionCut = 0.7,
   bindingInGene = FALSE, insideSkewToEndCut = 0.7,
   removePseudo = FALSE)
@@ -37,7 +37,7 @@ appropriate transcripy type values.}
 
 \item{bidirectionalDistance}{If a peak is present at bidirectional promoter where
 distance between two TSS is < \code{bidirectionalDistance}, both the targets are
-assigned to the peak.}
+assigned to the peak. Default: 1000}
 
 \item{bidirectionalSkew}{Maximum fraction of peak region allowed on the side of
 false target from the midpoint of two target genes. Default: 0.2}
@@ -108,7 +108,7 @@ selected in \code{select_optimal_targets()} if peak lies within promoter range.
 \subsection{bidirectionalDistance and bidirectionalSkew}{
 For peak at bidirectional promoter, its skewness from midpoint and summit poistion
 w.r.t. midpoint is used to decide correct target/s. \cr
-\code{nearest_upstream_bidirectional(..., bidirectionalDistance = 500,
+\code{nearest_upstream_bidirectional(..., bidirectionalDistance = 1000,
 bidirectionalSkew = 0.2)}
 \preformatted{
 #                        *                                                   #
@@ -131,7 +131,7 @@ peak3 => Additionally, if peak summit (^) is within central 10\% region
          (= bidirectionalSkew/2), peak is assigned to both the target genes
 peak4 => target1
 If gap between two bidirectional genes < \code{bidirectionalDistance}
-(default: 500bp), peak is assigned to both the target genes
+(default: 1000bp), peak is assigned to both the target genes
 }
 }
 

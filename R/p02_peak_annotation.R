@@ -57,7 +57,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
                                 txdb, promoterLength, upstreamLimit,
                                 txIds = NULL, blacklistRegions = NULL,
                                 excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
-                                bidirectionalDistance = 500, bidirectionalSkew = 0.2,
+                                bidirectionalDistance = 1000, bidirectionalSkew = 0.2,
                                 includeFractionCut = 0.7, bindingInGene = FALSE,
                                 insideSkewToEndCut = 0.7,
                                 removePseudo = FALSE,
@@ -174,7 +174,7 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
                             txIds = NULL, blacklistRegions = NULL,
                             excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
-                            bidirectionalDistance = 500, bidirectionalSkew = 0.2,
+                            bidirectionalDistance = 1000, bidirectionalSkew = 0.2,
                             includeFractionCut = 0.7, bindingInGene = FALSE,
                             insideSkewToEndCut = 0.7,
                             removePseudo = FALSE){
@@ -1043,7 +1043,7 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 #' \subsection{bidirectionalDistance and bidirectionalSkew}{
 #' For peak at bidirectional promoter, its skewness from midpoint and summit poistion
 #' w.r.t. midpoint is used to decide correct target/s. \cr
-#' \code{nearest_upstream_bidirectional(..., bidirectionalDistance = 500,
+#' \code{nearest_upstream_bidirectional(..., bidirectionalDistance = 1000,
 #' bidirectionalSkew = 0.2)}
 #' \preformatted{
 #' #                        *                                                   #
@@ -1066,7 +1066,7 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 #'          (= bidirectionalSkew/2), peak is assigned to both the target genes
 #' peak4 => target1
 #' If gap between two bidirectional genes < \code{bidirectionalDistance}
-#' (default: 500bp), peak is assigned to both the target genes
+#' (default: 1000bp), peak is assigned to both the target genes
 #' }
 #' }
 #'
@@ -1079,7 +1079,7 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 #' false target from the midpoint of two target genes. Default: 0.2
 #' @param bidirectionalDistance If a peak is present at bidirectional promoter where
 #' distance between two TSS is < \code{bidirectionalDistance}, both the targets are
-#' assigned to the peak.
+#' assigned to the peak. Default: 1000
 #' @param promoterLength Promoter region length. Upstream peaks within \code{promoterLength}
 #' distance of feature start are annotated as \code{promoter} region peaks.
 #' @param upstreamLimit Maximum distance of peak for upstream annotation. Peak beyond
@@ -1094,7 +1094,7 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
                                            promoterLength, upstreamLimit,
                                            bidirectionalSkew = 0.2,
-                                           bidirectionalDistance = 500,
+                                           bidirectionalDistance = 1000,
                                            pointBasedAnnotation = FALSE){
 
   targetPairDf <- tibble::tibble(t1Idx = t1Idx, t2Idx = t2Idx,
