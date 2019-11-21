@@ -28,6 +28,10 @@ get_peak_summit_seq = function(file, peakFormat = "narrowPeak", sampleId, genome
 
   np <- rtracklayer::import(con = file, format = peakFormat)
 
+  if(length(np) == 0){
+    return(NULL)
+  }
+
   if(is.null(mcols(np)$peak)){
     mcols(np)$peak <- as.integer(width(np) / 2)
   }
