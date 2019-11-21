@@ -157,6 +157,10 @@ import_peaks_as_df <- function(file, sampleId, peakFormat = "narrowPeak",
 
   peaksDf <- suppressMessages(readr::read_tsv(file = file, col_names = colNames))
 
+  if(nrow(peaksDf) == 0){
+    return(NULL)
+  }
+
   renameCols <- peakCols
   names(renameCols) <- paste(peakCols, sampleId, sep = ".")
 

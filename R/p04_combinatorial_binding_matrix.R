@@ -12,10 +12,11 @@
 #' @param peakRegions Optional GRanges object which has master peak regions. If not provided,
 #' peaks from narrowPeak files are merged to create new master peakset.
 #' @param peakFormat Format of the peak file. One of \code{"narrowPeak", "broadPeak", "bed"}
-#' @param summitRegion Region width around peak summit to use for annotation purpose. This
-#' allows peaks with uniform peak width centered around summit. If 0, whole peak region
-#' is used. If > 0, it indicates how many basepairs to include upstream and downstream
-#' of the peak summit.
+#' @param summitRegion Region width around peak summit to use for while merging the peaks
+#' from multiple samples. With increasing number of peaksets, the mearging of peaks creates
+#' broader consensus peaksets. Using a small region around peak summit allows to limit this
+#' consensus peak width. If 0 (default), whole peak region is used. If \code{summitRegion > 0},
+#' \code{2 x summitRegion} region around peak summit is used to create consensus peakset.
 #' @param peakCols Column to extract from peak file. Column names should be from this list:
 #' \code{c("peakChr", "peakStart", "peakEnd", "peakId", "peakScore", "peakStrand", "peakEnrichment",
 #' "peakPval", "peakQval", "peakSummit").}
@@ -90,6 +91,14 @@ combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFor
     peakIdCol <- paste("peakId.", sampleName, sep = "")
     overlapPeakCol <- paste("overlap.", sampleName, sep = "")
 
+    if(length(peakList[[sampleName]]) == 0){
+      masterDf[[overlapPeakCol]] <- FALSE
+      for (x in peakCols) {
+        masterDf[[paste(x, ".", sampleName, sep = "")]] <- NA
+      }
+      next
+    }
+
     ## findOverlaps
     hits <- as.data.frame(GenomicRanges::findOverlaps(query = peakRegions, subject = peakList[[sampleName]]))
     hits$peakRegionName <- peakRegions$name[hits$queryHits]
@@ -101,9 +110,7 @@ combinatorial_binding_matrix <- function(sampleInfo, peakRegions = NULL, peakFor
     dt <- import_peaks_as_df(file = sampleInfo$peakFile[i],
                              sampleId = sampleName,
                              peakFormat = peakFormat,
-                             peakCols = peakCols) %>%
-      dplyr::distinct()
-
+                             peakCols = peakCols)
 
     dt[[overlapPeakCol]] <- TRUE
 
