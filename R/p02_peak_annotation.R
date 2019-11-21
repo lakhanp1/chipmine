@@ -1148,6 +1148,7 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
   # targetPairDf$midpointDist <- distance(x = midpoint, y = peakGr, ignore.strand = TRUE)
 
   centralNoSummitZone <- bidirectionalSkew
+  targetPairDf$summitPosLim <- (targetPairDf$gapWidth + targetPairDf$gapWidth*centralNoSummitZone)/2
 
   ## gapWidth condition has to be 1st always to ensure that the targets which are
   ## very close are not marked pseudo
@@ -1159,7 +1160,7 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
       dir == "opposite" & pointBasedAnnotation == FALSE &
         (abs(t1PeakDist) + peakFraction) > (gapWidth/2) ~ FALSE,
       dir == "opposite" & pointBasedAnnotation &
-        abs(t1SummitDist) > ((gapWidth + gapWidth*centralNoSummitZone)/2) ~ FALSE,
+        abs(t1SummitDist) > summitPosLim ~ FALSE,
       TRUE ~ t1Select
     ),
     t2Select = dplyr::case_when(
@@ -1169,7 +1170,7 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
       dir == "opposite" & pointBasedAnnotation == FALSE &
         (abs(t2PeakDist) + peakFraction) > (gapWidth/2) ~ FALSE,
       dir == "opposite" & pointBasedAnnotation &
-        abs(t2SummitDist) > ((gapWidth + gapWidth*centralNoSummitZone)/2) ~ FALSE,
+        abs(t2SummitDist) > summitPosLim ~ FALSE,
       TRUE ~ t2Select
     )
   )
