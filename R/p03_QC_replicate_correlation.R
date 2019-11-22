@@ -186,6 +186,7 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title, yintercept
   }
 
   if(nrow(commonPeaks) > 0){
+
     ## value XY scatter plot
     gg_scatter_val <- ggplot(
       data = commonPeaks,
@@ -209,6 +210,7 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title, yintercept
       labs(title = paste(compareConfig[[compare]]$plotLabel, "rank scatter plot")) +
       theme_bw() +
       theme_scatter
+
   } else{
     gg_scatter_val <- ggplot() +
       geom_text(mapping = aes(x = 0.5, y = 0.5), label = "No\ncommon\npeaks", size = 12) +

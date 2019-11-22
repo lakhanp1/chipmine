@@ -79,12 +79,12 @@ plot_MA_gg = function(df, s1, s2, title = NA, colorCol, pseudoCount = 0.1, ylim 
 #' Generate XY scatter plot for two sets
 #'
 #' @param df dataframe with values two columns for which scatter plot is to be generated
-#' @param s1 sample 1 column name
-#' @param s2 sample 2 column name
+#' @param sx sample 1 column name
+#' @param sy sample 2 column name
 #' @param title title to be showed on plot
 #' @param colorCol column name which should be used for coloring the points
 #' @param transformation trans argument from ggplot::scale_x_continuous() function.
-#' Default: log2
+#' Default: identity
 #' @param pseudoCount A small number to be added to the values to avoid log(0) error.
 #' Default: 0.1
 #'
@@ -92,36 +92,43 @@ plot_MA_gg = function(df, s1, s2, title = NA, colorCol, pseudoCount = 0.1, ylim 
 #' @export
 #'
 #' @examples NA
-plot_scatter <- function(df, s1, s2, title = "Scatter plot", colorCol, transformation = "log2", pseudoCount = 0.1){
+plot_scatter <- function(df, sx, sy, title = "Scatter plot", colorCol,
+                         transformation = "identity", pseudoCount = 0){
 
-  df2 <- df %>%
-    dplyr::mutate(
-      s1 = !!sym(s1) + pseudoCount,
-      s2 = !!sym(s2) + pseudoCount
-    )
-
+  if(pseudoCount > 0){
+    df <- df %>%
+      dplyr::mutate(
+        !!sx := pmax(!!sym(sx), pseudoCount),
+        !!sy := pmax(!!sym(sy), pseudoCount)
+      )
+  }
 
   ## if the column for color does not exists, create new column with value "genes"
   ## this also means no group wise coloring
-  if(!any(colorCol %in% names(df2))){
-    df2[[colorCol]] <- "genes"
+  if(!any(colorCol %in% names(df))){
+    df[[colorCol]] <- "genes"
   }
 
-
-  ## if the color column is not character, convert it to character.
-  ## for numeric and interger type column, the color is continuous which we dont want
-  if(class(df2[[colorCol]]) != "character"){
-    df2[[colorCol]] <- as.character(df2[[colorCol]])
+  discreteColor <- FALSE
+  if(is.character(df[[colorCol]])){
+    discreteColor <- TRUE
   }
 
+  if(transformation != "identity"){
+    xname <- paste(transformation, "(",sx, ")", sep = "")
+    yname <- paste(transformation, "(",sy, ")", sep = "")
+  } else{
+    xname <- sx
+    yname <- sy
+  }
 
-  sp <- ggplot() +
-    geom_point(data = df2, mapping = aes(x = s2, y = s1, color = !!sym(colorCol))) +
-    ggtitle(title) +
-    scale_x_continuous(name = paste(transformation, "(",s2, ")", sep = ""),
-                       trans = transformation) +
-    scale_y_continuous(name = paste(transformation, "(",s1, ")", sep = ""),
-                       trans = transformation) +
+  sp <- ggplot(data = df,
+               mapping = aes(x = !!sym(sx), y = !!sym(sy), color = !!sym(colorCol))) +
+    geom_point() +
+    scale_x_continuous(trans = transformation) +
+    scale_y_continuous(trans = transformation) +
+    viridis::scale_color_viridis(option = "plasma", discrete = discreteColor) +
+    labs(title = title, x = xname, y = yname) +
     theme_bw() +
     theme(plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
           axis.text = element_text(size = 20),
@@ -131,7 +138,6 @@ plot_scatter <- function(df, s1, s2, title = "Scatter plot", colorCol, transform
           legend.box.background = element_rect(colour = "black"),
           legend.box.margin = margin(1, 1, 1, 1)
     )
-
 
   return(sp)
 }
