@@ -5,7 +5,7 @@
 \title{TF ChIPseq replicate correlation plots}
 \usage{
 tf_replicate_plots(sampleInfo, compare = "pvalue", title,
-  yintercept = -Inf)
+  yintercept = -Inf, summitRegion = 0)
 }
 \arguments{
 \item{sampleInfo}{sample information dataframe}
@@ -15,6 +15,12 @@ tf_replicate_plots(sampleInfo, compare = "pvalue", title,
 \item{title}{Comparison title}
 
 \item{yintercept}{yintercept for horizontal line on beeswarm plot}
+
+\item{summitRegion}{Region width around peak summit to use for while merging the peaks
+from multiple samples. With increasing number of peaksets, the mearging of peaks creates
+broader consensus peaksets. Using a small region around peak summit allows to limit this
+consensus peak width. If 0 (default), whole peak region is used. If \code{summitRegion > 0},
+\code{2 x summitRegion} region around peak summit is used to create consensus peakset.}
 }
 \value{
 A list with following ggplot2 elements:

@@ -11,6 +11,7 @@
 #' @param compare One of \emph{pvalue} or \emph{enrichment}
 #' @param title Comparison title
 #' @param yintercept yintercept for horizontal line on beeswarm plot
+#' @inheritParams combinatorial_binding_matrix
 #'
 #' @return A list with following ggplot2 elements:
 #' \itemize{
@@ -24,7 +25,8 @@
 #' @export
 #'
 #' @examples NA
-tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title, yintercept = -Inf){
+tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title, yintercept = -Inf,
+                               summitRegion = 0){
 
   compare <- match.arg(tolower(compare), choices = c("pvalue", "enrichment", "qvalue"))
 
@@ -73,8 +75,16 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title, yintercept
   r1Peaks <- rtracklayer::import(con = rep1Data$peakFile, format = peakFormat)
   r2Peaks <- rtracklayer::import(con = rep2Data$peakFile, format = peakFormat)
 
-  mcols(r1Peaks)$overlap <- factor("unique", levels = c("common", "unique"), ordered = TRUE)
-  mcols(r2Peaks)$overlap <- factor("unique", levels = c("common", "unique"), ordered = TRUE)
+  combinedSeqLevels <- union(seqlevels(r1Peaks), seqlevels(r2Peaks))
+  seqlevels(r1Peaks) <- combinedSeqLevels
+  seqlevels(r2Peaks) <- combinedSeqLevels
+
+  mcols(r1Peaks)$overlap <- factor(
+    x = rep("unique", length(r1Peaks)), levels = c("common", "unique"), ordered = TRUE
+  )
+  mcols(r2Peaks)$overlap <- factor(
+    x = rep("unique", length(r2Peaks)), levels = c("common", "unique"), ordered = TRUE
+  )
 
   peakOvlp <- findOverlaps(r1Peaks, r2Peaks)
 
@@ -83,6 +93,7 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title, yintercept
 
   #######################################
   ovlpSummary <- bind_rows(table(r1Peaks$overlap), table(r2Peaks$overlap)) %>%
+    tidyr::replace_na(replace = list(common = 0, unique = 0)) %>%
     dplyr::mutate(total = common + unique,
                   sampleId = c(rep1Data$sampleId, rep2Data$sampleId)) %>%
     dplyr::mutate(common_per = sprintf(fmt = "%d (%.2f%%)", common, (100 * common / total)),
@@ -126,6 +137,7 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title, yintercept
     scale_color_manual(name = "Replicate overlap",
                        values = pointColor) +
     scale_alpha_manual(values = pointAlpha) +
+    scale_x_discrete(limits = sampleInfo$sampleId) +
     labs(title = paste(compareConfig[[compare]]$plotLabel, "distribution"),
          y = compareConfig[[compare]]$plotLabel) +
     guides(alpha = FALSE,
@@ -151,7 +163,8 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title, yintercept
     )
 
   peakOverlapMat <- combinatorial_binding_matrix(sampleInfo = sampleInfo,
-                                                 peakFormat = peakFormat)
+                                                 peakFormat = peakFormat,
+                                                 summitRegion = summitRegion)
 
 
   commonPeaks <- dplyr::filter_at(.tbl = peakOverlapMat,
@@ -161,42 +174,50 @@ tf_replicate_plots <- function(sampleInfo, compare = "pvalue", title, yintercept
   rep1Col <- tfCols[[compareConfig[[compare]]$chipmine]][rep1Id]
   rep2Col <- tfCols[[compareConfig[[compare]]$chipmine]][rep2Id]
 
-  densColor <- densCols(x = commonPeaks[[ rep1Col ]],
-                        y = commonPeaks[[ rep2Col ]],
-                        colramp = colorRampPalette(c("black", "white"))
-  )
+  if(nrow(commonPeaks) >= 10){
+    densColor <- densCols(x = commonPeaks[[ rep1Col ]],
+                          y = commonPeaks[[ rep2Col ]],
+                          colramp = colorRampPalette(c("black", "white"))
+    )
 
-  commonPeaks$density <- col2rgb(densColor)[1,] + 1L
+    commonPeaks$density <- col2rgb(densColor)[1,] + 1L
+  } else{
+    commonPeaks$density <- rep(1, nrow(commonPeaks))
+  }
 
-  ## value XY scatter plot
-  gg_scatter_val <- ggplot(
-    data = commonPeaks,
-    mapping = aes(x = !!sym(rep1Col), y = !!sym(rep2Col), color = density)
-  ) +
-    geom_point() +
-    geom_smooth(method=lm, se = FALSE, formula = y ~ x) +
-    ggpubr::stat_cor(method = "spearman", size = 10) +
-    scale_color_gradientn(
-      name = "Density",
-      colours = RColorBrewer::brewer.pal(7, "RdYlBu")) +
-    labs(title = paste(compareConfig[[compare]]$plotLabel, "scatter plot")) +
-    # guides(color = FALSE) +
-    theme_bw() +
-    theme_scatter
+  if(nrow(commonPeaks) > 0){
+    ## value XY scatter plot
+    gg_scatter_val <- ggplot(
+      data = commonPeaks,
+      mapping = aes(x = !!sym(rep1Col), y = !!sym(rep2Col), color = density)
+    ) +
+      geom_point() +
+      geom_smooth(method=lm, se = FALSE, formula = y ~ x, color = "red") +
+      ggpubr::stat_cor(method = "spearman", size = 6) +
+      viridis::scale_color_viridis(name = "Density", option = "plasma") +
+      labs(title = paste(compareConfig[[compare]]$plotLabel, "scatter plot")) +
+      theme_bw() +
+      theme_scatter
 
-  ## rank(-value) XY scatter plot
-  gg_scatter_rank <- ggplot(
-    data = commonPeaks,
-    mapping = aes(x = rank(- !!sym(rep1Col)), y = rank(- !!sym(rep2Col)), color = density)
-  ) +
-    geom_point() +
-    scale_color_gradientn(
-      name = "Density",
-      colours = RColorBrewer::brewer.pal(7, "RdYlBu")) +
-    labs(title = paste(compareConfig[[compare]]$plotLabel, "rank scatter plot")) +
-    # guides(color = FALSE) +
-    theme_bw() +
-    theme_scatter
+    ## rank(-value) XY scatter plot
+    gg_scatter_rank <- ggplot(
+      data = commonPeaks,
+      mapping = aes(x = rank(- !!sym(rep1Col)), y = rank(- !!sym(rep2Col)), color = density)
+    ) +
+      geom_point() +
+      viridis::scale_color_viridis(name = "Density", option = "plasma") +
+      labs(title = paste(compareConfig[[compare]]$plotLabel, "rank scatter plot")) +
+      theme_bw() +
+      theme_scatter
+  } else{
+    gg_scatter_val <- ggplot() +
+      geom_text(mapping = aes(x = 0.5, y = 0.5), label = "No\ncommon\npeaks", size = 12) +
+      theme_void()
+    gg_scatter_rank <- ggplot() +
+      geom_text(mapping = aes(x = 0.5, y = 0.5), label = "No\ncommon\npeaks", size = 12) +
+      theme_void()
+  }
+
 
   #######################################
   # ## IDR analysis
