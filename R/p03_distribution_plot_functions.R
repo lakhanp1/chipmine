@@ -83,19 +83,21 @@ plot_MA_gg = function(df, s1, s2, title = NA, colorCol, pseudoCount = 0.1, ylim 
 #' @param sy sample 2 column name
 #' @param title title to be showed on plot
 #' @param colorCol column name which should be used for coloring the points
-#' @param transformation trans argument from ggplot::scale_x_continuous() function.
+#' @param trans trans argument from ggplot::scale_x_continuous() function.
 #' Default: identity
 #' @param pseudoCount A small number to be added to the values to avoid log(0) error.
-#' Default: 0.1
+#' Default: NULL
 #'
 #' @return a ggplot object
 #' @export
 #'
 #' @examples NA
-plot_scatter <- function(df, sx, sy, title = "Scatter plot", colorCol,
-                         transformation = "identity", pseudoCount = 0){
+plot_scatter <- function(df, sx, sy, title = "Scatter plot", colorCol = "Density",
+                         trans = "identity", pseudoCount = NULL){
 
-  if(pseudoCount > 0){
+  trans <- scales::as.trans(trans)
+
+  if(is.numeric(pseudoCount)){
     df <- df %>%
       dplyr::mutate(
         !!sx := pmax(!!sym(sx), pseudoCount),
@@ -103,10 +105,19 @@ plot_scatter <- function(df, sx, sy, title = "Scatter plot", colorCol,
       )
   }
 
-  ## if the column for color does not exists, create new column with value "genes"
-  ## this also means no group wise coloring
+  ## if the column for color does not exists, use density color by default
   if(!any(colorCol %in% names(df))){
-    df[[colorCol]] <- "genes"
+    colorCol = "Density"
+    if(nrow(df) >= 10){
+      densColor <- densCols(x = trans$transform(df[[ sx ]]),
+                            y = trans$transform(df[[ sy ]]),
+                            colramp = colorRampPalette(c("black", "white"))
+      )
+
+      df[[colorCol]] <- col2rgb(densColor)[1,] + 1L
+    } else{
+      df[[colorCol]] <- rep(1, nrow(df))
+    }
   }
 
   discreteColor <- FALSE
@@ -114,9 +125,9 @@ plot_scatter <- function(df, sx, sy, title = "Scatter plot", colorCol,
     discreteColor <- TRUE
   }
 
-  if(transformation != "identity"){
-    xname <- paste(transformation, "(",sx, ")", sep = "")
-    yname <- paste(transformation, "(",sy, ")", sep = "")
+  if(trans$name != "identity"){
+    xname <- paste(trans$name, "(",sx, ")", sep = "")
+    yname <- paste(trans$name, "(",sy, ")", sep = "")
   } else{
     xname <- sx
     yname <- sy
@@ -125,8 +136,8 @@ plot_scatter <- function(df, sx, sy, title = "Scatter plot", colorCol,
   sp <- ggplot(data = df,
                mapping = aes(x = !!sym(sx), y = !!sym(sy), color = !!sym(colorCol))) +
     geom_point() +
-    scale_x_continuous(trans = transformation) +
-    scale_y_continuous(trans = transformation) +
+    scale_x_continuous(trans = trans) +
+    scale_y_continuous(trans = trans) +
     viridis::scale_color_viridis(option = "plasma", discrete = discreteColor) +
     labs(title = title, x = xname, y = yname) +
     theme_bw() +

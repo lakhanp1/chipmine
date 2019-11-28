@@ -4,8 +4,8 @@
 \alias{plot_scatter}
 \title{Generate XY scatter plot for two sets}
 \usage{
-plot_scatter(df, sx, sy, title = "Scatter plot", colorCol,
-  transformation = "identity", pseudoCount = 0)
+plot_scatter(df, sx, sy, title = "Scatter plot", colorCol = "Density",
+  trans = "identity", pseudoCount = NULL)
 }
 \arguments{
 \item{df}{dataframe with values two columns for which scatter plot is to be generated}
@@ -18,11 +18,11 @@ plot_scatter(df, sx, sy, title = "Scatter plot", colorCol,
 
 \item{colorCol}{column name which should be used for coloring the points}
 
-\item{transformation}{trans argument from ggplot::scale_x_continuous() function.
+\item{trans}{trans argument from ggplot::scale_x_continuous() function.
 Default: identity}
 
 \item{pseudoCount}{A small number to be added to the values to avoid log(0) error.
-Default: 0.1}
+Default: NULL}
 }
 \value{
 a ggplot object
