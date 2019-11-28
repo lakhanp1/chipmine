@@ -38,10 +38,8 @@ get_TF_binding_data <- function(genesDf, exptInfo, allColumns = FALSE){
       colNames <- paste(c("hasPeak", "peakPosition", "peakType", "peakId", "peakDist", "summitDist",
                           "peakEnrichment", "peakCoverage", "peakPval"), exptInfo$sampleId[i], sep = ".")
 
-
-      df <- data.table::fread(input = exptInfo$peakTargetFile[i], header = T, stringsAsFactors = F,
-                             drop = c("chr", "start", "end", "strand"), sep = "\t", data.table = F)
-
+      df <- suppressMessages(readr::read_tsv(file = exptInfo$peakTargetFile[i])) %>%
+        dplyr::select(-chr, -start, -end, -strand)
 
       if(!allColumns){
         df <- df %>% dplyr::select(geneId, !!!colNames)

@@ -1,33 +1,4 @@
 
-
-##################################################################################
-## add different gene class types annotation: eg. TF, SM_gene etc
-#' Add gene information
-#'
-#' @param file TAB delimited file with gene information columns. Genes are listed under
-#' column 'geneId'
-#' @param clusterDf a dataframe to which the gene information is to be added. It should
-#' have a column 'geneId'
-#'
-#' @return A dataframe with various gene information columns added
-#' @export
-#'
-#' @examples NA
-add_gene_info = function(file, clusterDf){
-  geneData = data.table::fread(input = file, header = T, drop = c(2,3),  stringsAsFactors = F, sep = "\t", data.table = F)
-
-  clusterDf = clusterDf %>%
-    dplyr::left_join(y = geneData, by = c("geneId" = "geneId"))
-
-  return(clusterDf)
-}
-
-##################################################################################
-
-
-
-
-
 ##################################################################################
 ## get the polII expression values for list of samples
 #' PolII signal list from multiple samples
@@ -40,7 +11,7 @@ add_gene_info = function(file, clusterDf){
 #' @export
 #'
 #' @examples NA
-get_polII_expressions = function(genesDf, exptInfo, log2 = FALSE){
+get_polII_expressions <- function(genesDf, exptInfo, log2 = FALSE){
 
   if(is.null(exptInfo$polIIExpFile)){
     warning("Expression data not found...")
@@ -51,11 +22,13 @@ get_polII_expressions = function(genesDf, exptInfo, log2 = FALSE){
 
     if(exptInfo$IP_tag[i] == "polII" & !is.na(exptInfo$polIIExpFile[i])){
 
-      df = suppressMessages(readr::read_tsv(file = exptInfo$polIIExpFile[i]))
+      df <- suppressMessages(readr::read_tsv(file = exptInfo$polIIExpFile[i]))
+
       if(log2){
         df[[exptInfo$sampleId[i]]] <- log2(pmax(df[[exptInfo$sampleId[i]]], 1))
       }
-      genesDf = dplyr::left_join(x = genesDf, y = df, by = c("geneId" = "geneId"))
+
+      genesDf <- dplyr::left_join(x = genesDf, y = df, by = c("geneId" = "geneId"))
 
     }
   }
@@ -89,18 +62,18 @@ get_polII_expressions = function(genesDf, exptInfo, log2 = FALSE){
 #' @export
 #'
 #' @examples NA
-get_polII_signal = function(file, title, clusterData){
+get_polII_signal <- function(file, title, clusterData){
 
-  polII_df = data.table::fread(input = file, header = T, stringsAsFactors = F, sep = "\t", data.table = F)
+  polII_df <- suppressMessages(readr::read_tsv(file = file))
 
-  clusterData = clusterData %>% dplyr::left_join(y = polII_df, by = c("geneId" = "geneId"))
+  clusterData <- clusterData %>% dplyr::left_join(y = polII_df, by = c("geneId" = "geneId"))
 
-  polII_mat = as.matrix(clusterData[[title]])
-  rownames(polII_mat) = clusterData$geneId
+  polII_mat <- as.matrix(clusterData[[title]])
+  rownames(polII_mat) <- clusterData$geneId
 
-  polII_log2_mat = log2(polII_mat + 1)
+  polII_log2_mat <- log2(pmax(polII_mat, 1))
 
-  polII_q = quantile(polII_log2_mat, c(seq(0, 0.9, by = 0.1), 0.95, 0.99, 0.992, 0.995, 0.999, 1), na.rm = T)
+  polII_q <- quantile(polII_log2_mat, c(seq(0, 0.9, by = 0.1), 0.95, 0.99, 0.992, 0.995, 0.999, 1), na.rm = T)
   print(paste("Quantiles for polII data", file, sep = ": "), quote = F)
   print(polII_q)
 
