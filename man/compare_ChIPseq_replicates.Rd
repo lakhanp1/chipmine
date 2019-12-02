@@ -4,15 +4,13 @@
 \alias{compare_ChIPseq_replicates}
 \title{TF ChIPseq replicate correlation plots}
 \usage{
-compare_ChIPseq_replicates(sampleInfo, compare = "pvalue", title,
+compare_ChIPseq_replicates(sampleInfo, compare = "pvalue",
   yintercept = -Inf, summitRegion = 0)
 }
 \arguments{
 \item{sampleInfo}{sample information dataframe}
 
 \item{compare}{One of \emph{pvalue} or \emph{enrichment}}
-
-\item{title}{Comparison title}
 
 \item{yintercept}{yintercept for horizontal line on beeswarm plot}
 

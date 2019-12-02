@@ -4,8 +4,8 @@
 \alias{compare_replicates}
 \title{Correlation plots for numeric data}
 \usage{
-compare_replicates(data, rep1Col, rep2Col, trans = "identity",
-  title = "correlation")
+compare_replicates(data, rep1Col, rep2Col, value = "FPKM",
+  trans = "identity")
 }
 \arguments{
 \item{data}{A dataframe}
@@ -14,7 +14,9 @@ compare_replicates(data, rep1Col, rep2Col, trans = "identity",
 
 \item{rep2Col}{column name for replicate 1}
 
-\item{title}{plot title}
+\item{value}{A character name for the value. Default: FPKM}
+
+\item{trans}{trans argument from ggplot::scale_x_continuous() function.}
 }
 \value{
 A list with following elements is returned.
@@ -25,7 +27,7 @@ A list with following elements is returned.
 \itemize{
 \item \strong{table:} a \code{ggtable} object for quantile stats
 \item \strong{density:} a FPKM density plot for both replicates
-\item \strong{scatter:} A list with two scatter plot objects: fpkm, rank
+\item \strong{scatter:} A list with two scatter plot objects: value, rank
 \item \strong{corrVariation:} A line plot showing changing correlation with quantile
 subset of data.
 }

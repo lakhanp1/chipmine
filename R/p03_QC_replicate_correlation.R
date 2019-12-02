@@ -9,7 +9,6 @@
 #'
 #' @param sampleInfo sample information dataframe
 #' @param compare One of \emph{pvalue} or \emph{enrichment}
-#' @param title Comparison title
 #' @param yintercept yintercept for horizontal line on beeswarm plot
 #' @inheritParams combinatorial_binding_matrix
 #'
@@ -25,7 +24,7 @@
 #' @export
 #'
 #' @examples NA
-compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", title, yintercept = -Inf,
+compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", yintercept = -Inf,
                                summitRegion = 0){
 
   compare <- match.arg(tolower(compare), choices = c("pvalue", "enrichment", "qvalue"))
@@ -279,7 +278,8 @@ compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", title, yi
 #' @param data A dataframe
 #' @param rep1Col column name for replicate 1
 #' @param rep2Col column name for replicate 1
-#' @param title plot title
+#' @param value A character name for the value. Default: FPKM
+#' @param trans trans argument from ggplot::scale_x_continuous() function.
 #'
 #' @return A list with following elements is returned.
 #' \itemize{
@@ -289,7 +289,7 @@ compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", title, yi
 #' \itemize{
 #' \item \strong{table:} a \code{ggtable} object for quantile stats
 #' \item \strong{density:} a FPKM density plot for both replicates
-#' \item \strong{scatter:} A list with two scatter plot objects: fpkm, rank
+#' \item \strong{scatter:} A list with two scatter plot objects: value, rank
 #' \item \strong{corrVariation:} A line plot showing changing correlation with quantile
 #' subset of data.
 #' }
@@ -298,7 +298,7 @@ compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", title, yi
 #' @export
 #'
 #' @examples NA
-compare_replicates <- function(data, rep1Col, rep2Col, trans = "identity", title = "correlation"){
+compare_replicates <- function(data, rep1Col, rep2Col, value = "FPKM", trans = "identity"){
 
   trans <- scales::as.trans(trans)
   colorScale <- "viridis"
@@ -341,7 +341,7 @@ compare_replicates <- function(data, rep1Col, rep2Col, trans = "identity", title
     geom_density(mapping = aes(x = pmax(FPKM, 1), color = sampleId), linetype = "twodash") +
     scale_x_continuous(trans = trans) +
     scale_color_brewer(name = NULL, palette="Dark2") +
-    labs(y = "Density", title = "Density plot") +
+    labs(x = paste(trans$name, "(", value, ")", sep = ""), y = "Density", title = "Density plot") +
     theme_bw() +
     theme(
       legend.position = "bottom",
@@ -363,7 +363,7 @@ compare_replicates <- function(data, rep1Col, rep2Col, trans = "identity", title
     viridis::scale_color_viridis(name = "Density", option = colorScale) +
     scale_x_continuous(trans = trans) +
     scale_y_continuous(trans = trans) +
-    labs(title = paste("log2(FPKM) scatter plot")) +
+    labs(title = paste("scatter plot: ", trans$name, "(", value, ")", sep = "")) +
     theme_bw() +
     theme_scatter
 
@@ -422,9 +422,9 @@ compare_replicates <- function(data, rep1Col, rep2Col, trans = "identity", title
       panel.grid = element_blank()
     )
 
-
+  meanValName = paste("mean(", value, ")", sep = "")
   summaryTable <- purrr::map_dfr(
-    .x = structure(c("quantPer", "fpkm", "geneCount"), names = c("Quantile", "mean(FPKM)", "# of genes")),
+    .x = structure(c("quantPer", "fpkm", "geneCount"), names = c("Quantile", meanValName, "# of genes")),
     .f = function(x){
       as.list(as.character(corDf[[x]])) %>% purrr::set_names(nm = corDf$fractionPer)
     },
@@ -455,14 +455,14 @@ compare_replicates <- function(data, rep1Col, rep2Col, trans = "identity", title
 
   summaryFig <- ggpubr::annotate_figure(
     p = summaryFig,
-    top = text_grob(label = paste("Replicate correlation:", rep1Col, "vs", rep2Col),
+    top = text_grob(label = paste("Replicates", value, "correlation:", rep1Col, "vs", rep2Col),
                     size = 15, face = "bold")
   )
 
 
   plotList <- list(table = gg_stable,
                    density = gg_fpkm_density,
-                   scatter = list(fpkm = gg_scatter_val,
+                   scatter = list(value = gg_scatter_val,
                                   rank = gg_scatter_rank),
                    corrVariation = gg_line_cor)
 
