@@ -25,7 +25,9 @@ Default: \emph{normalizedmatrix}.}
 \item{profileType}{Type of profile. This will be added as suffix to the profile name}
 }
 \value{
-Data frame with details for each sample
+Data frame with columns \code{"sampleId", "IP_tag", "control", "peakType",
+"sampleName", "profileName", "bwFile", "matFile", "clusterFile", "mergedDataFile",
+"polIIExpFile", "polIIExpMat", "peakFile", "peakAnno", "peakTargetFile", "FE_bwFile"}.
 }
 \description{
 This is a utility function to prepare the sample information dataframe for sample

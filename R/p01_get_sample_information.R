@@ -31,7 +31,9 @@
 #' @param samples A vector of Sample IDs which are to be processed. Default: All samples are used
 #' @param profileType Type of profile. This will be added as suffix to the profile name
 #'
-#' @return Data frame with details for each sample
+#' @return Data frame with columns \code{"sampleId", "IP_tag", "control", "peakType",
+#' "sampleName", "profileName", "bwFile", "matFile", "clusterFile", "mergedDataFile",
+#' "polIIExpFile", "polIIExpMat", "peakFile", "peakAnno", "peakTargetFile", "FE_bwFile"}.
 #' @export
 #'
 #' @examples NA
