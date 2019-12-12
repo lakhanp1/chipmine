@@ -73,6 +73,7 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath,
   exptData <- exptData[order(exptData$sampleId), ] %>%
     dplyr::mutate_if(is.factor, as.character) %>%
     dplyr::mutate(
+      IP_tag = toupper(IP_tag),
       hasControl = if_else(condition = is.na(control) | control == ".",
                            true = FALSE, false = TRUE, missing = FALSE)
     ) %>%
@@ -83,12 +84,12 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath,
       matFile = paste(dataPath, "/", sampleId, "/", sampleId, ".",
                       profileMatrixSuffix,".tab.gz", sep = ""),
       clusterFile = dplyr::if_else(
-        tolower(IP_tag) == "polii",
+        toupper(IP_tag) == "POLII",
         "NA",
         paste(dataPath, "/", sampleId, "/", sampleId, ".kmeans.clusters.txt", sep = "")
       ),
       mergedDataFile = dplyr::if_else(
-        tolower(IP_tag) == "polii",
+        toupper(IP_tag) == "POLII",
         "NA",
         paste(dataPath, "/", sampleId, "/", sampleId, ".allGenes_clusters.tab", sep = "")
       )
@@ -96,12 +97,12 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath,
     ## polII ChIPseq related data
     dplyr::mutate(
       polIIExpFile = dplyr::if_else(
-        tolower(IP_tag) == "polii",
+        toupper(IP_tag) == "POLII",
         paste(dataPath, "/", sampleId, "/", sampleId, ".normalizedExpression.tab", sep = ""),
         "NA"
       ),
       polIIExpMat = dplyr::if_else(
-        tolower(IP_tag) == "polii",
+        toupper(IP_tag) == "POLII",
         paste(dataPath, "/", sampleId, "/", sampleId, "_polii_expr.tab.rel.mat", sep = ""),
         "NA"
       )

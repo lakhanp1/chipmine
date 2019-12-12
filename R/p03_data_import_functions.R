@@ -20,7 +20,7 @@ get_polII_expressions <- function(genesDf, exptInfo, log2 = FALSE){
 
   for(i in 1:nrow(exptInfo)){
 
-    if(exptInfo$IP_tag[i] == "polII" & !is.na(exptInfo$polIIExpFile[i])){
+    if(toupper(exptInfo$IP_tag[i]) == "POLII" & !is.na(exptInfo$polIIExpFile[i])){
 
       df <- suppressMessages(readr::read_tsv(file = exptInfo$polIIExpFile[i]))
 

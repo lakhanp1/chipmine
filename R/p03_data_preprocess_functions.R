@@ -35,7 +35,7 @@ preProcess_polII_expression <- function(expMat, sampleId, expFraction, polIIExpF
 
   write.table(x = finalDf, file = polIIExpFile, sep = "\t", col.names = T, quote = F, row.names = F)
 
-  cat("Processed polII expression for sample ", sampleId, "\n")
+  # cat("Processed polII expression for sample ", sampleId, "\n")
 
   return(polIIExpFile)
 }
