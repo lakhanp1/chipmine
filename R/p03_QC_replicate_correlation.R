@@ -25,7 +25,7 @@
 #'
 #' @examples NA
 compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", yintercept = -Inf,
-                               summitRegion = 0){
+                                       summitRegion = 0){
 
   compare <- match.arg(tolower(compare), choices = c("pvalue", "enrichment", "qvalue"))
 
@@ -184,6 +184,8 @@ compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", yintercep
     commonPeaks$density <- rep(1, nrow(commonPeaks))
   }
 
+  colorScale <- "viridis"
+
   if(nrow(commonPeaks) > 0){
 
     ## value XY scatter plot
@@ -300,7 +302,7 @@ compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", yintercep
 #' @examples NA
 compare_replicates <- function(data, rep1Col, rep2Col, value = "FPKM", trans = "identity"){
 
-  trans <- scales::as.trans(trans)
+  transformer <- scales::as.trans(trans)
   colorScale <- "viridis"
 
   data <- data %>%
@@ -312,8 +314,8 @@ compare_replicates <- function(data, rep1Col, rep2Col, value = "FPKM", trans = "
 
   ## calculate density
   if(nrow(data) >= 10){
-    densColor <- densCols(x = trans$transform(data[[rep1Col]]),
-                          y = trans$transform(data[[rep2Col]]),
+    densColor <- densCols(x = transformer$transform(data[[rep1Col]]),
+                          y = transformer$transform(data[[rep2Col]]),
                           colramp = colorRampPalette(c("black", "white"))
     )
 
@@ -339,9 +341,9 @@ compare_replicates <- function(data, rep1Col, rep2Col, value = "FPKM", trans = "
     ggplot() +
     geom_density(mapping = aes(x = FPKM, color = sampleId), size = 1) +
     geom_density(mapping = aes(x = pmax(FPKM, 1), color = sampleId), linetype = "twodash") +
-    scale_x_continuous(trans = trans) +
+    scale_x_continuous(trans = transformer) +
     scale_color_brewer(name = NULL, palette="Dark2") +
-    labs(x = paste(trans$name, "(", value, ")", sep = ""), y = "Density", title = "Density plot") +
+    labs(x = paste(transformer$name, "(", value, ")", sep = ""), y = "Density", title = "Density plot") +
     theme_bw() +
     theme(
       legend.position = "bottom",
@@ -353,17 +355,24 @@ compare_replicates <- function(data, rep1Col, rep2Col, value = "FPKM", trans = "
 
 
   ## value XY scatter plot
+  ## there is some problem when geom_smooth() and coord_trans() used together
   gg_scatter_val <- ggplot(
     data = data,
     mapping = aes(x = !!sym(rep1Col), y = !!sym(rep2Col), color = density)
   ) +
     geom_point() +
-    geom_smooth(method=lm, se = FALSE, formula = y ~ x, color = "red") +
-    ggpubr::stat_cor(method = "spearman", size = 6) +
+    # geom_smooth(method="lm", se = FALSE, formula = y ~ x, color = "red") +
+    ggpubr::stat_cor(method = "pearson", size = 6, color = "red",
+                     label.x.npc = 0, label.y.npc = 1) +
     viridis::scale_color_viridis(name = "Density", option = colorScale) +
-    scale_x_continuous(trans = trans) +
-    scale_y_continuous(trans = trans) +
-    labs(title = paste("scatter plot: ", trans$name, "(", value, ")", sep = "")) +
+    coord_trans(x = trans, y = trans) +
+    scale_x_continuous(
+      breaks = trans_breaks(trans = transformer$transform, inv = transformer$inverse, n = 4)
+    ) +
+    scale_y_continuous(
+      breaks = trans_breaks(trans = transformer$transform, inv = transformer$inverse, n = 4)
+    ) +
+    labs(title = paste("scatter plot: ", transformer$name, "(", value, ")", sep = "")) +
     theme_bw() +
     theme_scatter
 
@@ -373,12 +382,15 @@ compare_replicates <- function(data, rep1Col, rep2Col, value = "FPKM", trans = "
     mapping = aes(x = rank(!!sym(rep1Col)), y = rank(!!sym(rep2Col)), color = density)
   ) +
     geom_point() +
+    ggpubr::stat_cor(method = "spearman", size = 6, color = "red",
+                     label.x.npc = 0, label.y.npc = 1) +
     viridis::scale_color_viridis(name = "Density", option = colorScale) +
     labs(title = paste("rank scatter plot")) +
     theme_bw() +
     theme_scatter
 
 
+  ## calculate correlation coefficients on cumulative decreasing data: 100% to 10%
   corDf <- purrr::map_dfr(
     .x = c(seq(0, 0.9, by = 0.1), 0.95, 0.99),
     .f = function(x){
@@ -387,10 +399,14 @@ compare_replicates <- function(data, rep1Col, rep2Col, value = "FPKM", trans = "
       corP <- cor(x = tmpExprDf[[rep1Col]], y = tmpExprDf[[rep2Col]], method = "pearson")
       corS <- cor(x = tmpExprDf[[rep1Col]], y = tmpExprDf[[rep2Col]], method = "spearman")
 
-      return(tibble::tibble(
-        quant = x, quantPer = scales::percent(x),
-        fraction = 1-x, fractionPer = scales::percent(x = fraction, accuracy = 1),
-        fpkm = round(qtVal, 2), geneCount = nrow(tmpExprDf), pearson = corP, spearman = corS)
+      return(
+        tibble::tibble(
+          quant = x, quantPer = scales::percent(x),
+          fraction = 1-x, fractionPer = scales::percent(x = fraction, accuracy = 1),
+          fpkm = round(qtVal, 2), geneCount = nrow(tmpExprDf),
+          pearson = round(x = corP, digits = 3),
+          spearman = round(x = corS, digits = 3)
+        )
       )
     }
   )
