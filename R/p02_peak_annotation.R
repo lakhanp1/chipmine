@@ -1155,7 +1155,7 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
   targetPairDf <- targetPairDf %>% dplyr::mutate(
     t1Select = dplyr::case_when(
       gapWidth <= bidirectionalDistance & abs(t1PeakDist) < promoterLength ~ TRUE,
-      pointBasedAnnotation == FALSE & abs(t1PeakDist) < promoterLength ~ TRUE,
+      # pointBasedAnnotation == FALSE & abs(t1PeakDist) < promoterLength ~ TRUE,
       abs(t1PeakDist) > upstreamLimit & abs(t2PeakDist) <= promoterLength ~ FALSE,
       dir == "opposite" & pointBasedAnnotation == FALSE &
         (abs(t1PeakDist) + peakFraction) > (gapWidth/2) ~ FALSE,
@@ -1165,7 +1165,7 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
     ),
     t2Select = dplyr::case_when(
       gapWidth <= bidirectionalDistance & abs(t2PeakDist) < promoterLength ~ TRUE,
-      pointBasedAnnotation == FALSE & abs(t2PeakDist) < promoterLength ~ TRUE,
+      # pointBasedAnnotation == FALSE & abs(t2PeakDist) < promoterLength ~ TRUE,
       abs(t2PeakDist) > upstreamLimit & abs(t1PeakDist) <= promoterLength ~ FALSE,
       dir == "opposite" & pointBasedAnnotation == FALSE &
         (abs(t2PeakDist) + peakFraction) > (gapWidth/2) ~ FALSE,
