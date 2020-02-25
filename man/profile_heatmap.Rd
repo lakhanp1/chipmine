@@ -4,11 +4,22 @@
 \alias{profile_heatmap}
 \title{Generate profile heatmap}
 \usage{
-profile_heatmap(profileMat, signalName, profileColor, columnTitle = NULL,
-  createClusters = FALSE, numClust = 7, geneGroups = NULL,
-  showAnnotation = TRUE, clusterColor = NULL, clusterOrder = NULL,
-  ylimFraction = NULL, posLineGpar = gpar(lty = 2, alpha = 0.4, lwd =
-  0.5), rasterPar = list(use = TRUE, qual = 5), ...)
+profile_heatmap(
+  profileMat,
+  signalName,
+  profileColor,
+  columnTitle = NULL,
+  createClusters = FALSE,
+  numClust = 7,
+  geneGroups = NULL,
+  showAnnotation = TRUE,
+  clusterColor = NULL,
+  clusterOrder = NULL,
+  ylimFraction = NULL,
+  posLineGpar = gpar(lty = 2, alpha = 0.4, lwd = 0.5),
+  rasterPar = list(use = TRUE, qual = 5),
+  ...
+)
 }
 \arguments{
 \item{profileMat}{profile matrix of class \code{normalizedMatrix}}

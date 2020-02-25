@@ -4,8 +4,7 @@
 \alias{compare_replicates}
 \title{Correlation plots for numeric data}
 \usage{
-compare_replicates(data, rep1Col, rep2Col, value = "FPKM",
-  trans = "identity")
+compare_replicates(data, rep1Col, rep2Col, value = "FPKM", trans = "identity")
 }
 \arguments{
 \item{data}{A dataframe}

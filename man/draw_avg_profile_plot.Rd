@@ -4,8 +4,13 @@
 \alias{draw_avg_profile_plot}
 \title{Average signal plot for multiple samples}
 \usage{
-draw_avg_profile_plot(exptInfo, profileMats, genes, lineColors = NULL,
-  lineShape = NULL)
+draw_avg_profile_plot(
+  exptInfo,
+  profileMats,
+  genes,
+  lineColors = NULL,
+  lineShape = NULL
+)
 }
 \arguments{
 \item{exptInfo}{Experiment information dataframe}

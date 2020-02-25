@@ -4,8 +4,14 @@
 \alias{scale_matrix_columns}
 \title{column wise z-score scaling of matrix}
 \usage{
-scale_matrix_columns(x, center = TRUE, scale = TRUE, add_attr = TRUE,
-  rows = NULL, cols = NULL)
+scale_matrix_columns(
+  x,
+  center = TRUE,
+  scale = TRUE,
+  add_attr = TRUE,
+  rows = NULL,
+  cols = NULL
+)
 }
 \arguments{
 \item{x}{A matrix}

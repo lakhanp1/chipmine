@@ -4,9 +4,15 @@
 \alias{combinatorial_binding_matrix}
 \title{Generate the combinatorial peak association matrix with merged master peak list}
 \usage{
-combinatorial_binding_matrix(sampleInfo, peakRegions = NULL,
-  peakFormat = "narrowPeak", summitRegion = 0, peakCols = c("peakId",
-  "peakEnrichment", "peakPval"), genome = NULL, summitSeqLen = 200)
+combinatorial_binding_matrix(
+  sampleInfo,
+  peakRegions = NULL,
+  peakFormat = "narrowPeak",
+  summitRegion = 0,
+  peakCols = c("peakId", "peakEnrichment", "peakPval"),
+  genome = NULL,
+  summitSeqLen = 200
+)
 }
 \arguments{
 \item{sampleInfo}{Sample information dataframe}

@@ -4,13 +4,24 @@
 \alias{narrowPeak_annotate}
 \title{Annotate narrowPeak using \code{TxDB} object}
 \usage{
-narrowPeak_annotate(peakFile, fileFormat = "narrowPeak",
-  summitRegion = 0, txdb, promoterLength, upstreamLimit, txIds = NULL,
-  blacklistRegions = NULL, excludeType = c("tRNA", "rRNA", "snRNA",
-  "snoRNA", "ncRNA"), bidirectionalDistance = 1000,
-  bidirectionalSkew = 0.2, includeFractionCut = 0.7,
-  bindingInGene = FALSE, insideSkewToEndCut = 0.7,
-  removePseudo = FALSE, output = NULL)
+narrowPeak_annotate(
+  peakFile,
+  fileFormat = "narrowPeak",
+  summitRegion = 0,
+  txdb,
+  promoterLength,
+  upstreamLimit,
+  txIds = NULL,
+  blacklistRegions = NULL,
+  excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
+  bidirectionalDistance = 1000,
+  bidirectionalSkew = 0.2,
+  includeFractionCut = 0.7,
+  bindingInGene = FALSE,
+  insideSkewToEndCut = 0.7,
+  removePseudo = FALSE,
+  output = NULL
+)
 }
 \arguments{
 \item{peakFile}{A narroPeak or broadPeak file. If a broadPeak file, peak center is

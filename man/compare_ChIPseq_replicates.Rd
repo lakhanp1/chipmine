@@ -4,8 +4,12 @@
 \alias{compare_ChIPseq_replicates}
 \title{TF ChIPseq replicate correlation plots}
 \usage{
-compare_ChIPseq_replicates(sampleInfo, compare = "pvalue",
-  yintercept = -Inf, summitRegion = 0)
+compare_ChIPseq_replicates(
+  sampleInfo,
+  compare = "pvalue",
+  yintercept = -Inf,
+  summitRegion = 0
+)
 }
 \arguments{
 \item{sampleInfo}{sample information dataframe}

@@ -4,9 +4,16 @@
 \alias{upstream_annotations}
 \title{Annotate upstream peaks on transcripts}
 \usage{
-upstream_annotations(peaksGr, featuresGr, txdb = NULL,
-  upstreamOverlappingFraction = 0.2, promoterLength, upstreamLimit,
-  bidirectionalDistance, bidirectionalSkew)
+upstream_annotations(
+  peaksGr,
+  featuresGr,
+  txdb = NULL,
+  upstreamOverlappingFraction = 0.2,
+  promoterLength,
+  upstreamLimit,
+  bidirectionalDistance,
+  bidirectionalSkew
+)
 }
 \arguments{
 \item{peaksGr}{GRanges object for peak data}

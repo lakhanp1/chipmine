@@ -4,9 +4,16 @@
 \alias{nearest_upstream_bidirectional}
 \title{True target for bidirectional peak}
 \usage{
-nearest_upstream_bidirectional(targetDf, t1Idx, t2Idx, promoterLength,
-  upstreamLimit, bidirectionalSkew = 0.2, bidirectionalDistance = 1000,
-  pointBasedAnnotation = FALSE)
+nearest_upstream_bidirectional(
+  targetDf,
+  t1Idx,
+  t2Idx,
+  promoterLength,
+  upstreamLimit,
+  bidirectionalSkew = 0.2,
+  bidirectionalDistance = 1000,
+  pointBasedAnnotation = FALSE
+)
 }
 \arguments{
 \item{targetDf}{A dataframe which has bidirectional targets for each peak.}

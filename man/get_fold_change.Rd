@@ -4,8 +4,14 @@
 \alias{get_fold_change}
 \title{Raw log2 fold change value between two samples as log2(s2/s1)}
 \usage{
-get_fold_change(df, nmt, dmt, newCol = "lfc", isExpressedCols = NULL,
-  lfcLimit = 0)
+get_fold_change(
+  df,
+  nmt,
+  dmt,
+  newCol = "lfc",
+  isExpressedCols = NULL,
+  lfcLimit = 0
+)
 }
 \arguments{
 \item{df}{data frame}
