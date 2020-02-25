@@ -1,7 +1,22 @@
 
 
 
-get_txdb_transcripts_gr <- function(txdb, excludeType = NULL, tx = NULL){
+#' Transcripts GRanges object from TxDB
+#'
+#' @param txdb \code{TxDB} object which will be used for annotation
+#' @param excludeType Types of transcripts to exclude from annotation. Should be a
+#' character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}.
+#' This argument work only when \code{TxDB} object has \code{TXTYPE} column with
+#' appropriate transcripy type values.
+#' @param txIds A vector of transcript IDs to be used specifically in the annotation
+#' process instead of full transcript set. These should be internal tx_ids from \code{TxDB}
+#' object. This is useful feature to exclude tRNA, rRNA transcripts while annotating
+#' the regions. Default: NULL
+#'
+#' @return GRanges object from TxDB
+#'
+#' @examples NA
+get_txdb_transcripts_gr <- function(txdb, excludeType = NULL, txIds = NULL){
 
   if(exists("transcriptsGr", envir=txdbEnv, inherits=FALSE)) {
 
@@ -23,11 +38,11 @@ get_txdb_transcripts_gr <- function(txdb, excludeType = NULL, tx = NULL){
     allTxTypes <- unique(txToGene$txType)
     selectType <- allTxTypes[which(!allTxTypes %in% excludeType)]
 
-    ## tx filter list
+    ## txIds filter list
     txFilter <- NULL
     txFilter$tx_type <- selectType
-    if(!is.null(tx)){
-      txFilter$tx_id <- tx
+    if(!is.null(txIds)){
+      txFilter$tx_id <- txIds
     }
 
     ## extract transcript GRanges
@@ -49,7 +64,14 @@ get_txdb_transcripts_gr <- function(txdb, excludeType = NULL, tx = NULL){
 ##################################################################################
 
 
-get_txdb_fiveUtr_gr <- function(txdb, tx = NULL){
+#' 5UTR GRanges object from TxDB
+#'
+#' @inheritParams get_txdb_transcripts_gr
+#'
+#' @return GRanges object from TxDB
+#'
+#' @examples NA
+get_txdb_fiveUtr_gr <- function(txdb, txIds = NULL){
 
   if(exists("fiveUtrGr", envir=txdbEnv, inherits=FALSE)) {
     fiveUtrGr <- get(x = "fiveUtrGr", envir = txdbEnv)
@@ -57,8 +79,8 @@ get_txdb_fiveUtr_gr <- function(txdb, tx = NULL){
   } else{
     fiveUtrGrl <- GenomicFeatures::fiveUTRsByTranscript(txdb)
 
-    if(!is.null(tx)){
-      fiveUtrGrl <- fiveUtrGrl[names(fiveUtrGrl) %in% tx]
+    if(!is.null(txIds)){
+      fiveUtrGrl <- fiveUtrGrl[names(fiveUtrGrl) %in% txIds]
     }
 
     ## remember to combine the multi-exon UTRs from UTR GRangesList
@@ -72,15 +94,22 @@ get_txdb_fiveUtr_gr <- function(txdb, tx = NULL){
 
 ##################################################################################
 
-get_txdb_threeUtr_gr <- function(txdb, tx = NULL){
+#' 3UTR GRanges object from TxDB
+#'
+#' @inheritParams get_txdb_transcripts_gr
+#'
+#' @return GRanges object from TxDB
+#'
+#' @examples NA
+get_txdb_threeUtr_gr <- function(txdb, txIds = NULL){
   if(exists("threeUtrGr", envir=txdbEnv, inherits=FALSE)) {
     threeUtrGr <- get(x = "threeUtrGr", envir = txdbEnv)
 
   } else{
     threeUtrGrl <- GenomicFeatures::threeUTRsByTranscript(txdb)
 
-    if(!is.null(tx)){
-      threeUtrGrl <- threeUtrGrl[names(threeUtrGrl) %in% tx]
+    if(!is.null(txIds)){
+      threeUtrGrl <- threeUtrGrl[names(threeUtrGrl) %in% txIds]
     }
 
     ## remember to combine the multi-exon UTRs from UTR GRangesList
@@ -96,14 +125,21 @@ get_txdb_threeUtr_gr <- function(txdb, tx = NULL){
 ##################################################################################
 
 
-get_txdb_exons_gr <- function(txdb, tx = NULL){
+#' Exons GRanges object from TxDB
+#'
+#' @inheritParams get_txdb_transcripts_gr
+#'
+#' @return GRanges object from TxDB
+#'
+#' @examples NA
+get_txdb_exons_gr <- function(txdb, txIds = NULL){
   if(exists("exonsGr", envir=txdbEnv, inherits=FALSE)) {
     exonsGr <- get(x = "exonsGr", envir = txdbEnv)
   } else{
     exonsGrl <- GenomicFeatures::exonsBy(x = txdb, by = "tx")
 
-    if(!is.null(tx)){
-      exonsGrl <- exonsGrl[names(exonsGrl) %in% tx]
+    if(!is.null(txIds)){
+      exonsGrl <- exonsGrl[names(exonsGrl) %in% txIds]
     }
 
     exonsGr <- unlist(exonsGrl)
@@ -118,14 +154,21 @@ get_txdb_exons_gr <- function(txdb, tx = NULL){
 ##################################################################################
 
 
-get_txdb_introns_gr <- function(txdb, tx = NULL){
+#' Introns GRanges object from TxDB
+#'
+#' @inheritParams get_txdb_transcripts_gr
+#'
+#' @return GRanges object from TxDB
+#'
+#' @examples NA
+get_txdb_introns_gr <- function(txdb, txIds = NULL){
   if(exists("intronsGr", envir=txdbEnv, inherits=FALSE)) {
     intronsGr <- get(x = "intronsGr", envir = txdbEnv)
   } else{
     intronsGrl <- GenomicFeatures::intronsByTranscript(x = txdb)
 
-    if(!is.null(tx)){
-      intronsGrl <- intronsGrl[names(intronsGrl) %in% tx]
+    if(!is.null(txIds)){
+      intronsGrl <- intronsGrl[names(intronsGrl) %in% txIds]
     }
 
     intronsGr <- unlist(intronsGrl)

@@ -146,20 +146,12 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 #'
 #'
 #' @param peaks A GRanges object with name column.
-#' @param txdb \code{TxDB} object which will be used for annotation
-#' @param txIds A vector of transcript IDs to be used specifically in the annotation
-#' process instead of full transcript set. These should be internal tx_ids from \code{TxDB}
-#' object. This is useful feature to exclude tRNA, rRNA transcripts while annotating
-#' the regions. Default: NULL
-#' @param excludeType Types of transcripts to exclude from annotation. Should be a
-#' character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}.
-#' This argument work only when \code{TxDB} object has \code{TXTYPE} column with
-#' appropriate transcripy type values.
 #' @param blacklistRegions A BED file or GRanges object with ChIPseq blacklist regions.
 #' Peaks overlapping with these regions are not used for annotation.
 #' @param removePseudo Logical: whether to remove peak targets which are marked as pseudo.
 #' Default: FALSE
 #'
+#' @inheritParams get_txdb_transcripts_gr
 #' @inheritParams region_annotations
 #' @inheritParams upstream_annotations
 #' @inheritParams select_optimal_targets
