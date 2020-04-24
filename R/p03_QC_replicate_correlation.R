@@ -38,7 +38,7 @@ compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", yintercep
                       chipmine = "peakEnrichment",
                       plotLabel = "fold enrichment",
                       color = "#bf9a2d"),
-    pvalue = list(narrowPeak = "qValue",
+    qValue = list(narrowPeak = "qValue",
                   chipmine = "peakQval",
                   plotLabel = "-log10(q-value)",
                   color = "#a2b67c")
@@ -204,7 +204,7 @@ compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", yintercep
     ## rank(-value) XY scatter plot
     gg_scatter_rank <- ggplot(
       data = commonPeaks,
-      mapping = aes(x = rank(- !!sym(rep1Col)), y = rank(- !!sym(rep2Col)), color = density)
+      mapping = aes(x = rank(!!sym(rep1Col)), y = rank(!!sym(rep2Col)), color = density)
     ) +
       geom_point() +
       viridis::scale_color_viridis(name = "Density", option = colorScale) +
@@ -282,6 +282,8 @@ compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", yintercep
 #' @param rep2Col column name for replicate 1
 #' @param value A character name for the value. Default: FPKM
 #' @param trans trans argument from ggplot::scale_x_continuous() function.
+#' @param pseudoCount A pseudo count to avoid log(0) = Inf error. All values less than
+#' this number will be set to this number in XY scatter plot. Default: 0
 #'
 #' @return A list with following elements is returned.
 #' \itemize{
@@ -300,7 +302,8 @@ compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", yintercep
 #' @export
 #'
 #' @examples NA
-compare_replicates <- function(data, rep1Col, rep2Col, value = "FPKM", trans = "identity"){
+compare_replicates <- function(data, rep1Col, rep2Col, value = "FPKM", trans = "identity",
+                               pseudoCount = 0){
 
   transformer <- scales::as.trans(trans)
   colorScale <- "viridis"
@@ -356,25 +359,35 @@ compare_replicates <- function(data, rep1Col, rep2Col, value = "FPKM", trans = "
 
   ## value XY scatter plot
   ## there is some problem when geom_smooth() and coord_trans() used together
+  ## using coord_trans() as it does not change the original values but just the scale
   gg_scatter_val <- ggplot(
     data = data,
-    mapping = aes(x = !!sym(rep1Col), y = !!sym(rep2Col), color = density)
+    mapping = aes(
+      x = pmax(!!pseudoCount, !!sym(rep1Col)),
+      y = pmax(!!pseudoCount, !!sym(rep2Col)),
+      color = density)
   ) +
     geom_point() +
-    # geom_smooth(method="lm", se = FALSE, formula = y ~ x, color = "red") +
-    ggpubr::stat_cor(method = "pearson", size = 6, color = "red",
-                     label.x.npc = 0, label.y.npc = 1) +
-    viridis::scale_color_viridis(name = "Density", option = colorScale) +
     coord_trans(x = trans, y = trans) +
+    # geom_smooth(method="lm", se = FALSE, formula = y ~ x, color = "red") +
+    ggpubr::stat_cor(
+      method = "pearson", size = 6, color = "red", label.x.npc = 0, label.y.npc = 1
+    ) +
+    viridis::scale_color_viridis(name = "Density", option = colorScale) +
     scale_x_continuous(
       breaks = trans_breaks(trans = transformer$transform, inv = transformer$inverse, n = 4)
     ) +
     scale_y_continuous(
       breaks = trans_breaks(trans = transformer$transform, inv = transformer$inverse, n = 4)
     ) +
-    labs(title = paste("scatter plot: ", transformer$name, "(", value, ")", sep = "")) +
+    labs(
+      x = rep1Col, y = rep2Col,
+      title = paste("scatter plot: ", transformer$name, "(", value, "+", pseudoCount, ")", sep = "")
+    ) +
     theme_bw() +
     theme_scatter
+
+
 
   ## rank(-value) XY scatter plot
   gg_scatter_rank <- ggplot(

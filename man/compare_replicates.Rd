@@ -4,7 +4,14 @@
 \alias{compare_replicates}
 \title{Correlation plots for numeric data}
 \usage{
-compare_replicates(data, rep1Col, rep2Col, value = "FPKM", trans = "identity")
+compare_replicates(
+  data,
+  rep1Col,
+  rep2Col,
+  value = "FPKM",
+  trans = "identity",
+  pseudoCount = 0
+)
 }
 \arguments{
 \item{data}{A dataframe}
@@ -16,6 +23,9 @@ compare_replicates(data, rep1Col, rep2Col, value = "FPKM", trans = "identity")
 \item{value}{A character name for the value. Default: FPKM}
 
 \item{trans}{trans argument from ggplot::scale_x_continuous() function.}
+
+\item{pseudoCount}{A pseudo count to avoid log(0) = Inf error. All values less than
+this number will be set to this number in XY scatter plot. Default: 0}
 }
 \value{
 A list with following elements is returned.
