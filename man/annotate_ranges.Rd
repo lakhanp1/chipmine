@@ -9,14 +9,14 @@ annotate_ranges(
   txdb,
   promoterLength,
   upstreamLimit,
-  txIds = NULL,
-  blacklistRegions = NULL,
-  excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
   bidirectionalDistance = 1000,
   bidirectionalSkew = 0.2,
   includeFractionCut = 0.7,
-  bindingInGene = FALSE,
   insideSkewToEndCut = 0.7,
+  txIds = NULL,
+  blacklistRegions = NULL,
+  excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
+  bindingInGene = FALSE,
   removePseudo = FALSE
 )
 }
@@ -31,6 +31,20 @@ distance of feature start are annotated as \code{promoter} region peaks.}
 \item{upstreamLimit}{Maximum distance of peak for upstream annotation. Peak beyond
 this distance can be considered as intergenic instead.}
 
+\item{bidirectionalDistance}{When a peak is present at bidirectional promoter where
+distance between two TSS is < \code{bidirectionalDistance}, any gene within
+\code{promoterLength} distance of peak is assigned to the peak as annotation. Default: 1000}
+
+\item{bidirectionalSkew}{Maximum fraction of peak region allowed on the side of
+false target from the midpoint of two target genes. Default: 0.2}
+
+\item{includeFractionCut}{A floating point number between [0, 1]. If a peak covers more
+than this proportion of feature, it is annotated as, eg. \code{include_tx}. Default: 0.7}
+
+\item{insideSkewToEndCut}{A floating point number in range [0, 1]. If a peak is
+present inside feature/gene and the relative summit position is >
+\code{insideSkewToEndCut}, it is closer to the end of the feature. Default: 0.7}
+
 \item{txIds}{A vector of transcript IDs to be used specifically in the annotation
 process instead of full transcript set. These should be internal tx_ids from \code{TxDB}
 object. This is useful feature to exclude tRNA, rRNA transcripts while annotating
@@ -44,22 +58,8 @@ character vector. Default: \code{c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA")}.
 This argument work only when \code{TxDB} object has \code{TXTYPE} column with
 appropriate transcripy type values.}
 
-\item{bidirectionalDistance}{If a peak is present at bidirectional promoter where
-distance between two TSS is < \code{bidirectionalDistance}, both the targets are
-assigned to the peak. Default: 1000}
-
-\item{bidirectionalSkew}{Maximum fraction of peak region allowed on the side of
-false target from the midpoint of two target genes. Default: 0.2}
-
-\item{includeFractionCut}{A floating point number between [0, 1]. If a peak covers more
-than this proportion of feature, it is annotated as, eg. \code{include_tx}. Default: 0.7}
-
 \item{bindingInGene}{Logical: whether the ChIPseq TF binds in gene body. This is
 useful for polII ChIPseq data. Default: FALSE}
-
-\item{insideSkewToEndCut}{A floating point number in range [0, 1]. If a peak is
-present inside feature/gene and the relative summit position is >
-\code{insideSkewToEndCut}, it is closer to the end of the feature. Default: 0.7}
 
 \item{removePseudo}{Logical: whether to remove peak targets which are marked as pseudo.
 Default: FALSE}

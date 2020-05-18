@@ -54,12 +54,13 @@
 #' @examples NA
 narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
                                 summitRegion = 0,
-                                txdb, promoterLength, upstreamLimit,
+                                txdb,
+                                promoterLength, upstreamLimit,
+                                bidirectionalDistance = 1000, bidirectionalSkew = 0.2,
+                                includeFractionCut = 0.7, insideSkewToEndCut = 0.7,
                                 txIds = NULL, blacklistRegions = NULL,
                                 excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
-                                bidirectionalDistance = 1000, bidirectionalSkew = 0.2,
-                                includeFractionCut = 0.7, bindingInGene = FALSE,
-                                insideSkewToEndCut = 0.7,
+                                bindingInGene = FALSE,
                                 removePseudo = FALSE,
                                 output = NULL){
 
@@ -164,11 +165,11 @@ narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
 #'
 #' @examples NA
 annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
+                            bidirectionalDistance = 1000, bidirectionalSkew = 0.2,
+                            includeFractionCut = 0.7, insideSkewToEndCut = 0.7,
                             txIds = NULL, blacklistRegions = NULL,
                             excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
-                            bidirectionalDistance = 1000, bidirectionalSkew = 0.2,
-                            includeFractionCut = 0.7, bindingInGene = FALSE,
-                            insideSkewToEndCut = 0.7,
+                            bindingInGene = FALSE,
                             removePseudo = FALSE){
 
 
@@ -883,8 +884,7 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
     hitId = mcols(peakTargetGapsGr)$hitId[featuresInGap@from],
     gapWidth = width(peakTargetGapsGr)[featuresInGap@from],
     gapGrRow = featuresInGap@from,
-    firstOverlapFeature = featuresInGap@to,
-    stringsAsFactors = FALSE
+    firstOverlapFeature = featuresInGap@to
   ) %>%
     dplyr::filter(!is.na(firstOverlapFeature))
 
@@ -1069,9 +1069,9 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
 #' \code{length(t2Idx)}
 #' @param bidirectionalSkew Maximum fraction of peak region allowed on the side of
 #' false target from the midpoint of two target genes. Default: 0.2
-#' @param bidirectionalDistance If a peak is present at bidirectional promoter where
-#' distance between two TSS is < \code{bidirectionalDistance}, both the targets are
-#' assigned to the peak. Default: 1000
+#' @param bidirectionalDistance When a peak is present at bidirectional promoter where
+#' distance between two TSS is < \code{bidirectionalDistance}, any gene within
+#' \code{promoterLength} distance of peak is assigned to the peak as annotation. Default: 1000
 #' @param promoterLength Promoter region length. Upstream peaks within \code{promoterLength}
 #' distance of feature start are annotated as \code{promoter} region peaks.
 #' @param upstreamLimit Maximum distance of peak for upstream annotation. Peak beyond

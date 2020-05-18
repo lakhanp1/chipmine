@@ -35,9 +35,9 @@ present inside feature/gene and the relative summit position is >
 \item{bidirectionalSkew}{Maximum fraction of peak region allowed on the side of
 false target from the midpoint of two target genes. Default: 0.2}
 
-\item{bidirectionalDistance}{If a peak is present at bidirectional promoter where
-distance between two TSS is < \code{bidirectionalDistance}, both the targets are
-assigned to the peak. Default: 1000}
+\item{bidirectionalDistance}{When a peak is present at bidirectional promoter where
+distance between two TSS is < \code{bidirectionalDistance}, any gene within
+\code{promoterLength} distance of peak is assigned to the peak as annotation. Default: 1000}
 }
 \value{
 Same GRanges object as peakGr but with modified peakType column or excluding
