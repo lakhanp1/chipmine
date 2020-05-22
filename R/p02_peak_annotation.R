@@ -1,3 +1,23 @@
+
+##################################################################################
+# Flow of function calls:
+# narrowPeak_annotate()
+# |- annotate_ranges()
+#    |- splicing_unit_annotations()             ## 5' UTR annotation
+#    |- splicing_unit_annotations()             ## 3' UTR region annotations
+#    |- splicing_unit_annotations()             ## exons annotations
+#    |- splicing_unit_annotations()             ## introns annotations
+#    |- region_annotations()                    ## Transcript region annotations
+#    |- upstream_annotations()                  ## upstream annotations
+#       |- nearest_upstream_bidirectional()
+#    |- select_optimal_targets()                ## select correct genes from multiple annotations
+#       |- nearest_upstream_bidirectional()
+#
+#
+##################################################################################
+
+
+
 #' Annotate narrowPeak using \code{TxDB} object
 #'
 #' This function annotate the MACS2 called peaks with appropriate target transcript and
@@ -1505,7 +1525,7 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
   ruleC2_farUp <- ruleC2[purrr::map_lgl(.x = peakDistDf$upstreamTss[ruleC2],
                                         .f = function(x){abs(x[1]) > upstreamLimit})]
 
-  ## accept all upstreamTss < promoterLength i.e. ruleC2_pro
+  ## accept all upstreamTss < promoterLength i.e. ruleC2_pro and mark bidirectional
   ## reject all upstreamTss > upstreamLimit i.e. ruleC2_farUp
 
   ## promoterLength < upstreamTss < upstreamLimit: decide using nearest_upstream_bidirectional()
@@ -1568,6 +1588,8 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
 
   ## no need to use masterIndexDf as ruleC2_bidirectPseudo has indices from targetDf
   markPseudoIdx <- append(markPseudoIdx, ruleC2_bidirectPseudo)
+  bidirectBIdx <- union(bidirectBIdx, unlist(masterIndexDf$peakInFeature[ruleC2_pro]))
+  bidirectBIdx <- union(bidirectBIdx, unlist(masterIndexDf$upstreamTss[ruleC2_pro]))
   bidirectBIdx <- union(bidirectBIdx, ruleC2_bidirect)
 
   ## remaining ruleC2_nearUp: set as NULL
