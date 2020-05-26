@@ -1,7 +1,7 @@
 
 ##################################################################################
 # Flow of function calls:
-# narrowPeak_annotate()
+# annotate_peaks()
 # |- annotate_ranges()
 #    |- splicing_unit_annotations()             ## 5' UTR annotation
 #    |- splicing_unit_annotations()             ## 3' UTR region annotations
@@ -72,7 +72,7 @@
 #' @export
 #'
 #' @examples NA
-narrowPeak_annotate <- function(peakFile, fileFormat = "narrowPeak",
+annotate_peaks <- function(peakFile, fileFormat = "narrowPeak",
                                 summitRegion = 0,
                                 txdb,
                                 promoterLength, upstreamLimit,
@@ -386,6 +386,15 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
 
 
     peakTargetsGr <- c(peakTargetsGr, unannotatedPeaks, ignore.mcols=FALSE)
+
+    ## set upstream peaks with distance > upstreamLimit to upstream_intergenic
+    farUpstreamPeaks <- which(
+      peakTargetsGr$peakType == "upstream" & abs(peakTargetsGr$peakDist) > upstreamLimit
+    )
+
+    peakTargetsGr$peakType[farUpstreamPeaks] <- "upstream_intergenic"
+    peakTargetsGr$peakCategory[farUpstreamPeaks] <- "intergenic"
+
 
     ## optionally filter peak targets which are marked as pseudo
     if(removePseudo){
@@ -1310,6 +1319,7 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
   ## Future development: use priority list of peak category to select peak targets
   markPseudoIdx <- c()
   bidirectBIdx <- c()
+  bidirectCIdx <- c()
 
   ## "featureInPeak", "nearStart", "nearEnd", "peakInFeature", "upstreamTss"
   ## nearStart peak
