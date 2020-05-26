@@ -187,50 +187,61 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakFormat,
       theme_scatter
 
     ## peak annotation pie chart
-    peakAnSummary <- dplyr::group_by(peakAnno, peakType) %>%
+    peakAnSummary <- dplyr::group_by(peakAnno, peakType, peakCategory) %>%
       dplyr::summarise(count = n()) %>%
+      dplyr::ungroup() %>%
       dplyr::mutate(label = round(count / sum(count), digits = 4)) %>%
       dplyr::mutate(
-        peakType = factor(
+        peakType = forcats::fct_relevel(
           peakType,
-          levels = c("upstream", "promoter", "include_tx", "5UTR", "tx_start",
-                     "EXON", "INTRON", "tx_end", "3UTR", "intergenic"))
+          "upstream", "promoter", "include_tx", "5UTR", "tx_start", "EXON",
+          "INTRON", "tx_end", "3UTR", "intergenic"
+        )
+      ) %>%
+      dplyr::arrange(desc(peakType)) %>%
+      dplyr::mutate(
+        ypos = cumsum(count)- 0.5*count
       )
 
-    peakTypeCol <- c("upstream" = "#a6cee3", "promoter" = "#1f78b4", "include_tx" = "#b2df8a",
-                     "5UTR" = "#fb9a99", "tx_start" = "#e31a1c", "EXON" = "#ff7f00",
-                     "INTRON" = "#fdbf6f", "tx_end" = "#cab2d6", "3UTR" = "#6a3d9a",
-                     "intergenic" = "#b15928")
+    peakTypeCol <- structure(
+      .Data = rainbow(n = length(levels(peakAnSummary$peakType))),
+      names = length(levels(peakAnSummary$peakType))
+    )
 
-
-    gg_pie_peakAn <- ggplot(data = peakAnSummary,
-                            mapping = aes(x = 1, y = count, fill = peakType)) +
+    gg_pie_peakAn <- ggplot(
+      data = peakAnSummary,
+      mapping = aes(x = 1, y = count, fill = peakType, label = scales::percent(label))
+    ) +
       geom_bar(color = "black", stat = "identity") +
       coord_polar(theta = "y", start = 0, direction = -1) +
-      geom_label_repel(mapping = aes(x = 1.4, label = scales::percent(label)),
-                       position = position_stack(vjust = 0.5),
-                       size = 5, show.legend = FALSE) +
+      geom_label_repel(
+        mapping = aes(x = 1.5, y = ypos),
+        hjust = 0.5, direction = "x",
+        size = 5, show.legend = FALSE) +
       scale_fill_manual(
         name = "Peak annotations",
         values = peakTypeCol
       ) +
+      scale_x_continuous(limits = c(0, 1.75), expand = expansion(add = c(0, 0))) +
       labs(title = "Peak annotation distribution") +
       theme_bw() +
       theme(
         axis.title.x = element_blank(),
         axis.title.y = element_blank(),
-        panel.border = element_blank(),
+        # panel.border = element_blank(),
         panel.grid=element_blank(),
         axis.ticks = element_blank(),
         axis.text = element_blank(),
         plot.title=element_text(size=14, face="bold")
       )
 
-    plotList <- list(table = gg_stable,
-                     distribution = list(enrichment = gg_dot_enrichment,
-                                         pval = gg_dot_pval,
-                                         width = gg_dot_width),
-                     annoPie = gg_pie_peakAn)
+    plotList <- list(
+      table = gg_stable,
+      distribution = list(enrichment = gg_dot_enrichment,
+                          pval = gg_dot_pval,
+                          width = gg_dot_width),
+      annoPie = gg_pie_peakAn
+    )
 
     ## combine plots + table to make a summary figure
     summaryFig <- ggpubr::ggarrange(
@@ -240,7 +251,7 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakFormat,
                         nrow = 1, ncol = 2, legend = "right", widths = c(1, 1),
                         hjust = 0),
       nrow = 2,
-      heights = c(6, 4)
+      heights = c(5, 5)
     ) +
       theme(
         plot.margin = unit(c(0.2, 0.2, 0.2, 0.2), "cm")
