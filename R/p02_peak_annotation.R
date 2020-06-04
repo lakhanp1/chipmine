@@ -73,16 +73,16 @@
 #'
 #' @examples NA
 annotate_peaks <- function(peakFile, fileFormat = "narrowPeak",
-                                summitRegion = 0,
-                                txdb,
-                                promoterLength, upstreamLimit,
-                                bidirectionalDistance = 1000, bidirectionalSkew = 0.2,
-                                includeFractionCut = 0.7, insideSkewToEndCut = 0.7,
-                                txIds = NULL, blacklistRegions = NULL,
-                                excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
-                                bindingInGene = FALSE,
-                                removePseudo = FALSE,
-                                output = NULL){
+                           summitRegion = 0,
+                           txdb,
+                           promoterLength, upstreamLimit,
+                           bidirectionalDistance = 1000, bidirectionalSkew = 0.2,
+                           includeFractionCut = 0.7, insideSkewToEndCut = 0.7,
+                           txIds = NULL, blacklistRegions = NULL,
+                           excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
+                           bindingInGene = FALSE,
+                           removePseudo = FALSE,
+                           output = NULL){
 
   ## started working for peak_annotation on larger genomes
   fileFormat <- match.arg(arg = fileFormat, choices = c("narrowPeak", "broadPeak"))
@@ -125,16 +125,16 @@ annotate_peaks <- function(peakFile, fileFormat = "narrowPeak",
     insideSkewToEndCut = insideSkewToEndCut, removePseudo = removePseudo
   )
 
-  ## rename narrowPeak/broadPeak specific columns
-  mcols(peakTargetsGr)$peakEnrichment <- mcols(peakTargetsGr)$signalValue
-  mcols(peakTargetsGr)$peakPval <- mcols(peakTargetsGr)$pValue
-  mcols(peakTargetsGr)$peakQval <- mcols(peakTargetsGr)$qValue
-
-  ## remove unnecessary columns from narrowPeak/broadPeak
-  mcols(peakTargetsGr)$signalValue <- NULL
-  mcols(peakTargetsGr)$pValue <- NULL
-  mcols(peakTargetsGr)$qValue <- NULL
-  mcols(peakTargetsGr)$score <- NULL
+  ## rename narrowPeak/broadPeak specific columns and remove unnecessary columns
+  peakTargetsGr <- as.data.frame(peakTargetsGr) %>%
+    dplyr::rename(
+      peakEnrichment = signalValue,
+      peakPval = pValue,
+      peakQval = qValue,
+      peakId = name
+    ) %>%
+    dplyr::select(-score) %>%
+    GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = TRUE)
 
   ## optionally store the data
   if(!is.null(output)){
@@ -210,6 +210,7 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
     stop("Duplicate values in name column")
   }
 
+  ## rename columns for readability
   mcols(peaks)$peakChr <- as.character(seqnames(peaks))
   mcols(peaks)$peakStart <- start(peaks)
   mcols(peaks)$peakEnd <- end(peaks)
@@ -405,17 +406,17 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
     ## use the original peakset
     peakTargetsGr <- peaks
 
-    mcols(peakTargetsGr)$peakType <- NA
-    mcols(peakTargetsGr)$peakDist <- NA
-    mcols(peakTargetsGr)$targetOverlap <- NA
-    mcols(peakTargetsGr)$peakOverlap <- NA
-    mcols(peakTargetsGr)$summitDist <- NA
     mcols(peakTargetsGr)$geneId <- NA
     mcols(peakTargetsGr)$txName <- NA
-    mcols(peakTargetsGr)$peakPosition <- NA
-    mcols(peakTargetsGr)$relativePeakPos <- NA
+    mcols(peakTargetsGr)$peakType <- NA
     mcols(peakTargetsGr)$peakCategory <- NA
+    mcols(peakTargetsGr)$peakPosition <- NA
+    mcols(peakTargetsGr)$peakDist <- NA
+    mcols(peakTargetsGr)$summitDist <- NA
     mcols(peakTargetsGr)$bidirectional <- NA
+    mcols(peakTargetsGr)$relativePeakPos <- NA
+    mcols(peakTargetsGr)$targetOverlap <- NA
+    mcols(peakTargetsGr)$peakOverlap <- NA
 
   }
 
@@ -423,25 +424,26 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
   peakTargetsGr <- sort(peakTargetsGr)
   names(x = peakTargetsGr) <- NULL
 
-  ## rename columns to standard column names:
-  mcols(peakTargetsGr)$txId <- mcols(peakTargetsGr)$txName
-  mcols(peakTargetsGr)$peakId <- mcols(peakTargetsGr)$name
+  ## make sure the peakChr, peakStart and peakEnd columns are selected first
+  peakFileCols <- c("peakChr", "peakStart", "peakEnd")
+  peakFileCols <- union(peakFileCols, names(mcols(peaks)))
+
+  ## select output colums and rename columns to standard column names:
+  annotationGr <- as.data.frame(peakTargetsGr) %>%
+    dplyr::select(
+      seqnames, start, end, !!! peakFileCols,
+      geneId, txName, peakType, peakCategory, peakPosition, peakDist, summitDist,
+      bidirectional, relativePeakPos, targetOverlap, peakOverlap
+    ) %>%
+    dplyr::rename(
+      txId = txName
+    ) %>%
+    GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = TRUE)
 
   ## remove unnecessary columns from query GRanges
-  mcols(peakTargetsGr)$name <- NULL
-  mcols(peakTargetsGr)$peak <- NULL
+  mcols(annotationGr)$peak <- NULL
 
-  ## remove unnecessary columns from TxDB features
-  mcols(peakTargetsGr)$targetStart <- NULL
-  mcols(peakTargetsGr)$targetEnd <- NULL
-  mcols(peakTargetsGr)$targetStrand <- NULL
-  mcols(peakTargetsGr)$tx_id <- NULL
-  mcols(peakTargetsGr)$txName <- NULL
-  mcols(peakTargetsGr)$txType <- NULL
-  mcols(peakTargetsGr)$preference <- NULL
-  names(peakTargetsGr) <- NULL
-
-  return(peakTargetsGr)
+  return(annotationGr)
 }
 
 

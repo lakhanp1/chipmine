@@ -14,7 +14,6 @@ profile_heatmap(
   geneGroups = NULL,
   showAnnotation = TRUE,
   clusterColor = NULL,
-  clusterOrder = NULL,
   ylimFraction = NULL,
   posLineGpar = gpar(lty = 2, alpha = 0.4, lwd = 0.5),
   rasterPar = list(use = TRUE, qual = 5),
@@ -43,9 +42,6 @@ rows are not split into different groups.}
 
 \item{clusterColor}{Color assignment object for cluster colors. If nothing provided, colors
 are generated internally. Default: NULL}
-
-\item{clusterOrder}{A character vector of cluster order in the plot. If not provided,
-clusters are arranged as per character sort order}
 
 \item{ylimFraction}{A numeric vector with one or two elements for deciding the \code{ylimit} of top
 profile heatmap annotation. If the value is single number, it has to be floating point number
