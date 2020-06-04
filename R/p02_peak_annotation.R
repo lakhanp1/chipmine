@@ -32,7 +32,7 @@
 #' \item \strong{upstreamTss:} \emph{"promoter", "upstream"}
 #' \item \strong{intergenic:} \emph{"intergenic"}
 #' }
-#' Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
+#' Additionally, a \emph{pseudo} prefix is added to the peakAnnotation where a peak is
 #' annotated to two target genes/features and one of it is more optimum than the other.
 #' The less optimum target type is prefixed with \emph{pseudo}. Please refer to the
 #' \strong{Guidelines} section for specific information on this.
@@ -160,7 +160,7 @@ annotate_peaks <- function(peakFile, fileFormat = "narrowPeak",
 #' \item \strong{upstreamTss:} \emph{"promoter", "upstream"}
 #' \item \strong{intergenic:} \emph{"intergenic"}
 #' }
-#' Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
+#' Additionally, a \emph{pseudo} prefix is added to the peakAnnotation where a peak is
 #' annotated to two target genes/features and one of it is more optimum than other.
 #' The less optimum target type is prefixed with \emph{pseudo}.\cr
 #' See \strong{Use of arguments} section for more details.
@@ -281,10 +281,10 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
   ## prepare target preference list and peak category list
   ## this is internal preference list
   ## this order is IMP for: select 3UTR between 3UTR and inside_tx as it is more specific
-  peakTypes <- data.frame(
-    peakType = c("include_tx", "include_CDS", "5UTR", "CDS_start", "tx_start", "3UTR",
-                 "tx_end", "CDS_end", "EXON", "INTRON", "inside_tx", "inside_CDS",
-                 "promoter", "upstream", "pseudo_promoter", "pseudo_upstream"),
+  annotationTypes <- data.frame(
+    peakAnnotation = c("include_tx", "include_CDS", "5UTR", "CDS_start", "tx_start", "3UTR",
+                       "tx_end", "CDS_end", "EXON", "INTRON", "inside_tx", "inside_CDS",
+                       "promoter", "upstream", "pseudo_promoter", "pseudo_upstream"),
     peakPosition = c("TSS", "TSS", "TSS", "TSS", "TSS", "TES",
                      "TES", "TES", "TSS", "TSS", "TSS", "TSS",
                      "TSS", "TSS", "TSS", "TSS"),
@@ -301,25 +301,25 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
   )
 
   peakCategoryDf <- map_dfr(.x = peakCategories,
-                            .f = function(x){data.frame(peakType = x, stringsAsFactors = F)},
+                            .f = function(x){data.frame(peakAnnotation = x, stringsAsFactors = F)},
                             .id = "peakCategory")
 
-  peakTypes <- dplyr::left_join(x = peakTypes, y = peakCategoryDf, by = "peakType")
+  annotationTypes <- dplyr::left_join(x = annotationTypes, y = peakCategoryDf, by = "peakAnnotation")
 
   ## combine annotations
-  peakAnnotations <- NULL
-  if(!is.null(fiveUtrTargets)){ peakAnnotations <- append(peakAnnotations, fiveUtrTargets) }
-  if(!is.null(threeUtrTargets)){ peakAnnotations <- append(peakAnnotations, threeUtrTargets) }
-  if(!is.null(exonTargets)){ peakAnnotations <- append(peakAnnotations, exonTargets) }
-  if(!is.null(intronTargets)){ peakAnnotations <- append(peakAnnotations, intronTargets) }
-  if(!is.null(transcriptTargets)){ peakAnnotations <- append(peakAnnotations, transcriptTargets) }
-  if(!is.null(upstreamTargets)){ peakAnnotations <- append(peakAnnotations, upstreamTargets) }
+  combinedAnnotations <- NULL
+  if(!is.null(fiveUtrTargets)){ combinedAnnotations <- append(combinedAnnotations, fiveUtrTargets) }
+  if(!is.null(threeUtrTargets)){ combinedAnnotations <- append(combinedAnnotations, threeUtrTargets) }
+  if(!is.null(exonTargets)){ combinedAnnotations <- append(combinedAnnotations, exonTargets) }
+  if(!is.null(intronTargets)){ combinedAnnotations <- append(combinedAnnotations, intronTargets) }
+  if(!is.null(transcriptTargets)){ combinedAnnotations <- append(combinedAnnotations, transcriptTargets) }
+  if(!is.null(upstreamTargets)){ combinedAnnotations <- append(combinedAnnotations, upstreamTargets) }
 
-  if(!is.null(peakAnnotations)){
+  if(!is.null(combinedAnnotations)){
 
-    allTargetsDf <- as.data.frame(peakAnnotations, row.names = NULL) %>%
+    allTargetsDf <- as.data.frame(combinedAnnotations, row.names = NULL) %>%
       dplyr::left_join(y = txToGene, by = c("tx_id" = "TXID")) %>%
-      dplyr::left_join(y = peakTypes, by = c("peakType" = "peakType"))
+      dplyr::left_join(y = annotationTypes, by = c("peakAnnotation" = "peakAnnotation"))
 
     ## extract best transcript region annotation for each peak-gene combination using the preference
     ## using geneId instead of tx_id: for gene which have multiple tx, 5UTR/3UTR/Intron can get
@@ -338,12 +338,12 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
     # ## for summary and debugging
     # tmpDf <- dplyr::group_by(bestPeakGeneTargets, name) %>%
     #   dplyr::summarise(n = n(),
-    #                    peakType = paste(sort(peakType), collapse = ","),
+    #                    peakAnnotation = paste(sort(peakAnnotation), collapse = ","),
     #                    peakCat = paste(peakCategory, collapse = ","),
     #                    uniqCat = paste(sort(unique(peakCategory)), collapse = ","),
     #                    gene = paste(geneId, collapse = ",")) %>%
     #   dplyr::filter(n > 1) %>%
-    #   dplyr::distinct(peakType, .keep_all = T) %>%
+    #   dplyr::distinct(peakAnnotation, .keep_all = T) %>%
     #   as.data.frame()
     #######################
 
@@ -381,7 +381,7 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
     ## add the unannotated peaks
     unannotatedPeaks <- peaks[which(!peaks$name %in% peakTargetsGr$name)]
     if(length(unannotatedPeaks) > 0){
-      mcols(unannotatedPeaks)$peakType <- "intergenic"
+      mcols(unannotatedPeaks)$peakAnnotation <- "intergenic"
       mcols(unannotatedPeaks)$peakCategory <- "intergenic"
     }
 
@@ -390,16 +390,16 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
 
     ## set upstream peaks with distance > upstreamLimit to upstream_intergenic
     farUpstreamPeaks <- which(
-      peakTargetsGr$peakType == "upstream" & abs(peakTargetsGr$peakDist) > upstreamLimit
+      peakTargetsGr$peakAnnotation == "upstream" & abs(peakTargetsGr$peakDist) > upstreamLimit
     )
 
-    peakTargetsGr$peakType[farUpstreamPeaks] <- "upstream_intergenic"
+    peakTargetsGr$peakAnnotation[farUpstreamPeaks] <- "upstream_intergenic"
     peakTargetsGr$peakCategory[farUpstreamPeaks] <- "intergenic"
 
 
     ## optionally filter peak targets which are marked as pseudo
     if(removePseudo){
-      peakTargetsGr <- peakTargetsGr[!grepl(pattern = "pseudo_", x = mcols(peakTargetsGr)$peakType)]
+      peakTargetsGr <- peakTargetsGr[!grepl(pattern = "pseudo_", x = mcols(peakTargetsGr)$peakAnnotation)]
     }
 
   } else{
@@ -408,7 +408,7 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
 
     mcols(peakTargetsGr)$geneId <- NA
     mcols(peakTargetsGr)$txName <- NA
-    mcols(peakTargetsGr)$peakType <- NA
+    mcols(peakTargetsGr)$peakAnnotation <- NA
     mcols(peakTargetsGr)$peakCategory <- NA
     mcols(peakTargetsGr)$peakPosition <- NA
     mcols(peakTargetsGr)$peakDist <- NA
@@ -432,7 +432,7 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
   annotationGr <- as.data.frame(peakTargetsGr) %>%
     dplyr::select(
       seqnames, start, end, !!! peakFileCols,
-      geneId, txName, peakType, peakCategory, peakPosition, peakDist, summitDist,
+      geneId, txName, peakAnnotation, peakCategory, peakPosition, peakDist, summitDist,
       bidirectional, relativePeakPos, targetOverlap, peakOverlap
     ) %>%
     dplyr::rename(
@@ -461,7 +461,7 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
 #' selected.
 #'
 #' @return A modified peak GRanges object with additional columns: \code{tx_id,
-#' peakType, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
+#' peakAnnotation, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
 #' @export
 #'
 #' @examples NA
@@ -481,7 +481,7 @@ splicing_unit_annotations <- function(peaksGr, featuresGr, featureType, txdb){
 
   peakTargets <- peaksGr[ovlpHits@from]
   mcols(peakTargets)$tx_id <- mcols(featuresGr)$tx_id[ovlpHits@to]
-  mcols(peakTargets)$peakType <- featureType
+  mcols(peakTargets)$peakAnnotation <- featureType
   mcols(peakTargets)$peakDist <- 0
 
   ## targetOverlap is at transcript level
@@ -573,7 +573,7 @@ splicing_unit_annotations <- function(peaksGr, featuresGr, featureType, txdb){
 #' @param name Feature type to be used as suffix in peak type annotation. Eg. CDS, gene etc.
 #'
 #' @return A modified peak GRanges object with additional columns: \code{tx_id,
-#' peakType, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
+#' peakAnnotation, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
 #' @export
 #'
 #' @examples NA
@@ -602,7 +602,7 @@ region_annotations <- function(peaksGr, featuresGr, includeFractionCut = 0.7, na
 
   queryTargets <- peaksGr[ovlpHits@from]
   mcols(queryTargets)$tx_id <- mcols(featuresGr)$tx_id[ovlpHits@to]
-  mcols(queryTargets)$peakType <- insideFeature
+  mcols(queryTargets)$peakAnnotation <- insideFeature
   mcols(queryTargets)$peakDist <- 0
 
   ##
@@ -629,7 +629,7 @@ region_annotations <- function(peaksGr, featuresGr, includeFractionCut = 0.7, na
   ## summitDist < 0 : peak overlap at start and summit before start
   targetsDf <- as.data.frame(queryTargets) %>%
     dplyr::mutate(
-      peakType = dplyr::case_when(
+      peakAnnotation = dplyr::case_when(
         peakStart <= targetStart & peakEnd >= targetEnd ~ includeFeature,
         targetOverlap >= includeFractionCut ~ includeFeature,
         targetStrand == "+" & peakStart <= targetStart & peakEnd < targetEnd ~ overlapStart,
@@ -668,19 +668,19 @@ region_annotations <- function(peaksGr, featuresGr, includeFractionCut = 0.7, na
 
 ##################################################################################
 
-#' Set peakType to pseudo
+#' Set peakAnnotation to pseudo
 #'
-#' @param target A dataframe or GRanges object which has peakType column
+#' @param target A dataframe or GRanges object which has peakAnnotation column
 #'
-#' @return Same object with \code{pseudo} prefix to peakType column values
+#' @return Same object with \code{pseudo} prefix to peakAnnotation column values
 #' @export
 #'
 #' @examples NA
 set_peakTarget_to_pseudo <- function(target){
   if(any(class(target) %in% "GRanges")){
-    mcols(target)$peakType <- paste("pseudo_", mcols(target)$peakType, sep = "")
+    mcols(target)$peakAnnotation <- paste("pseudo_", mcols(target)$peakAnnotation, sep = "")
   } else if(any(class(target) %in% "data.frame")){
-    target$peakType <- paste("pseudo_", target$peakType, sep = "")
+    target$peakAnnotation <- paste("pseudo_", target$peakAnnotation, sep = "")
   }
 
   return(target)
@@ -737,7 +737,7 @@ set_peakTarget_to_pseudo <- function(target){
 #' @inheritSection nearest_upstream_bidirectional Use of arguments
 #'
 #' @return A modified peak GRanges object with additional columns: \code{ tx_id,
-#' peakType, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
+#' peakAnnotation, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
 #' @export
 #'
 #' @examples NA
@@ -952,7 +952,7 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
   upstreamPeaks <- peaksGr[upstreamHitsFiltered$from]
 
   mcols(upstreamPeaks)$tx_id <- mcols(featuresGr)$tx_id[upstreamHitsFiltered$to]
-  mcols(upstreamPeaks)$peakType <- "upstream"
+  mcols(upstreamPeaks)$peakAnnotation <- "upstream"
   mcols(upstreamPeaks)$peakDist <- GenomicRanges::distance(
     x = upstreamPeaks,
     y = featuresGr[upstreamHitsFiltered$to]
@@ -979,7 +979,7 @@ upstream_annotations <- function(peaksGr, featuresGr, txdb = NULL,
       relativeSummitPos = dplyr::if_else(
         condition = targetStrand == "-",
         true = round(1 - relativeSummitPos, 3), false = relativeSummitPos),
-      peakType = if_else(abs(peakDist) < promoterLength, "promoter", peakType)
+      peakAnnotation = if_else(abs(peakDist) < promoterLength, "promoter", peakAnnotation)
     ) %>%
     GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = TRUE)
 
@@ -1250,7 +1250,7 @@ nearest_upstream_bidirectional <- function(targetDf, t1Idx, t2Idx,
 #'
 #' @inheritParams nearest_upstream_bidirectional
 #'
-#' @return Same GRanges object as peakGr but with modified peakType column or excluding
+#' @return Same GRanges object as peakGr but with modified peakAnnotation column or excluding
 #' some targets which were not optimum.
 #' @export
 #'
@@ -1629,7 +1629,7 @@ select_optimal_targets <- function(targetGr, promoterLength, upstreamLimit,
 
 
   ## mark selected targets to pseudo
-  targetDf$peakType[markPseudoIdx] <- paste("pseudo_", targetDf$peakType[markPseudoIdx], sep = "")
+  targetDf$peakAnnotation[markPseudoIdx] <- paste("pseudo_", targetDf$peakAnnotation[markPseudoIdx], sep = "")
 
   ## add bidirectional information
   targetDf$bidirectional[bidirectBIdx] <- "B"

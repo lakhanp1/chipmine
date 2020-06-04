@@ -187,30 +187,30 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakFormat,
       theme_scatter
 
     ## peak annotation pie chart
-    peakAnSummary <- dplyr::group_by(peakAnno, peakType, peakCategory) %>%
+    peakAnSummary <- dplyr::group_by(peakAnno, peakAnnotation, peakCategory) %>%
       dplyr::summarise(count = n()) %>%
       dplyr::ungroup() %>%
       dplyr::mutate(label = round(count / sum(count), digits = 4)) %>%
       dplyr::mutate(
-        peakType = forcats::fct_relevel(
-          peakType,
+        peakAnnotation = forcats::fct_relevel(
+          peakAnnotation,
           "upstream", "promoter", "include_tx", "5UTR", "tx_start", "EXON",
           "INTRON", "tx_end", "3UTR", "intergenic"
         )
       ) %>%
-      dplyr::arrange(desc(peakType)) %>%
+      dplyr::arrange(desc(peakAnnotation)) %>%
       dplyr::mutate(
         ypos = cumsum(count)- 0.5*count
       )
 
-    peakTypeCol <- structure(
-      .Data = rainbow(n = length(levels(peakAnSummary$peakType))),
-      names = length(levels(peakAnSummary$peakType))
+    peakAnnotationCol <- structure(
+      .Data = rainbow(n = length(levels(peakAnSummary$peakAnnotation))),
+      names = length(levels(peakAnSummary$peakAnnotation))
     )
 
     gg_pie_peakAn <- ggplot(
       data = peakAnSummary,
-      mapping = aes(x = 1, y = count, fill = peakType, label = scales::percent(label))
+      mapping = aes(x = 1, y = count, fill = peakAnnotation, label = scales::percent(label))
     ) +
       geom_bar(color = "black", stat = "identity") +
       coord_polar(theta = "y", start = 0, direction = -1) +
@@ -220,7 +220,7 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakFormat,
         size = 5, show.legend = FALSE) +
       scale_fill_manual(
         name = "Peak annotations",
-        values = peakTypeCol
+        values = peakAnnotationCol
       ) +
       scale_x_continuous(limits = c(0, 1.75), expand = expansion(add = c(0, 0))) +
       labs(title = "Peak annotation distribution") +

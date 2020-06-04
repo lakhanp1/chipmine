@@ -40,7 +40,7 @@ distance between two TSS is < \code{bidirectionalDistance}, any gene within
 \code{promoterLength} distance of peak is assigned to the peak as annotation. Default: 1000}
 }
 \value{
-Same GRanges object as peakGr but with modified peakType column or excluding
+Same GRanges object as peakGr but with modified peakAnnotation column or excluding
 some targets which were not optimum.
 }
 \description{

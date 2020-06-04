@@ -43,7 +43,7 @@ false target from the midpoint of two target genes. Default: 0.2}
 }
 \value{
 A modified peak GRanges object with additional columns: \code{ tx_id,
-peakType, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
+peakAnnotation, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
 }
 \description{
 This function annotates the peaks with nearest downstream target.

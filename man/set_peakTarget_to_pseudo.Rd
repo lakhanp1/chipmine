@@ -2,18 +2,18 @@
 % Please edit documentation in R/p02_peak_annotation.R
 \name{set_peakTarget_to_pseudo}
 \alias{set_peakTarget_to_pseudo}
-\title{Set peakType to pseudo}
+\title{Set peakAnnotation to pseudo}
 \usage{
 set_peakTarget_to_pseudo(target)
 }
 \arguments{
-\item{target}{A dataframe or GRanges object which has peakType column}
+\item{target}{A dataframe or GRanges object which has peakAnnotation column}
 }
 \value{
-Same object with \code{pseudo} prefix to peakType column values
+Same object with \code{pseudo} prefix to peakAnnotation column values
 }
 \description{
-Set peakType to pseudo
+Set peakAnnotation to pseudo
 }
 \examples{
 NA

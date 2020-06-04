@@ -93,7 +93,7 @@ annotation. Peaks are annnotated with the following \strong{broad categories} an
 \item \strong{upstreamTss:} \emph{"promoter", "upstream"}
 \item \strong{intergenic:} \emph{"intergenic"}
 }
-Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
+Additionally, a \emph{pseudo} prefix is added to the peakAnnotation where a peak is
 annotated to two target genes/features and one of it is more optimum than the other.
 The less optimum target type is prefixed with \emph{pseudo}. Please refer to the
 \strong{Guidelines} section for specific information on this.

@@ -59,7 +59,7 @@ compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", yintercep
 
   tfCols <- sapply(
     X = c("hasPeak", "peakId", "peakEnrichment", "peakPval", "peakQval", "peakSummit", "peakDist", "summitDist",
-          "peakType", "bidirectional", "targetOverlap", "peakOverlap", "relativeSummitPos", "peakRegion",
+          "peakAnnotation", "bidirectional", "targetOverlap", "peakOverlap", "relativeSummitPos", "peakRegion",
           "peakPosition", "peakCoverage", "pvalFiltered", "summitSeq", "relativePeakPos"),
     FUN = function(x){ structure(paste(x, ".", sampleInfo$sampleId, sep = ""), names = sampleInfo$sampleId) },
     simplify = F, USE.NAMES = T)
@@ -67,8 +67,8 @@ compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", yintercep
 
   ## find the common and unique peaks between replicates
   peakFormat <- dplyr::case_when(
-    rep1Data$peakType == "narrow" ~ "narrowPeak",
-    rep1Data$peakType == "broad" ~ "broadPeak"
+    rep1Data$peakAnnotation == "narrow" ~ "narrowPeak",
+    rep1Data$peakAnnotation == "broad" ~ "broadPeak"
   )
 
   r1Peaks <- rtracklayer::import(con = rep1Data$peakFile, format = peakFormat)

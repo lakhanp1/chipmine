@@ -51,7 +51,7 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath,
   }
 
   if (nrow(exptData) == 0) {
-      return(NULL)
+    return(NULL)
   }
 
   exptData$sampleId <- factor(exptData$sampleId, levels = unique(exptData$sampleId))

@@ -27,7 +27,7 @@ Default: TRUE}
 \item{pvalCutoff}{log10_pvalue cutoff for the peak. Default: 1 i.e. no cutoff}
 
 \item{columns}{A vector of column names which should be returned. Allowed values are:
-\code{c("peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
+\code{c("peakPosition", "peakAnnotation", "peakId", "peakEnrichment", "peakPval", "peakQval",
 "peakSummit", "peakDist", "summitDist", "bidirectional", "targetOverlap", "relativeSummitPos",
 "peakRegion", "peakCoverage", "peakOverlap", "relativePeakPos")}. Default: all columns are returned}
 

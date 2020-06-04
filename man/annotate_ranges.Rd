@@ -79,7 +79,7 @@ types} (listed in decreasing order of preference):
 \item \strong{upstreamTss:} \emph{"promoter", "upstream"}
 \item \strong{intergenic:} \emph{"intergenic"}
 }
-Additionally, a \emph{pseudo} prefix is added to the peakType where a peak is
+Additionally, a \emph{pseudo} prefix is added to the peakAnnotation where a peak is
 annotated to two target genes/features and one of it is more optimum than other.
 The less optimum target type is prefixed with \emph{pseudo}.\cr
 See \strong{Use of arguments} section for more details.
