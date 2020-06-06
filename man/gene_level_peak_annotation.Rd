@@ -4,10 +4,19 @@
 \alias{gene_level_peak_annotation}
 \title{Pre-process peak annotation data}
 \usage{
-gene_level_peak_annotation(sampleId, peakAnnotation, genesDf, peakFile,
-  bwFile, preference = c("nearStart", "peakInFeature", "featureInPeak",
-  "nearEnd", "upstreamTss", "intergenic"), outFile = NULL,
-  removePseudo = TRUE, fcCutoff = 1, pvalCutoff = 1)
+gene_level_peak_annotation(
+  sampleId,
+  peakAnnotation,
+  genesDf,
+  peakFile,
+  bwFile,
+  preference = c("nearStart", "peakInFeature", "featureInPeak", "nearEnd",
+    "upstreamTss", "intergenic"),
+  outFile = NULL,
+  removePseudo = TRUE,
+  fcCutoff = 1,
+  pvalCutoff = 1
+)
 }
 \arguments{
 \item{sampleId}{sample ID}

@@ -20,8 +20,6 @@
 #' @param showAnnotation Logical: to show or hide top annotation. Default: TRUE
 #' @param clusterColor Color assignment object for cluster colors. If nothing provided, colors
 #' are generated internally. Default: NULL
-#' @param clusterOrder A character vector of cluster order in the plot. If not provided,
-#' clusters are arranged as per character sort order
 #' @param ylimFraction A numeric vector with one or two elements for deciding the \code{ylimit} of top
 #' profile heatmap annotation. If the value is single number, it has to be floating point number
 #' to extract the quantile and use limit \code{[0, quantile(x)]}. If the value is numeric vector of
@@ -59,7 +57,6 @@ profile_heatmap <- function(profileMat,
                             geneGroups = NULL,
                             showAnnotation = TRUE,
                             clusterColor = NULL,
-                            clusterOrder = NULL,
                             ylimFraction = NULL,
                             posLineGpar = gpar(lty = 2, alpha = 0.4, lwd = 0.5),
                             rasterPar = list(use = TRUE, qual = 5),
@@ -130,37 +127,6 @@ profile_heatmap <- function(profileMat,
       tibble::column_to_rownames(var = "geneId") %>%
       as.data.frame()
 
-    if(!is.factor(clusterData$cluster)){
-
-      if(is.null(clusterOrder)){
-        ## IMP: convert the cluster column to factor to ensure the order of the clusters when heatmap is split
-        ## make sure that the levels argument is sorted as Cluster_1, Cluster_2, 3, 4..
-        ## and not as Cluster_1, Cluster_10, 11, 12, 2, 3
-        clusterData$cluster <- factor(
-          x = clusterData$cluster,
-          levels = unique(c(
-            paste("Cluster", 1:(length(unique(clusterData$cluster)) + 10), sep = "_"),
-            grep(pattern = "^Cluster_\\d+", x = sort(unique(clusterData$cluster)), invert = TRUE, value = TRUE)
-          ))
-        )
-      } else{
-        ## use custom cluster order
-        ## check if all the cluster IDs in data are present in clusterOrder
-        if(! all(unique(clusterData$cluster) %in% clusterOrder)){
-          stop("Missing cluster IDs in the clusterOrder provided for custom clustering\n",
-               "Provided order: ", clusterOrder, "\n",
-               "Current clusters: ", unique(clusterData$cluster))
-        }
-
-        clusterData$cluster <- factor(
-          x = clusterData$cluster,
-          levels = clusterOrder)
-
-      }
-    }
-
-    clusterData$cluster <- droplevels(clusterData$cluster)
-
     ## make sure that the rows of clusterdata and profile matrix are in same order
     ## if the order is different, the splitting will be changed
     if(! all(rownames(profileMat) == rownames(clusterData) ) ){
@@ -204,6 +170,7 @@ profile_heatmap <- function(profileMat,
       name = "clusterAn",
       col = clusterColor,
       width = unit(0.3, "cm"),
+      show_row_names = FALSE,
       show_heatmap_legend = FALSE
     )
 

@@ -4,11 +4,22 @@
 \alias{get_profile_plot_list}
 \title{Multiple Enriched Heatmaps as list}
 \usage{
-get_profile_plot_list(exptInfo, cluster = NULL, clusterColor = NULL,
-  clustOrd = NULL, geneList, colorList = NULL,
-  matrixSource = "normalizedmatrix", matrixBins = c(200, 200, 100, 10),
-  targetType = "region", targetName = "gene", ylimFraction = NULL,
-  keep = c(0, 1), rasterPar = list(use = TRUE, qual = 5), ...)
+get_profile_plot_list(
+  exptInfo,
+  cluster = NULL,
+  clusterColor = NULL,
+  clustOrd = NULL,
+  geneList,
+  colorList = NULL,
+  matrixSource = "normalizedmatrix",
+  matrixBins = c(200, 200, 100, 10),
+  targetType = "region",
+  targetName = "gene",
+  ylimFraction = NULL,
+  keep = c(0, 1),
+  rasterPar = list(use = TRUE, qual = 5),
+  ...
+)
 }
 \arguments{
 \item{exptInfo}{experiment info as data frame with information like sampleID, type,

@@ -4,8 +4,15 @@
 \alias{profile_matrix_kmeans}
 \title{Profile Matrix k-means Clustering}
 \usage{
-profile_matrix_kmeans(mat, km, clustFile, name, kmIter = 100,
-  kmStarts = 150, ...)
+profile_matrix_kmeans(
+  mat,
+  km,
+  clustFile,
+  name,
+  kmIter = 100,
+  kmStarts = 150,
+  ...
+)
 }
 \arguments{
 \item{mat}{profile matrix}

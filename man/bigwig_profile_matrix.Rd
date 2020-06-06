@@ -4,9 +4,17 @@
 \alias{bigwig_profile_matrix}
 \title{Generate profile matrix using normalizeToMatrix()}
 \usage{
-bigwig_profile_matrix(bwFile, regions, signalName, extend = c(2000,
-  1000), w = 10, targetName = "gene", storeLocal = FALSE, localPath,
-  ...)
+bigwig_profile_matrix(
+  bwFile,
+  regions,
+  signalName,
+  extend = c(2000, 1000),
+  w = 10,
+  targetName = "gene",
+  storeLocal = FALSE,
+  localPath,
+  ...
+)
 }
 \arguments{
 \item{bwFile}{BigWig file for the signal}

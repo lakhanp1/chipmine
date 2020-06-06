@@ -4,9 +4,15 @@
 \alias{combinatorial_binding_matrix}
 \title{Generate the combinatorial peak association matrix with merged master peak list}
 \usage{
-combinatorial_binding_matrix(sampleInfo, peakRegions = NULL,
-  peakFormat = "narrowPeak", summitRegion = 0, peakCols = c("peakId",
-  "peakEnrichment", "peakPval"), genome = NULL, summitSeqLen = 200)
+combinatorial_binding_matrix(
+  sampleInfo,
+  peakRegions = NULL,
+  peakFormat = "narrowPeak",
+  summitRegion = 0,
+  peakCols = c("peakId", "peakEnrichment", "peakPval"),
+  genome = NULL,
+  summitSeqLen = 200
+)
 }
 \arguments{
 \item{sampleInfo}{Sample information dataframe}
@@ -16,10 +22,11 @@ peaks from narrowPeak files are merged to create new master peakset.}
 
 \item{peakFormat}{Format of the peak file. One of \code{"narrowPeak", "broadPeak", "bed"}}
 
-\item{summitRegion}{Region width around peak summit to use for annotation purpose. This
-allows peaks with uniform peak width centered around summit. If 0, whole peak region
-is used. If > 0, it indicates how many basepairs to include upstream and downstream
-of the peak summit.}
+\item{summitRegion}{Region width around peak summit to use for while merging the peaks
+from multiple samples. With increasing number of peaksets, the mearging of peaks creates
+broader consensus peaksets. Using a small region around peak summit allows to limit this
+consensus peak width. If 0 (default), whole peak region is used. If \code{summitRegion > 0},
+\code{2 x summitRegion} region around peak summit is used to create consensus peakset.}
 
 \item{peakCols}{Column to extract from peak file. Column names should be from this list:
 \code{c("peakChr", "peakStart", "peakEnd", "peakId", "peakScore", "peakStrand", "peakEnrichment",
