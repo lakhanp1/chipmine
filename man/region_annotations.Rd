@@ -4,8 +4,7 @@
 \alias{region_annotations}
 \title{Map peaks to given GRanges regions}
 \usage{
-region_annotations(peaksGr, featuresGr, includeFractionCut = 0.7,
-  name = "tx")
+region_annotations(peaksGr, featuresGr, includeFractionCut = 0.7, name = "tx")
 }
 \arguments{
 \item{peaksGr}{GRanges object generated from narrowPeak or broadPeak file}
@@ -20,7 +19,7 @@ than this proportion of feature, it is annotated as, eg. \code{include_tx}. Defa
 }
 \value{
 A modified peak GRanges object with additional columns: \code{tx_id,
-peakType, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
+peakAnnotation, targetOverlap, peakOverlap, peakDist, summitDist, relativePeakPos}
 }
 \description{
 This function annotates the peaks onto a regions into e.g. \code{tx_start, tx_end,

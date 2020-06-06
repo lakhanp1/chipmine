@@ -59,14 +59,18 @@ geneset_average_profile <- function(exptInfo, profileMats, genes, cluster = "gro
   grp2Cols <- paste(exptInfo$sampleId, "_sd", sep = "")
 
   plotDf <- data.table::melt(data = meanProfileDf,
-                            id.vars = c("bin"),
-                            measure.vars = list(grp1Cols, grp2Cols),
-                            value.name = c("mean", "sd"),
-                            variable.name = "sample"
+                             id.vars = c("bin"),
+                             measure.vars = list(grp1Cols, grp2Cols),
+                             value.name = c("mean", "sd"),
+                             variable.name = "sample"
   ) %>%
     as.data.frame()
 
-  levels(plotDf$sample) <- exptInfo$sampleId
+  plotDf$sample <- forcats::fct_recode(
+    .f = plotDf$sample,
+    structure(.Data = levels(plotDf$sample), names = exptInfo$sampleId)
+  )
+
   # plotDf$sample <- as.character(plotDf$sample)
 
   plotDf$cluster <- cluster

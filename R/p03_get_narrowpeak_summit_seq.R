@@ -10,7 +10,7 @@
 #' @param genome BSgenome object
 #' @param length Length of the region. Default: 200
 #' @param column_name_prefix Whether to modify the column names to include sampleId.
-#' If TRUE, the new column names are of format: sampleId.colName
+#' If TRUE, the new column names are of format: colName.sampleId
 #'
 #' @return A dataframe with three columns: name, summitRegion, summitSeq
 #' @export
@@ -24,9 +24,13 @@ get_peak_summit_seq = function(file, peakFormat = "narrowPeak", sampleId, genome
   cat("Extracting DNA sequences for sample", sampleId,"\n")
   peakFormat <- match.arg(arg = peakFormat, choices = c("narrowPeak", "broadPeak", "bed"))
 
-  seqAroundSummit = round(length / 2)
+  seqAroundSummit <- round(length / 2)
 
-  np = rtracklayer::import(con = file, format = peakFormat)
+  np <- rtracklayer::import(con = file, format = peakFormat)
+
+  if(length(np) == 0){
+    return(NULL)
+  }
 
   if(is.null(mcols(np)$peak)){
     mcols(np)$peak <- as.integer(width(np) / 2)
@@ -39,21 +43,24 @@ get_peak_summit_seq = function(file, peakFormat = "narrowPeak", sampleId, genome
   )
 
   ## check if there are any out of bound ranges based on seqlengths and trim
-  suppressWarnings(seqlengths(np) <- seqlengths(genome))
+  suppressWarnings(seqlengths(np) <- seqlengths(genome)[seqlevels(np)])
   np <- trim(np)
 
   ## get the DNA sequence for region
-  np$summitSeq = BSgenome::getSeq(x = genome, names = np, as.character = TRUE)
+  np$summitSeq <- BSgenome::getSeq(x = genome, names = np, as.character = TRUE)
 
-  regionCol = paste("summitSeqRegion.", sampleId, sep = "")
-  seqCol = paste("summitSeq.", sampleId, sep = "")
+  peakIdCol <- paste("peakId.", sampleId, sep = "")
+  regionCol <- paste("summitSeqRegion.", sampleId, sep = "")
+  seqCol <- paste("summitSeq.", sampleId, sep = "")
 
-  motifSeq = as.data.frame(np) %>%
+  motifSeq <- as.data.frame(np) %>%
     dplyr::mutate(summitSeqRegion = paste(seqnames, ":", start, "-", end, sep = "")) %>%
-    dplyr::select(name, summitSeqRegion, summitSeq) %>%
+    dplyr::select(peakId = name, summitSeqRegion, summitSeq) %>%
     {
       if (column_name_prefix) {
-        dplyr::rename(.,
+        dplyr::rename(
+          .,
+          !! peakIdCol := peakId,
           !! regionCol := summitSeqRegion,
           !! seqCol := summitSeq
         )
@@ -61,8 +68,6 @@ get_peak_summit_seq = function(file, peakFormat = "narrowPeak", sampleId, genome
         .
       }
     }
-
-
 
   return(motifSeq)
 }

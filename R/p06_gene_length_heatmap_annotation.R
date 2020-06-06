@@ -20,8 +20,10 @@ gene_length_heatmap_annotation = function(bedFile, genes, axis_param = default_a
                                           pointSize = unit(1, "mm")){
 
   ## read the bed file
-  geneSet = data.table::fread(file = bedFile, header = F,
-                              col.names = c("chr", "start", "end", "geneId", "score", "strand")) %>%
+  geneSet <- suppressMessages(readr::read_tsv(
+    file = bedFile,
+    col_names =  c("chr", "start", "end", "geneId", "score", "strand"))
+  ) %>%
     dplyr::mutate(length = end - start) %>%
     dplyr::select(geneId, length)
 

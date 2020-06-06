@@ -12,7 +12,7 @@
 #'
 #' @return Dataframe with all columns when allColumns is TRUE.
 #' If allColumns = FALSE, "hasPeak.sampleId",  "peakId.sampleId",  "peakDist.sampleId",
-#' "summitDist.sampleId",  "peakType.sampleId",   "enrichment.sampleId",  "pval.sampleId"
+#' "summitDist.sampleId",  "peakAnnotation.sampleId",   "enrichment.sampleId",  "pval.sampleId"
 #'  columns are returned from TF peak annotation file
 #' @export
 #'
@@ -31,17 +31,15 @@ get_TF_binding_data <- function(genesDf, exptInfo, allColumns = FALSE){
         next()
       }
 
-      # "hasPeak", "peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
+      # "hasPeak", "peakPosition", "peakAnnotation", "peakId", "peakEnrichment", "peakPval", "peakQval",
       # "peakSummit", "peakDist", "summitDist", "bidirectional", "targetOverlap", "peakOverlap",
       # "relativeSummitPos", "peakRegion", "peakCoverage", "relativePeakPos"
 
-      colNames <- paste(c("hasPeak", "peakPosition", "peakType", "peakId", "peakDist", "summitDist",
+      colNames <- paste(c("hasPeak", "peakPosition", "peakAnnotation", "peakId", "peakDist", "summitDist",
                           "peakEnrichment", "peakCoverage", "peakPval"), exptInfo$sampleId[i], sep = ".")
 
-
-      df <- data.table::fread(input = exptInfo$peakTargetFile[i], header = T, stringsAsFactors = F,
-                             drop = c("chr", "start", "end", "strand"), sep = "\t", data.table = F)
-
+      df <- suppressMessages(readr::read_tsv(file = exptInfo$peakTargetFile[i])) %>%
+        dplyr::select(-chr, -start, -end, -strand)
 
       if(!allColumns){
         df <- df %>% dplyr::select(geneId, !!!colNames)

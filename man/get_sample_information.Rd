@@ -4,8 +4,13 @@
 \alias{get_sample_information}
 \title{Create sample information dataframe}
 \usage{
-get_sample_information(exptInfoFile, samples = NULL, dataPath,
-  profileMatrixSuffix = "normalizedmatrix", profileType = "profile")
+get_sample_information(
+  exptInfoFile,
+  samples = NULL,
+  dataPath,
+  profileMatrixSuffix = "normalizedmatrix",
+  profileType = "profile"
+)
 }
 \arguments{
 \item{exptInfoFile}{A tabular file with details for each sample. "sampleId" and "IP_tag" columns are must}
@@ -25,7 +30,9 @@ Default: \emph{normalizedmatrix}.}
 \item{profileType}{Type of profile. This will be added as suffix to the profile name}
 }
 \value{
-Data frame with details for each sample
+Data frame with columns \code{"sampleId", "IP_tag", "control", "peakType",
+"sampleName", "profileName", "bwFile", "matFile", "clusterFile", "mergedDataFile",
+"polIIExpFile", "polIIExpMat", "peakFile", "peakAnno", "peakTargetFile", "FE_bwFile"}.
 }
 \description{
 This is a utility function to prepare the sample information dataframe for sample

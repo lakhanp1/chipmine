@@ -30,7 +30,7 @@ peak_target_matrix <- function(sampleInfo, position = "TSS"){
 
   mergedDf <- NULL
   peakPositionCol <- NULL
-  colNames <- c("hasPeak", "peakId", "peakType", "peakPosition", "peakPval", "peakDist")
+  colNames <- c("hasPeak", "peakId", "peakAnnotation", "peakPosition", "peakPval", "peakDist")
 
   for(i in 1:nrow(sampleInfo)){
 

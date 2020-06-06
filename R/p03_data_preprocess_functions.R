@@ -35,7 +35,7 @@ preProcess_polII_expression <- function(expMat, sampleId, expFraction, polIIExpF
 
   write.table(x = finalDf, file = polIIExpFile, sep = "\t", col.names = T, quote = F, row.names = F)
 
-  cat("Processed polII expression for sample ", sampleId, "\n")
+  # cat("Processed polII expression for sample ", sampleId, "\n")
 
   return(polIIExpFile)
 }
@@ -90,7 +90,7 @@ gene_level_peak_annotation <- function(
 
   tfCols <- sapply(
     X = c("peakDist", "targetOverlap", "peakOverlap", "hasPeak", "peakCoverage", "peakPosition",
-          "peakId", "peakType", "peakPval", "peakEnrichment", "preference", "peakCategory"),
+          "peakId", "peakAnnotation", "peakPval", "peakEnrichment", "preference", "peakCategory"),
     FUN = function(x){ paste(x, ".", sampleId, sep = "") },
     simplify = F, USE.NAMES = T)
 
@@ -123,7 +123,7 @@ gene_level_peak_annotation <- function(
                        .vars_predicate = all_vars(. >= !! fcCutoff))
 
     if(removePseudo){
-      peakAnnDf <- dplyr::filter(peakAnnDf, !grepl(pattern = "pseudo_", x = !!sym(tfCols$peakType)))
+      peakAnnDf <- dplyr::filter(peakAnnDf, !grepl(pattern = "pseudo_", x = !!sym(tfCols$peakAnnotation)))
     }
 
   } else{
@@ -178,7 +178,7 @@ gene_level_peak_annotation <- function(
       !! tfCols$hasPeak := ifelse(test = is.na(!! sym(tfCols$hasPeak)),
                                   yes =  FALSE, no = !!sym(tfCols$hasPeak) ),
     ) %>%
-    dplyr::select(!!colnames(genesDf), tfCols$hasPeak, tfCols$peakPosition, tfCols$peakType,
+    dplyr::select(!!colnames(genesDf), tfCols$hasPeak, tfCols$peakPosition, tfCols$peakAnnotation,
                   tfCols$peakId, tfCols$peakCategory, tfCols$preference, everything()) %>%
     dplyr::filter_at(.vars = vars(starts_with("hasPeak.")), .vars_predicate = all_vars(. == TRUE))
 
@@ -215,7 +215,7 @@ gene_level_peak_annotation <- function(
 #' @param fcCutoff fold enrichment cutoff for the peak. Default: 1 i.e. no cutoff
 #' @param pvalCutoff log10_pvalue cutoff for the peak. Default: 1 i.e. no cutoff
 #' @param columns A vector of column names which should be returned. Allowed values are:
-#' \code{c("peakPosition", "peakType", "peakId", "peakEnrichment", "peakPval", "peakQval",
+#' \code{c("peakPosition", "peakAnnotation", "peakId", "peakEnrichment", "peakPval", "peakQval",
 #' "peakSummit", "peakDist", "summitDist", "bidirectional", "targetOverlap", "relativeSummitPos",
 #' "peakRegion", "peakCoverage", "peakOverlap", "relativePeakPos")}. Default: all columns are returned
 #' @param renameColumn Logical indicating whether to add sampleId suffix to column name. If
@@ -230,12 +230,12 @@ import_peak_annotation <- function(sampleId, peakAnnoFile, removePseudo = TRUE,
                                    columns = NULL, renameColumn = TRUE){
 
 
-  ## "peakChr", "peakStart", "peakEnd", "peakSummit", "relativeSummitPos", "peakType", "peakDist",
+  ## "peakChr", "peakStart", "peakEnd", "peakSummit", "relativeSummitPos", "peakAnnotation", "peakDist",
   ## "targetOverlap", "peakOverlap", "summitDist", "geneId", "txName", "peakPosition", "preference",
   ## "bidirectional", "peakId", "peakEnrichment", "peakPval", "peakQval", "peakCategory", "relativePeakPos"
 
   renameCols <- c("peakId", "peakEnrichment", "peakPval", "peakQval", "peakSummit", "peakDist",
-                  "summitDist", "peakType", "bidirectional", "targetOverlap", "peakOverlap",
+                  "summitDist", "peakAnnotation", "bidirectional", "targetOverlap", "peakOverlap",
                   "relativeSummitPos", "peakRegion", "peakPosition", "peakCategory")
 
   if(!is.null(columns)){
@@ -252,7 +252,7 @@ import_peak_annotation <- function(sampleId, peakAnnoFile, removePseudo = TRUE,
 
   ## optionally remove peak targets which are marked as pseudo
   if(removePseudo){
-    peakAnt <- peakAnt[!grepl(pattern = "pseudo_", x = peakAnt$peakType), ]
+    peakAnt <- peakAnt[!grepl(pattern = "pseudo_", x = peakAnt$peakAnnotation), ]
   }
 
   ## if there are no peaks called in the data, this is needed to avoid the errors in
@@ -293,7 +293,7 @@ peak_targets_at_TSS <- function(sampleId, peakAnotation){
 
   ## new column names
   tfCols <- sapply(
-    X = c("hasPeak", "peakType", "peakEnrichment", "relativeSummitPos", "peakCategory"),
+    X = c("hasPeak", "peakAnnotation", "peakEnrichment", "relativeSummitPos", "peakCategory"),
     FUN = function(x){ paste(x, ".", sampleId, sep = "") },
     simplify = F, USE.NAMES = T
   )
@@ -336,7 +336,7 @@ peak_targets_at_TSS <- function(sampleId, peakAnotation){
 #' @examples NA
 peak_targets_at_TES <- function(sampleId, peakAnotation){
 
-  tfCols <- sapply(c("hasPeak", "peakCategory", "peakType", "peakEnrichment", "preference"),
+  tfCols <- sapply(c("hasPeak", "peakCategory", "peakAnnotation", "peakEnrichment", "preference"),
                    FUN = function(x){ paste(x, ".", sampleId, sep = "") },
                    simplify = F, USE.NAMES = T)
 
