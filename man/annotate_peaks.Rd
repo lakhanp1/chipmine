@@ -95,7 +95,9 @@ annotation. Peaks are annnotated with the following \strong{broad categories} an
 }
 Additionally, a \emph{pseudo} prefix is added to the peakAnnotation where a peak is
 annotated to two target genes/features and one of it is more optimum than the other.
-The less optimum target type is prefixed with \emph{pseudo}. Please refer to the
+The less optimum target type is prefixed with \emph{pseudo}. If \code{blacklistRegions}
+are provided, peak overlapping with the \code{blacklistRegions} are not used for
+annotation and instead annotated as \emph{"blacklist"}. Please refer to the
 \strong{Guidelines} section for specific information on this.
 }
 \section{Guidelines}{

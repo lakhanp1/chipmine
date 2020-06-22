@@ -34,7 +34,9 @@
 #' }
 #' Additionally, a \emph{pseudo} prefix is added to the peakAnnotation where a peak is
 #' annotated to two target genes/features and one of it is more optimum than the other.
-#' The less optimum target type is prefixed with \emph{pseudo}. Please refer to the
+#' The less optimum target type is prefixed with \emph{pseudo}. If \code{blacklistRegions}
+#' are provided, peak overlapping with the \code{blacklistRegions} are not used for
+#' annotation and instead annotated as \emph{"blacklist"}. Please refer to the
 #' \strong{Guidelines} section for specific information on this.
 #'
 #' @section Guidelines:
@@ -161,9 +163,11 @@ annotate_peaks <- function(peakFile, fileFormat = "narrowPeak",
 #' \item \strong{intergenic:} \emph{"intergenic"}
 #' }
 #' Additionally, a \emph{pseudo} prefix is added to the peakAnnotation where a peak is
-#' annotated to two target genes/features and one of it is more optimum than other.
-#' The less optimum target type is prefixed with \emph{pseudo}.\cr
-#' See \strong{Use of arguments} section for more details.
+#' annotated to two target genes/features and one of it is more optimum than the other.
+#' The less optimum target type is prefixed with \emph{pseudo}. If \code{blacklistRegions}
+#' are provided, peak overlapping with the \code{blacklistRegions} are not used for
+#' annotation and instead annotated as \emph{"blacklist"}. Please refer to the
+#' \strong{Guidelines} section for specific information on this.
 #'
 #'
 #' @param peaks A GRanges object with name column.
@@ -229,6 +233,29 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
   }
 
   mcols(peaks)$relativeSummitPos <- round((mcols(peaks)$peakSummit - start(peaks)) / width(peaks), 3)
+
+
+  blacklistPeaks <- NULL
+
+  ## optionally, remove annotation from the peaks which fall in balcklist regions
+  if(!is.null(blacklistRegions)){
+    if(!is(object = blacklistRegions, class2 = "GRanges")){
+      if(!file.exists(blacklistRegions)){
+        stop("blacklist regions file not found", blacklistRegions)
+      }
+      blacklistGr <- rtracklayer::import(con = blacklistRegions, format = "bed")
+    }
+
+    olpBlacklist <- GenomicRanges::findOverlaps(
+      query = blacklistGr, subject = peaks
+    )
+
+    blacklistPeaks <- peaks[olpBlacklist@to]
+
+    ## only use peaks which do not overlap with blacklist regions for annotation purpose
+    peaks <- peaks[-olpBlacklist@to]
+
+  }
 
   ## new environment for global variables which takes time to generate
   ## create once and use multiple times
@@ -385,8 +412,13 @@ annotate_ranges <- function(peaks, txdb, promoterLength, upstreamLimit,
       mcols(unannotatedPeaks)$peakCategory <- "intergenic"
     }
 
+    if(!is.null(blacklistPeaks)){
+      mcols(blacklistPeaks)$peakAnnotation <- "blacklist"
+      mcols(blacklistPeaks)$peakCategory <- "blacklist"
+    }
 
-    peakTargetsGr <- c(peakTargetsGr, unannotatedPeaks, ignore.mcols=FALSE)
+
+    peakTargetsGr <- c(peakTargetsGr, unannotatedPeaks, blacklistPeaks, ignore.mcols=FALSE)
 
     ## set upstream peaks with distance > upstreamLimit to upstream_intergenic
     farUpstreamPeaks <- which(
