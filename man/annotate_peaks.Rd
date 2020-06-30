@@ -29,10 +29,9 @@ used as summit as broadPeak file does not report summit}
 
 \item{fileFormat}{Format of the peak file. One of "narrowPeak" (Default) or "broadPeak".}
 
-\item{summitRegion}{Region width around peak summit to use for annotation purpose. This
-allows peaks with uniform peak width centered around summit. If 0, whole peak region
-is used. If > 0, it indicates how many basepairs to include upstream and downstream
-of the peak summit.}
+\item{summitRegion}{Region width around peak summit to use for annotation purpose.
+If 0, whole peak region is used. If > 0, \code{summitRegion} bases around peak summit
+are used in annotation.}
 
 \item{txdb}{\code{TxDB} object which will be used for annotation}
 

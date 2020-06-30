@@ -61,10 +61,9 @@
 #' used as summit as broadPeak file does not report summit
 #' @param fileFormat Format of the peak file. One of "narrowPeak" (Default) or "broadPeak".
 #' @param output Optionally store the annotation output to a file
-#' @param summitRegion Region width around peak summit to use for annotation purpose. This
-#' allows peaks with uniform peak width centered around summit. If 0, whole peak region
-#' is used. If > 0, it indicates how many basepairs to include upstream and downstream
-#' of the peak summit.
+#' @param summitRegion Region width around peak summit to use for annotation purpose.
+#' If 0, whole peak region is used. If > 0, \code{summitRegion} bases around peak summit
+#' are used in annotation.
 #'
 #' @inheritParams annotate_ranges
 #'
@@ -110,7 +109,7 @@ annotate_peaks <- function(peakFile, fileFormat = "narrowPeak",
     ## start(peaks) + peaks$peak
     peaks <- GenomicRanges::resize(
       x = GenomicRanges::shift(x = peaks, shift = peaks$peak - summitRegion),
-      width = summitRegion*2, fix = "start"
+      width = summitRegion, fix = "start"
     )
 
     ## update the summit
