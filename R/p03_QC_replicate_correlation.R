@@ -25,9 +25,10 @@
 #'
 #' @examples NA
 compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", yintercept = -Inf,
-                                       summitRegion = 0){
+                                       summitRegion = 0, peakFormat){
 
   compare <- match.arg(tolower(compare), choices = c("pvalue", "enrichment", "qvalue"))
+  peakFormat <- match.arg(peakFormat, choices = c("narrowPeak", "broadPeak"))
 
   compareConfig <- list(
     pvalue = list(narrowPeak = "pValue",
@@ -64,13 +65,7 @@ compare_ChIPseq_replicates <- function(sampleInfo, compare = "pvalue", yintercep
     FUN = function(x){ structure(paste(x, ".", sampleInfo$sampleId, sep = ""), names = sampleInfo$sampleId) },
     simplify = F, USE.NAMES = T)
 
-
   ## find the common and unique peaks between replicates
-  peakFormat <- dplyr::case_when(
-    rep1Data$peakAnnotation == "narrow" ~ "narrowPeak",
-    rep1Data$peakAnnotation == "broad" ~ "broadPeak"
-  )
-
   r1Peaks <- rtracklayer::import(con = rep1Data$peakFile, format = peakFormat)
   r2Peaks <- rtracklayer::import(con = rep2Data$peakFile, format = peakFormat)
 
