@@ -29,10 +29,9 @@ used as summit as broadPeak file does not report summit}
 
 \item{fileFormat}{Format of the peak file. One of "narrowPeak" (Default) or "broadPeak".}
 
-\item{summitRegion}{Region width around peak summit to use for annotation purpose. This
-allows peaks with uniform peak width centered around summit. If 0, whole peak region
-is used. If > 0, it indicates how many basepairs to include upstream and downstream
-of the peak summit.}
+\item{summitRegion}{Region width around peak summit to use for annotation purpose.
+If 0, whole peak region is used. If > 0, \code{summitRegion} bases around peak summit
+are used in annotation.}
 
 \item{txdb}{\code{TxDB} object which will be used for annotation}
 
@@ -95,7 +94,9 @@ annotation. Peaks are annnotated with the following \strong{broad categories} an
 }
 Additionally, a \emph{pseudo} prefix is added to the peakAnnotation where a peak is
 annotated to two target genes/features and one of it is more optimum than the other.
-The less optimum target type is prefixed with \emph{pseudo}. Please refer to the
+The less optimum target type is prefixed with \emph{pseudo}. If \code{blacklistRegions}
+are provided, peak overlapping with the \code{blacklistRegions} are not used for
+annotation and instead annotated as \emph{"blacklist"}. Please refer to the
 \strong{Guidelines} section for specific information on this.
 }
 \section{Guidelines}{

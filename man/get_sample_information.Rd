@@ -44,7 +44,7 @@ have columns: \code{sampleId, IP_tag, control, peakType}. \cr\cr
 This column value is used to determine whether the ChIPseq data is for polII ChIPseq
 or transcription factor ChIPseq. If polII ChIPseq, \code{polIIExpFile, polIIExpMat}
 columns are populated with appropriate file names for polII data.
-\item \strong{peakType:} One of \code{c("narrow", "broad")}. This column value is used
+\item \strong{peakType:} One of \code{c("narrowPeak", "broadPeak")}. This column value is used
 to decide the macs2 peak output file name (i.e. narrowPeak or broadPeak).
 \item \strong{control:} This column value is used to decide the suffix of macs2 output
 files. If the value is blank or ".", \emph{withoutCtrl} is used in macs2 peak realated

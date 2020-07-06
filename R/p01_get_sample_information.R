@@ -12,7 +12,7 @@
 #' This column value is used to determine whether the ChIPseq data is for polII ChIPseq
 #' or transcription factor ChIPseq. If polII ChIPseq, \code{polIIExpFile, polIIExpMat}
 #' columns are populated with appropriate file names for polII data.
-#' \item \strong{peakType:} One of \code{c("narrow", "broad")}. This column value is used
+#' \item \strong{peakType:} One of \code{c("narrowPeak", "broadPeak")}. This column value is used
 #' to decide the macs2 peak output file name (i.e. narrowPeak or broadPeak).
 #' \item \strong{control:} This column value is used to decide the suffix of macs2 output
 #' files. If the value is blank or ".", \emph{withoutCtrl} is used in macs2 peak realated
@@ -110,23 +110,23 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath,
     ## TF ChIP related data
     dplyr::mutate(
       peakFile = dplyr::case_when(
-        IP_tag %in% !!tfChipTags & hasControl & peakType == "narrow" ~
+        IP_tag %in% !!tfChipTags & hasControl & peakType == "narrowPeak" ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.narrowPeak", sep = ""),
-        IP_tag %in% !!tfChipTags & !hasControl & peakType == "narrow" ~
+        IP_tag %in% !!tfChipTags & !hasControl & peakType == "narrowPeak" ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.narrowPeak", sep = ""),
-        IP_tag %in% !!tfChipTags & hasControl & peakType == "broad" ~
+        IP_tag %in% !!tfChipTags & hasControl & peakType == "broadPeak" ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl_peaks.broadPeak", sep = ""),
         IP_tag %in% !!tfChipTags & !hasControl & peakType == "broad" ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl_peaks.broadPeak", sep = "")
       ),
       peakAnno = dplyr::case_when(
-        IP_tag %in% !!tfChipTags & hasControl & peakType == "narrow" ~
+        IP_tag %in% !!tfChipTags & hasControl & peakType == "narrowPeak" ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.narrowPeak.annotation.tab", sep = ""),
-        IP_tag %in% !!tfChipTags & !hasControl & peakType == "narrow" ~
+        IP_tag %in% !!tfChipTags & !hasControl & peakType == "narrowPeak" ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.narrowPeak.annotation.tab", sep = ""),
-        IP_tag %in% !!tfChipTags & hasControl & peakType == "broad" ~
+        IP_tag %in% !!tfChipTags & hasControl & peakType == "broadPeak" ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withCtrl.broadPeak.annotation.tab", sep = ""),
-        IP_tag %in% !!tfChipTags & !hasControl & peakType == "broad" ~
+        IP_tag %in% !!tfChipTags & !hasControl & peakType == "broadPeak" ~
           paste(dataPath, "/", sampleId, "/", sampleId, ".withoutCtrl.broadPeak.annotation.tab", sep = "")
       ),
       peakTargetFile = dplyr::case_when(

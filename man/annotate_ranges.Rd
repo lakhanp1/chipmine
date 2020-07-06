@@ -80,9 +80,11 @@ types} (listed in decreasing order of preference):
 \item \strong{intergenic:} \emph{"intergenic"}
 }
 Additionally, a \emph{pseudo} prefix is added to the peakAnnotation where a peak is
-annotated to two target genes/features and one of it is more optimum than other.
-The less optimum target type is prefixed with \emph{pseudo}.\cr
-See \strong{Use of arguments} section for more details.
+annotated to two target genes/features and one of it is more optimum than the other.
+The less optimum target type is prefixed with \emph{pseudo}. If \code{blacklistRegions}
+are provided, peak overlapping with the \code{blacklistRegions} are not used for
+annotation and instead annotated as \emph{"blacklist"}. Please refer to the
+\strong{Guidelines} section for specific information on this.
 }
 \section{Use of arguments}{
 
