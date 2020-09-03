@@ -35,7 +35,7 @@ best_replicate_peakset <- function(sampleInfo, cdsFile, ...){
     dplyr::distinct()
 
   ## get the target gene information for best ChIPseq replicate
-  peakAnn <- import_peak_annotation(
+  peakAnn <- markPeaks::import_peak_annotation(
     sampleId = sampleInfo$sampleId[ bestRepIndex ],
     peakAnnoFile = sampleInfo$narrowpeakAnno[ bestRepIndex ],
     fcCutoff = 1, pvalCutoff = 1)
