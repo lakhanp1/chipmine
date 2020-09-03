@@ -68,7 +68,7 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakFormat,
                               drawOrder = 1:(length(markTargets)+1))
 
   peakMarkDf <- purrr::map_dfr(
-    .x = genesToMark,
+    .x = markTargets,
     .f = function(x){tibble(geneId = x, stringsAsFactors = F)},
     .id = "geneType")
 
@@ -78,16 +78,18 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakFormat,
   if(file.exists(peakAnnotation)){
 
     ## import peak data with annotation
-    peakAnno <- import_peak_annotation(sampleId = sampleId,
-                                       peakAnnoFile = peakAnnotation,
-                                       renameColumn = FALSE)
+    peakAnno <- markPeaks::import_peak_annotation(
+      sampleId = sampleId,
+      peakAnnoFile = peakAnnotation,
+      renameColumn = FALSE
+    )
 
     ## add target gene type information if points need to be colored
     peakAnno <- dplyr::left_join(x = peakAnno, y = peakMarkDf, by = c("geneId" = "geneId")) %>%
       tidyr::replace_na(replace = list(geneType = "peaks")) %>%
       dplyr::left_join(y = markingPreference, by = c("geneType" = "geneType"))
 
-    ## for each peak, select one gene. preference is decided by order of names in genesToMark list
+    ## for each peak, select one gene. preference is decided by order of names in markTargets list
     plotData <- dplyr::group_by(peakAnno, peakId) %>%
       dplyr::arrange(drawOrder) %>%
       dplyr::slice(1L) %>%
