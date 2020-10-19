@@ -31,4 +31,4 @@ Imports:
 	ggpubr (>= 0.1.5)
 Remotes:
 	github::lakhanp1/markPeaks
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1

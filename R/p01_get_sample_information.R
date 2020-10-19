@@ -62,8 +62,8 @@ get_sample_information <- function(exptInfoFile, samples = NULL, dataPath,
   }
 
   if( !any("peakType" %in% colnames(exptData)) ){
-    warning("peakType column not found in sample information. Using \"narrow\" for all samples")
-    exptData$peakType <- "narrow"
+    warning("peakType column not found in sample information. Using \"narrowPeak\" for all samples")
+    exptData$peakType <- "narrowPeak"
   }
 
   if( !any("control" %in% colnames(exptData)) ){
