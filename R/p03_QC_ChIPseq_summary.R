@@ -52,11 +52,13 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakFormat,
   peakFormat <- match.arg(peakFormat, choices = c("narrowPeak", "broadPeak"))
 
   if(!is.null(markTargets)){
-    if(is.null(markTargets) || !all(names(markTargets) %in% names(pointColor))){
+    if(!is.list(markTargets)) stop("markTargets should be a named list")
+
+    if(!all(names(markTargets) %in% names(pointColor))){
       stop("pointColor should be a named vector with same names as markTargets")
     }
 
-    if(is.null(markTargets) || !all(names(markTargets) %in% names(pointAlpha))){
+    if(!all(names(markTargets) %in% names(pointAlpha))){
       stop("pointAlpha should be a named vector with same names as markTargets")
     }
   }
@@ -81,11 +83,20 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakFormat,
     peakAnno <- markPeaks::import_peak_annotation(
       sampleId = sampleId,
       peakAnnoFile = peakAnnotation,
-      renameColumn = FALSE
+      column_suffix = FALSE
     )
 
     ## add target gene type information if points need to be colored
-    peakAnno <- dplyr::left_join(x = peakAnno, y = peakMarkDf, by = c("geneId" = "geneId")) %>%
+    if(!is.null(markTargets)){
+      peakAnno <- dplyr::left_join(x = peakAnno, y = peakMarkDf, by = "geneId")
+
+      pointAlpha["peaks"] <- 1
+
+    } else{
+      peakAnno <- dplyr::mutate(peakAnno, geneType = "peaks")
+    }
+
+    peakAnno <- peakAnno %>%
       tidyr::replace_na(replace = list(geneType = "peaks")) %>%
       dplyr::left_join(y = markingPreference, by = c("geneType" = "geneType"))
 
@@ -95,12 +106,15 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakFormat,
       dplyr::slice(1L) %>%
       dplyr::ungroup() %>%
       dplyr::distinct() %>%
-      dplyr::mutate(sampleId = sampleId,
-                    peakWidth = peakEnd - peakStart + 1)
+      dplyr::mutate(
+        sampleId = sampleId,
+        peakWidth = peakEnd - peakStart + 1,
+        geneType = forcats::fct_relevel(.f = geneType, !!!markingPreference$geneType)
+      )
 
-    plotData$geneType <- factor(x = plotData$geneType,
-                                levels = markingPreference$geneType,
-                                ordered = TRUE)
+    # plotData$geneType <- factor(
+    #   x = plotData$geneType, levels = markingPreference$geneType, ordered = TRUE
+    # )
 
 
     ## summary table
@@ -196,7 +210,7 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakFormat,
       dplyr::mutate(
         peakAnnotation = forcats::fct_relevel(
           peakAnnotation,
-          "upstream", "promoter", "include_tx", "5UTR", "tx_start", "EXON",
+          "upstream", "promoter", "5UTR", "tx_start", "include_tx", "EXON",
           "INTRON", "tx_end", "3UTR", "intergenic"
         )
       ) %>%
