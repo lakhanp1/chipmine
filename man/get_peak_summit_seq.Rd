@@ -7,10 +7,10 @@
 get_peak_summit_seq(
   file,
   peakFormat = "narrowPeak",
-  sampleId,
+  sampleId = NULL,
   genome,
   length = 200,
-  column_name_prefix = TRUE
+  column_suffix = TRUE
 )
 }
 \arguments{
@@ -25,7 +25,7 @@ Default: narrowPeak}
 
 \item{length}{Length of the region. Default: 200}
 
-\item{column_name_prefix}{Whether to modify the column names to include sampleId.
+\item{column_suffix}{Whether to modify the column names to include sampleId.
 If TRUE, the new column names are of format: colName.sampleId}
 }
 \value{

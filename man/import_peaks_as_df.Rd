@@ -6,16 +6,14 @@
 \usage{
 import_peaks_as_df(
   file,
-  sampleId,
   peakFormat = "narrowPeak",
   peakCols = c("peakId", "peakEnrichment", "peakPval"),
-  rename = TRUE
+  sampleId = NULL,
+  column_suffix = TRUE
 )
 }
 \arguments{
 \item{file}{Peak file}
-
-\item{sampleId}{sampleId to be used as suffix in column names}
 
 \item{peakFormat}{one of \code{c("narrowPeak", "broadPeak", "bed")}}
 
@@ -24,7 +22,9 @@ import_peaks_as_df(
 "peakEnrichment", "peakPval", "peakQval", "peakSummit")}.
 Default: \code{c("peakId", "peakEnrichment", "peakPval")}}
 
-\item{rename}{Logical: whether to add sampleId prefix to column name. Default: TRUE}
+\item{sampleId}{sampleId to be used as suffix in column names}
+
+\item{column_suffix}{Logical: whether to add sampleId suffix to column name. Default: TRUE}
 }
 \value{
 A dataframe with columns specified
