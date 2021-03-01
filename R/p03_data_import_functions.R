@@ -94,21 +94,22 @@ get_polII_signal <- function(file, title, clusterData){
 #' Read peak file as dataframe with selected columns
 #'
 #' @param file Peak file
-#' @param sampleId sampleId to be used as suffix in column names
 #' @param peakFormat one of \code{c("narrowPeak", "broadPeak", "bed")}
 #' @param peakCols Column to select in dataframe. Column names should be from this list:
 #' \code{c("peakChr", "peakStart", "peakEnd", "peakId", "peakScore", "peakStrand",
 #' "peakEnrichment", "peakPval", "peakQval", "peakSummit")}.
 #' Default: \code{c("peakId", "peakEnrichment", "peakPval")}
-#' @param rename Logical: whether to add sampleId prefix to column name. Default: TRUE
+#' @param sampleId sampleId to be used as suffix in column names
+#' @param column_suffix Logical: whether to add sampleId suffix to column name. Default: TRUE
 #'
 #' @return A dataframe with columns specified
 #' @export
 #'
 #' @examples NA
-import_peaks_as_df <- function(file, sampleId, peakFormat = "narrowPeak",
-                               peakCols = c("peakId", "peakEnrichment", "peakPval"),
-                               rename = TRUE){
+import_peaks_as_df <- function(
+  file, peakFormat = "narrowPeak",
+  peakCols = c("peakId", "peakEnrichment", "peakPval"),
+  sampleId = NULL, column_suffix = TRUE){
 
   peakFormat <- match.arg(arg = peakFormat, choices = c("narrowPeak", "broadPeak", "bed"))
 
@@ -134,12 +135,11 @@ import_peaks_as_df <- function(file, sampleId, peakFormat = "narrowPeak",
     return(NULL)
   }
 
-  renameCols <- peakCols
-  names(renameCols) <- paste(peakCols, sampleId, sep = ".")
+  peaksDf <- dplyr::select(peaksDf, !!!peakCols)
 
-  peaksDf <- dplyr::select(peaksDf, peakCols)
-
-  if(rename){
+  if(column_suffix && !is.null(sampleId)){
+    renameCols <- peakCols
+    names(renameCols) <- paste(peakCols, sampleId, sep = ".")
     peaksDf <- dplyr::rename(peaksDf, !!! renameCols)
   }
 

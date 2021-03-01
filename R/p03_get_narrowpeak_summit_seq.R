@@ -9,7 +9,7 @@
 #' @param sampleId sample ID
 #' @param genome BSgenome object
 #' @param length Length of the region. Default: 200
-#' @param column_name_prefix Whether to modify the column names to include sampleId.
+#' @param column_suffix Whether to modify the column names to include sampleId.
 #' If TRUE, the new column names are of format: colName.sampleId
 #'
 #' @return A dataframe with three columns: name, summitRegion, summitSeq
@@ -18,10 +18,9 @@
 #' @examples
 #' summitSeq = get_peak_summit_seq("test.narropeak", "sampleId", BSgenome.Afumigatus.AspGD.Af293, 200)
 #'
-get_peak_summit_seq = function(file, peakFormat = "narrowPeak", sampleId, genome,
-                               length = 200, column_name_prefix = TRUE){
+get_peak_summit_seq = function(file, peakFormat = "narrowPeak", sampleId = NULL, genome,
+                               length = 200, column_suffix = TRUE){
 
-  cat("Extracting DNA sequences for sample", sampleId,"\n")
   peakFormat <- match.arg(arg = peakFormat, choices = c("narrowPeak", "broadPeak", "bed"))
 
   seqAroundSummit <- round(length / 2)
@@ -49,25 +48,22 @@ get_peak_summit_seq = function(file, peakFormat = "narrowPeak", sampleId, genome
   ## get the DNA sequence for region
   np$summitSeq <- BSgenome::getSeq(x = genome, names = np, as.character = TRUE)
 
-  peakIdCol <- paste("peakId.", sampleId, sep = "")
-  regionCol <- paste("summitSeqRegion.", sampleId, sep = "")
-  seqCol <- paste("summitSeq.", sampleId, sep = "")
-
   motifSeq <- as.data.frame(np) %>%
     dplyr::mutate(summitSeqRegion = paste(seqnames, ":", start, "-", end, sep = "")) %>%
-    dplyr::select(peakId = name, summitSeqRegion, summitSeq) %>%
-    {
-      if (column_name_prefix) {
-        dplyr::rename(
-          .,
-          !! peakIdCol := peakId,
-          !! regionCol := summitSeqRegion,
-          !! seqCol := summitSeq
-        )
-      } else{
-        .
-      }
-    }
+    dplyr::select(peakId = name, summitSeq, summitSeqRegion)
+
+  if(!is.null(sampleId) && column_suffix){
+    peakIdCol <- paste("peakId.", sampleId, sep = "")
+    regionCol <- paste("summitSeqRegion.", sampleId, sep = "")
+    seqCol <- paste("summitSeq.", sampleId, sep = "")
+
+    motifSeq <- dplyr::rename(
+      motifSeq,
+      !! peakIdCol := peakId,
+      !! regionCol := summitSeqRegion,
+      !! seqCol := summitSeq
+    )
+  }
 
   return(motifSeq)
 }
