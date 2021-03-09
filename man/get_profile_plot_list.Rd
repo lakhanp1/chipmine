@@ -8,7 +8,6 @@ get_profile_plot_list(
   exptInfo,
   cluster = NULL,
   clusterColor = NULL,
-  clustOrd = NULL,
   geneList,
   colorList = NULL,
   matrixSource = "normalizedmatrix",
@@ -29,9 +28,6 @@ path etc}
 in this dataframe: 'cluster', 'geneId'. Default: NULL}
 
 \item{clusterColor}{cluster annotation color information. Default: NULL}
-
-\item{clustOrd}{A character vector of cluster order in the plot. If not provided,
-clusters are arranged as per character sort order}
 
 \item{geneList}{A vector of gene IDs which are to be plotted}
 
