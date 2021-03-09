@@ -233,6 +233,7 @@ profile_heatmap <- function(profileMat,
     top_annotation = topAnn,
     row_title_rot = 0,
     pos_line_gp = posLineGpar,
+    heatmap_legend_param = list(title = columnTitle),
     use_raster = rasterPar$use,
     raster_quality = rasterPar$qual,
     ...
