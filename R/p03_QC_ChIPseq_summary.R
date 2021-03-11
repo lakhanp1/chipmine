@@ -83,7 +83,7 @@ chip_summary <- function(sampleId, peakAnnotation, peakFile, peakFormat,
     peakAnno <- markPeaks::import_peak_annotation(
       sampleId = sampleId,
       peakAnnoFile = peakAnnotation,
-      column_suffix = FALSE
+      renameColumn = FALSE
     )
 
     ## add target gene type information if points need to be colored
