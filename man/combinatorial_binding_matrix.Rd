@@ -26,7 +26,7 @@ peaks from narrowPeak files are merged to create new master peakset.}
 from multiple samples. With increasing number of peaksets, the mearging of peaks creates
 broader consensus peaksets. Using a small region around peak summit allows to limit this
 consensus peak width. If 0 (default), whole peak region is used. If \code{summitRegion > 0},
-\code{2 x summitRegion} region around peak summit is used to create consensus peakset.}
+then \code{summitRegion} nucleotides around peak summit are used to create consensus peakset.}
 
 \item{peakCols}{Column to extract from peak file. Column names should be from this list:
 \code{c("peakChr", "peakStart", "peakEnd", "peakId", "peakScore", "peakStrand", "peakEnrichment",
@@ -38,7 +38,8 @@ Default: \code{c("peakId", "peakEnrichment", "peakPval")}}
 \item{summitSeqLen}{Length of sequence to extract at summit position. Default: 200}
 }
 \value{
-A dataframe with a masterDf of peak regions generated after merging all peak regions from all samples. For each sample, its association with regions in the masterDf is reported.
+A dataframe with a masterDf of peak regions generated after merging all
+peak regions from all samples. For each sample, its association with regions in the masterDf is reported.
 }
 \description{
 This method reads all the narrowPeak files for given TFs and create a merged peak region list.

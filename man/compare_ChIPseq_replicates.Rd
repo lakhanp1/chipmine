@@ -23,7 +23,7 @@ compare_ChIPseq_replicates(
 from multiple samples. With increasing number of peaksets, the mearging of peaks creates
 broader consensus peaksets. Using a small region around peak summit allows to limit this
 consensus peak width. If 0 (default), whole peak region is used. If \code{summitRegion > 0},
-\code{2 x summitRegion} region around peak summit is used to create consensus peakset.}
+then \code{summitRegion} nucleotides around peak summit are used to create consensus peakset.}
 
 \item{peakFormat}{Format of the peak file. One of \code{"narrowPeak", "broadPeak", "bed"}}
 }
