@@ -137,6 +137,10 @@ profile_heatmap <- function(profileMat,
     ## set colors for clusters. IMP to sort as they will be arranged on heatmap in order
     if(is.null(clusterColor)){
 
+      if(!is.factor(clusterData$cluster)){
+        clusterData$cluster <- forcats::as_factor(clusterData$cluster)
+      }
+      
       clusterNames <- levels(clusterData$cluster)
       # cat("Colors for clusters not provided. Generating new colors for clusters: ", clusterNames, "\n")
 
