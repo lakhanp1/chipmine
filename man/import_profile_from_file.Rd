@@ -8,7 +8,7 @@ import_profile_from_file(
   file,
   source = "normalizedmatrix",
   signalName,
-  selectGenes,
+  selectGenes = NULL,
   up = 200,
   target = 200,
   down = 100,
@@ -29,7 +29,7 @@ command}
 \item{signalName}{name of the signal track}
 
 \item{selectGenes}{A vector of gene IDs which are to be plotted.. Only these genes' profile is extracted
-from the profile matrix for plotting.}
+from the profile matrix for plotting.Default: NULL}
 
 \item{up}{number of bins in upstream region}
 

@@ -8,7 +8,7 @@ get_profile_plot_list(
   exptInfo,
   cluster = NULL,
   clusterColor = NULL,
-  geneList,
+  geneList = NULL,
   colorList = NULL,
   matrixSource = "normalizedmatrix",
   matrixBins = c(200, 200, 100, 10),

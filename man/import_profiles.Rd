@@ -4,12 +4,10 @@
 \alias{import_profiles}
 \title{Generate profile matrix list}
 \usage{
-import_profiles(exptInfo, geneList, ...)
+import_profiles(exptInfo, ...)
 }
 \arguments{
 \item{exptInfo}{experiment info as data frame with information like sampleID, type, path etc}
-
-\item{geneList}{A vector of gene IDs for which the profile needs to be extracted}
 
 \item{...}{Other argument to \code{import_profile_from_file} function}
 }

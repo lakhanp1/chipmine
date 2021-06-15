@@ -6,7 +6,7 @@
 \usage{
 multi_profile_plots(
   exptInfo,
-  genesToPlot,
+  genesToPlot = NULL,
   clusters = NULL,
   drawClusterAn = TRUE,
   clusterColor = NULL,

@@ -55,7 +55,7 @@
 #'
 #' @examples NA
 multi_profile_plots <- function(exptInfo,
-                                genesToPlot,
+                                genesToPlot = NULL,
                                 clusters = NULL,
                                 drawClusterAn = TRUE,
                                 clusterColor = NULL,
@@ -213,7 +213,7 @@ multi_profile_plots <- function(exptInfo,
 get_profile_plot_list <- function(exptInfo,
                                   cluster = NULL,
                                   clusterColor = NULL,
-                                  geneList,
+                                  geneList = NULL,
                                   colorList = NULL,
                                   matrixSource = "normalizedmatrix",
                                   matrixBins = c(200, 200, 100, 10),
