@@ -19,11 +19,12 @@ geneset_average_profile <- function(exptInfo, profileMats, genes, cluster = "gro
 
   meanProfile <- list()
   checkList <- c(attributes(profileMats[[1]])$dim, attributes(profileMats[[1]])$extend)
+  
 
-  # i <- 1
+  # rowId <- 1
   ## calculate mean profile for each matrix
-  for (i in 1:nrow(exptInfo)) {
-    mat <- profileMats[[ exptInfo$sampleId[i] ]]
+  for (rowId in 1:nrow(exptInfo)) {
+    mat <- profileMats[[ exptInfo$sampleId[rowId] ]]
 
     ## make sure that all the matrices have same dimensions and extension
     if(! all(checkList == c(attributes(mat)$dim, attributes(mat)$extend))){
@@ -32,42 +33,66 @@ geneset_average_profile <- function(exptInfo, profileMats, genes, cluster = "gro
 
     mat <- mat[genes, ]
 
-    sdCol <- paste(exptInfo$sampleId[i], "_sd", sep = "")
+    meanCol <- paste(exptInfo$sampleId[rowId], ".mean", sep = "")
+    sdCol <- paste(exptInfo$sampleId[rowId], ".sd", sep = "")
+    medianCol <- paste(exptInfo$sampleId[rowId], ".median", sep = "")
 
-    meanProfile[[ exptInfo$sampleId[i] ]] <- apply(mat, MARGIN = 2, mean)
+    meanProfile[[ meanCol ]] <- apply(mat, MARGIN = 2, mean)
     meanProfile[[ sdCol ]] <- apply(mat, MARGIN = 2, sd)
+    meanProfile[[ medianCol ]] <- apply(mat, MARGIN = 2, median)
 
-    names(meanProfile[[ exptInfo$sampleId[i] ]]) <- c(attributes(mat)$upstream_index,
-                                                      attributes(mat)$target_index,
-                                                      attributes(mat)$downstream_index)
-
-    names(meanProfile[[ sdCol ]]) <- c(attributes(mat)$upstream_index,
-                                       attributes(mat)$target_index,
-                                       attributes(mat)$downstream_index)
-
-    cat("Calculated mean profile for sample", exptInfo$sampleId[i], "\n")
+    cat("Calculated mean profile for sample", exptInfo$sampleId[rowId], "\n")
   }
 
-  meanProfileDf <- data.table::as.data.table(meanProfile)
+  meanProfileDf <- as_tibble(meanProfile, rownames = "bin")
 
   meanProfileDf$bin <- c(attributes(profileMats[[1]])$upstream_index,
                          attributes(profileMats[[1]])$target_index,
                          attributes(profileMats[[1]])$downstream_index)
+  
+  ## decide the axis labels
+  posLabels <- NULL
+  
+  if(attributes(profileMats[[1]])$target_is_single_point){
+    
+    startPos <- -attributes(profileMats[[1]])$extend[1]
+    endPos <- attributes(profileMats[[1]])$extend[2]
+    binTotal <- attributes(profileMats[[1]])$dim[2]
+    binWidth <- (endPos - startPos)/binTotal
 
+    posLabels <- tibble::tibble(
+      breaks = c(meanProfileDf$bin[1], abs(startPos/binWidth), dplyr::last(meanProfileDf$bin[-1])),
+      labels = c(startPos, attributes(profileMats[[1]])$target_name, endPos)
+    )
 
-  grp1Cols <- exptInfo$sampleId
-  grp2Cols <- paste(exptInfo$sampleId, "_sd", sep = "")
+  } else if(! attributes(profileMats[[1]])$target_is_single_point){
 
-  plotDf <- data.table::melt(data = meanProfileDf,
-                            id.vars = c("bin"),
-                            measure.vars = list(grp1Cols, grp2Cols),
-                            value.name = c("mean", "sd"),
-                            variable.name = "sample"
-  ) %>%
-    as.data.frame()
-
-  levels(plotDf$sample) <- exptInfo$sampleId
-  # plotDf$sample <- as.character(plotDf$sample)
+    
+    posLabels <- tibble::tibble(
+      breaks =  c(
+        attributes(profileMats[[1]])$upstream_index[1],
+        attributes(profileMats[[1]])$target_index[1],
+        tail(attributes(profileMats[[1]])$target_index, 1),
+        tail(attributes(profileMats[[1]])$downstream_index, 1)
+      ),
+      labels = c(
+        -attributes(profileMats[[1]])$extend[1],
+        "START", "END",
+        attributes(profileMats[[1]])$extend[2]
+      )
+    )
+    
+  }
+  
+  plotDf <- tidyr::pivot_longer(
+    data = meanProfileDf,
+    cols = -bin,
+    names_to = c("sampleId", ".value"),
+    names_pattern = "(.*)\\.(.*)"
+  ) %>% 
+    dplyr::mutate(
+      sampleId = forcats::fct_relevel(.f = sampleId, !!!exptInfo$sampleId)
+    )
 
   plotDf$cluster <- cluster
   plotDf$groupSize <- length(genes)
