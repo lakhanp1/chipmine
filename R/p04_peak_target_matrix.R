@@ -80,7 +80,7 @@ peak_target_matrix <- function(sampleInfo, position = "TSS"){
   mergedDf <- dplyr::mutate_at(
     .tbl = mergedDf,
     .vars = vars(starts_with("hasPeak")),
-    .funs = funs(if_else(is.na(.), true = FALSE, false = .))
+    .funs = ~ if_else(is.na(.), true = FALSE, false = .)
   )
 
   return(mergedDf)
