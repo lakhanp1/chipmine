@@ -193,7 +193,7 @@ import_profile_from_file = function(file, source = "normalizedmatrix", signalNam
   ## read the profile matrix which is in .gz file
   ## for windows system: install IGV tools which has gzip binary. Add it to the PATH variable
   if(grepl(pattern = ".gz$", x = file, perl = T)){
-    z1 <- paste("gzip -c -d ", file, sep = " ")
+    z1 <- paste("gzip -c -d '", file, "'", sep = "")
   }
   
   
