@@ -4,8 +4,15 @@
 \alias{plot_scatter}
 \title{Generate XY scatter plot for two sets}
 \usage{
-plot_scatter(df, s1, s2, title = "Scatter plot", colorCol,
-  transformation = "log2", pseudoCount = 0.1)
+plot_scatter(
+  df,
+  s1,
+  s2,
+  title = "Scatter plot",
+  colorCol,
+  transformation = "log2",
+  pseudoCount = 0.1
+)
 }
 \arguments{
 \item{df}{dataframe with values two columns for which scatter plot is to be generated}

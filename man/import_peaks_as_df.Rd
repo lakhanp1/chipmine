@@ -4,8 +4,13 @@
 \alias{import_peaks_as_df}
 \title{Read peak file as dataframe with selected columns}
 \usage{
-import_peaks_as_df(file, sampleId, peakFormat = "narrowPeak",
-  peakCols = c("peakId", "peakEnrichment", "peakPval"), rename = TRUE)
+import_peaks_as_df(
+  file,
+  sampleId,
+  peakFormat = "narrowPeak",
+  peakCols = c("peakId", "peakEnrichment", "peakPval"),
+  rename = TRUE
+)
 }
 \arguments{
 \item{file}{Peak file}

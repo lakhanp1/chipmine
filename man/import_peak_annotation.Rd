@@ -4,9 +4,15 @@
 \alias{import_peak_annotation}
 \title{Import peak annotation data}
 \usage{
-import_peak_annotation(sampleId, peakAnnoFile, removePseudo = TRUE,
-  fcCutoff = 1, pvalCutoff = 1, columns = NULL,
-  renameColumn = TRUE)
+import_peak_annotation(
+  sampleId,
+  peakAnnoFile,
+  removePseudo = TRUE,
+  fcCutoff = 1,
+  pvalCutoff = 1,
+  columns = NULL,
+  renameColumn = TRUE
+)
 }
 \arguments{
 \item{sampleId}{sample ID}

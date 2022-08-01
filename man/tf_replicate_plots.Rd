@@ -4,8 +4,7 @@
 \alias{tf_replicate_plots}
 \title{TF ChIPseq replicate correlation plots}
 \usage{
-tf_replicate_plots(sampleInfo, compare = "pvalue", title,
-  yintercept = -Inf)
+tf_replicate_plots(sampleInfo, compare = "pvalue", title, yintercept = -Inf)
 }
 \arguments{
 \item{sampleInfo}{sample information dataframe}

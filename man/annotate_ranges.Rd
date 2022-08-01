@@ -4,12 +4,21 @@
 \alias{annotate_ranges}
 \title{Annotate GRanges using \code{TxDB} object}
 \usage{
-annotate_ranges(peaks, txdb, promoterLength, upstreamLimit, txIds = NULL,
-  blacklistRegions = NULL, excludeType = c("tRNA", "rRNA", "snRNA",
-  "snoRNA", "ncRNA"), bidirectionalDistance = 500,
-  bidirectionalSkew = 0.2, includeFractionCut = 0.7,
-  bindingInGene = FALSE, insideSkewToEndCut = 0.7,
-  removePseudo = FALSE)
+annotate_ranges(
+  peaks,
+  txdb,
+  promoterLength,
+  upstreamLimit,
+  txIds = NULL,
+  blacklistRegions = NULL,
+  excludeType = c("tRNA", "rRNA", "snRNA", "snoRNA", "ncRNA"),
+  bidirectionalDistance = 500,
+  bidirectionalSkew = 0.2,
+  includeFractionCut = 0.7,
+  bindingInGene = FALSE,
+  insideSkewToEndCut = 0.7,
+  removePseudo = FALSE
+)
 }
 \arguments{
 \item{peaks}{A GRanges object with name column.}

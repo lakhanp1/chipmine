@@ -4,8 +4,12 @@
 \alias{gene_length_heatmap_annotation}
 \title{Gene length annotation as points}
 \usage{
-gene_length_heatmap_annotation(bedFile, genes,
-  axis_param = default_axis_param("row"), pointSize = unit(1, "mm"))
+gene_length_heatmap_annotation(
+  bedFile,
+  genes,
+  axis_param = default_axis_param("row"),
+  pointSize = unit(1, "mm")
+)
 }
 \arguments{
 \item{bedFile}{a bed file with 6 columns. feature name will be used to select the genes}

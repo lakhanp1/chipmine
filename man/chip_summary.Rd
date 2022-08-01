@@ -4,9 +4,17 @@
 \alias{chip_summary}
 \title{TF ChIPseq data summary plots}
 \usage{
-chip_summary(sampleId, peakAnnotation, peakFile, peakFormat,
-  pval_cutoff = 20, enrichment_cutoff = 3, markTargets = NULL,
-  pointColor = NULL, pointAlpha = NULL)
+chip_summary(
+  sampleId,
+  peakAnnotation,
+  peakFile,
+  peakFormat,
+  pval_cutoff = 20,
+  enrichment_cutoff = 3,
+  markTargets = NULL,
+  pointColor = NULL,
+  pointAlpha = NULL
+)
 }
 \arguments{
 \item{sampleId}{sampleId}

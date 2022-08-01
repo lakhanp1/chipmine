@@ -4,8 +4,7 @@
 \alias{plot_MA_gg}
 \title{Generate MA plot}
 \usage{
-plot_MA_gg(df, s1, s2, title = NA, colorCol, pseudoCount = 0.1,
-  ylim = NULL)
+plot_MA_gg(df, s1, s2, title = NA, colorCol, pseudoCount = 0.1, ylim = NULL)
 }
 \arguments{
 \item{df}{dataframe with values two columns for which MA plot is to be generated}

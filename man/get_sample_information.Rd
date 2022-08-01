@@ -4,8 +4,13 @@
 \alias{get_sample_information}
 \title{Create sample information dataframe}
 \usage{
-get_sample_information(exptInfoFile, samples = NULL, dataPath,
-  profileMatrixSuffix = "normalizedmatrix", profileType = "profile")
+get_sample_information(
+  exptInfoFile,
+  samples = NULL,
+  dataPath,
+  profileMatrixSuffix = "normalizedmatrix",
+  profileType = "profile"
+)
 }
 \arguments{
 \item{exptInfoFile}{A tabular file with details for each sample. "sampleId" and "IP_tag" columns are must}

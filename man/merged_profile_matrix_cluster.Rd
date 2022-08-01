@@ -4,9 +4,18 @@
 \alias{merged_profile_matrix_cluster}
 \title{Merged profile matrix clustering}
 \usage{
-merged_profile_matrix_cluster(name, exptInfo, genes, clusterStorePath,
-  matrixBins = c(200, 200, 100, 10), source = "deeptools", k,
-  kmIter = 200, kmStarts = 200, ...)
+merged_profile_matrix_cluster(
+  name,
+  exptInfo,
+  genes,
+  clusterStorePath,
+  matrixBins = c(200, 200, 100, 10),
+  source = "deeptools",
+  k,
+  kmIter = 200,
+  kmStarts = 200,
+  ...
+)
 }
 \arguments{
 \item{name}{name of the newly mearged profile matrix}
@@ -17,9 +26,7 @@ merged_profile_matrix_cluster(name, exptInfo, genes, clusterStorePath,
 
 \item{clusterStorePath}{Path for storing/accessing the cluster information file.}
 
-\item{matrixBins}{A numeric vector with four elements representing the column
-counts for up, body, down regions and binSize for the profile matrix.
-Default: c(200, 200, 100, 10)}
+\item{matrixBins}{A numeric vector with four elements}
 
 \item{source}{Method by which profile matrix was generated.
 One of "deeptools", "miao" or "normalizedmatrix".}
@@ -31,8 +38,6 @@ One of "deeptools", "miao" or "normalizedmatrix".}
 \item{kmStarts}{nstart argument of stats::kmeans() function. Default: 200}
 
 \item{...}{other arguments for stats::kmeans() function}
-
-\item{matrixBins}{A numeric vector with four elements}
 }
 \value{
 A list with two elements:

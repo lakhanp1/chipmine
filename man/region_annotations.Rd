@@ -4,8 +4,7 @@
 \alias{region_annotations}
 \title{Map peaks to given GRanges regions}
 \usage{
-region_annotations(peaksGr, featuresGr, includeFractionCut = 0.7,
-  name = "tx")
+region_annotations(peaksGr, featuresGr, includeFractionCut = 0.7, name = "tx")
 }
 \arguments{
 \item{peaksGr}{GRanges object generated from narrowPeak or broadPeak file}

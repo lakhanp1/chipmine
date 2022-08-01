@@ -4,8 +4,7 @@
 \alias{geneset_average_profile}
 \title{Calculate average profile for a gene list}
 \usage{
-geneset_average_profile(exptInfo, profileMats, genes,
-  cluster = "group_A")
+geneset_average_profile(exptInfo, profileMats, genes, cluster = "group_A")
 }
 \arguments{
 \item{exptInfo}{Experiment information dataframe}
